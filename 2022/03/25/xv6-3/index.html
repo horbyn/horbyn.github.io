@@ -19,15 +19,15 @@
         <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
     
     <meta name="description" content="">
-    <meta name="description" content="xv6 series lab 3">
+    <meta name="description" content="本次 lab 理论基础是 risc-v 页表机制，着重关注物理地址的翻译过程，涉及 walk() 和 freewalk() 两个函数的理解">
 <meta property="og:type" content="article">
 <meta property="og:title" content="⌈xv6⌋ lab 3：Page tables">
 <meta property="og:url" content="http://example.com/2022/03/25/xv6-3/">
 <meta property="og:site_name">
-<meta property="og:description" content="xv6 series lab 3">
+<meta property="og:description" content="本次 lab 理论基础是 risc-v 页表机制，着重关注物理地址的翻译过程，涉及 walk() 和 freewalk() 两个函数的理解">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2022-03-25T14:57:18.000Z">
-<meta property="article:modified_time" content="2022-03-25T15:17:29.688Z">
+<meta property="article:modified_time" content="2022-04-05T14:12:34.129Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="xv6">
 <meta name="twitter:card" content="summary">
@@ -494,7 +494,12 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="speed-up-system-calls-easy">Speed up system calls (EASY)</h2>
+        <h2 id="lab">LAB</h2>
+<p>传送门：<a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/pgtbl.html">Lab: page
+tables</a></p>
+<p><br></p>
+<h2 id="speed-up-system-calls-easy">Speed up system calls (EASY)</h2>
 <h3 id="要求">要求</h3>
 <blockquote>
 <p>When each process is created, map one read-only page at USYSCALL (a
@@ -727,7 +732,7 @@ time pgaccess() was called (i.e., the bit will be set forever).</p>
             <p>Author：<a href="http://example.com">Horbyn</a>
             <p>Link：<a href="http://example.com/2022/03/25/xv6-3/">http://example.com/2022/03/25/xv6-3/</a>
             <p>Publish date：<a href="http://example.com/2022/03/25/xv6-3/">March 25th 2022, 10:57:18 pm</a>
-            <p>Update date：<a href="http://example.com/2022/03/25/xv6-3/">March 25th 2022, 11:17:29 pm</a>
+            <p>Update date：<a href="http://example.com/2022/03/25/xv6-3/">April 5th 2022, 10:12:34 pm</a>
             -->
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
@@ -897,8 +902,8 @@ time pgaccess() was called (i.e., the bit will be set forever).</p>
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#speed-up-system-calls-easy"><span class="toc-number">1.</span> <span class="toc-text">Speed up system calls (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82"><span class="toc-number">1.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA"><span class="toc-number">1.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary"><span class="toc-number">1.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution"><span class="toc-number">1.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#print-a-page-table-easy"><span class="toc-number">2.</span> <span class="toc-text">Print a page table (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-1"><span class="toc-number">2.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-1"><span class="toc-number">2.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-1"><span class="toc-number">2.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#detecting-which-pages-have-been-accessed-hard"><span class="toc-number">3.</span> <span class="toc-text">Detecting which
-pages have been accessed (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-2"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-2"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-2"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">4.</span> <span class="toc-text">写在最后</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#lab"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#speed-up-system-calls-easy"><span class="toc-number">2.</span> <span class="toc-text">Speed up system calls (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82"><span class="toc-number">2.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA"><span class="toc-number">2.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary"><span class="toc-number">2.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution"><span class="toc-number">2.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#print-a-page-table-easy"><span class="toc-number">3.</span> <span class="toc-text">Print a page table (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-1"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-1"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-1"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#detecting-which-pages-have-been-accessed-hard"><span class="toc-number">4.</span> <span class="toc-text">Detecting which
+pages have been accessed (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-2"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-2"><span class="toc-number">4.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-2"><span class="toc-number">4.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">5.</span> <span class="toc-text">写在最后</span></a></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -967,7 +972,24 @@ pages have been accessed (HARD)</span></a><ol class="toc-child"><li class="toc-i
         
         
         
+        
+        
+        
+        
+        
     
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -1024,7 +1046,7 @@ pages have been accessed (HARD)</span></a><ol class="toc-child"><li class="toc-i
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 11
+        Total : 12
         </div>
         <!-- search  -->
         
@@ -1038,6 +1060,12 @@ pages have been accessed (HARD)</span></a><ol class="toc-child"><li class="toc-i
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
             
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/05</span>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6⌋ lab 6：Multithreading</a>
+        </li>
+    
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/04</span>
