@@ -504,463 +504,235 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="lab">LAB</h2>
-<p>传送门：<a
-target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/traps.html">Lab:
-traps</a></p>
-<p><br></p>
-<h2 id="risc-v-assembly-easy">RISC-V assembly (EASY)</h2>
-<h3 id="要求">要求</h3>
+        <h2 id="LAB-v6"><a class="header-anchor" href="#LAB-v6"></a>LAB</h2>
+<p>传送门：<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/traps.html">Lab: traps</a></p>
+<br>
+<h2 id="RISC-V-assembly-EASY"><a class="header-anchor" href="#RISC-V-assembly-EASY"></a>RISC-V assembly (EASY)</h2>
+<h3 id="要求-v15"><a class="header-anchor" href="#要求-v15"></a>要求</h3>
 <blockquote>
-<p>There is a file user/call.c in your xv6 repo. make fs.img compiles it
-and also produces a readable assembly version of the program in
-user/call.asm.</p>
+<p>There is a file user/call.c in your xv6 repo. make fs.img compiles it and also produces a readable assembly version of the program in user/call.asm.</p>
 </blockquote>
-<p>"在 xv6 仓库里有一个 <code>user/call.c</code> 文件，运行
-<code>make fs.img</code> 编译后会生成
-<code>user/call.asm</code>，这是一个更加可读的汇编语言版本"</p>
+<p>“在 xv6 仓库里有一个 <code>user/call.c</code> 文件，运行 <code>make fs.img</code> 编译后会生成 <code>user/call.asm</code>，这是一个更加可读的汇编语言版本”</p>
 <blockquote>
 <p>Read the code in call.asm for the functions g, f, and main.</p>
 </blockquote>
-<p>"在 <code>call.asm</code> 中阅读 g()、f() 和 main() 的函数代码"</p>
+<p>“在 <code>call.asm</code> 中阅读 g()、f() 和 main() 的函数代码”</p>
 <blockquote>
-<p>Here are some questions that you should answer (store the answers in
-a file answers-traps.txt)</p>
+<p>Here are some questions that you should answer (store the answers in a file answers-traps.txt)</p>
 </blockquote>
-<p>"回答这里的一些问题（将答案保存在 <code>answers-traps.txt</code>
-里面）"</p>
-<p>这道题不是编程题，所以直接给答案就行。但是另一方面，我对 riscv
-不是很感兴趣（起码目前是这样），我只是想学 <em>operating system
-principles</em> 而已，而且我手边还有一个 <em>x86 arch kernel</em>
-在烂尾。所以在此之前，我只会根据 <em>x86 assembly</em> 的知识大概分享下
-<code>user/call.asm</code> 的含义，<strong>仅供参考</strong></p>
-<p><br></p>
-<h3 id="summary">Summary</h3>
+<p>“回答这里的一些问题（将答案保存在 <code>answers-traps.txt</code> 里面）”</p>
+<p>这道题不是编程题，所以直接给答案就行。但是另一方面，我对 riscv 不是很感兴趣（起码目前是这样），我只是想学 <em>operating system principles</em> 而已，而且我手边还有一个 <em>x86 arch kernel</em> 在烂尾。所以在此之前，我只会根据 <em>x86 assembly</em> 的知识大概分享下 <code>user/call.asm</code> 的含义，<strong>仅供参考</strong></p>
+<br>
+<h3 id="Summary-v15"><a class="header-anchor" href="#Summary-v15"></a>Summary</h3>
 <p>真正开始之前先分享几个参考资料：</p>
 <ul>
-<li>第一个是 <a
-target="_blank" rel="noopener" href="https://msyksphinz-self.github.io/riscv-isadoc/html/index.html">RISC-V
-ISA</a>，遇到什么指令不懂就查它，需要注意的是 xv6 实验架构是
-RV32I/RV64I</li>
-<li>第二个是 <a
-target="_blank" rel="noopener" href="https://horbyn.github.io/2022/03/29/trans-1/">调用约定</a>，这是上一个
-lab 的 preparation，此处是我自己翻译的版本，当然，原文会引用上</li>
+<li>第一个是 <a target="_blank" rel="noopener" href="https://msyksphinz-self.github.io/riscv-isadoc/html/index.html">RISC-V ISA</a>，遇到什么指令不懂就查它，需要注意的是 xv6 实验架构是 RV32I/RV64I</li>
+<li>第二个是 <a target="_blank" rel="noopener" href="https://horbyn.github.io/2022/03/29/trans-1/">调用约定</a>，这是上一个 lab 的 preparation，此处是我自己翻译的版本，当然，原文会引用上</li>
 </ul>
 <p>现在我们开始吧</p>
-<p>首先打开 <code>user/call.asm</code> 找到
-g()，我会把简化版拷贝到这里（即不关注机器指令），大概如下：</p>
+<p>首先打开 <code>user/call.asm</code> 找到 g()，我会把简化版拷贝到这里（即不关注机器指令），大概如下：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># g()</span><br><span class="line">int g(int x) &#123;              # 1</span><br><span class="line">    0: addi  sp, sp, -16    # 2</span><br><span class="line">    2: sd    s0, 8(sp)      # 3</span><br><span class="line">    4: addi  s0, sp, 16     # 4</span><br><span class="line">  return x + 3;             # 5</span><br><span class="line">&#125;                           # 6</span><br><span class="line">    6: addiw a0, a0, 3      # 7</span><br><span class="line">    8: ld    s0, 8(sp)      # 8</span><br><span class="line">    a: addi  sp, sp, 16     # 9</span><br><span class="line">    c: ret                  # 10</span><br></pre></td></tr></table></figure>
 <p>忽略第 1、5、6 行的 C 代码，只关注汇编代码</p>
 <p>假设现在刚进入 g()，那么 g() 的栈帧（stack frame）大概如下：</p>
-<p><img src="https://s2.loli.net/2022/03/29/OoLFJb6kpsQYyRZ.jpg" /></p>
-<p>g() 的栈底保存着返回地址，假设是 main() 调用了 g() 那么返回地址就是
-main() 里的某一句代码。再往上是函数参数，这里 g()
-只有一个参数，所以只占用一个栈元素。如果，g() 是
-<code>g(int x, int y)</code>
-这么定义的，那么栈帧就会像下面这个样子：</p>
-<p><img src="https://s2.loli.net/2022/03/29/jVeYqt2CiZIdpAr.jpg" /></p>
-<p>我想再强调一次，这里只是 x86 汇编角度来粗略了解下
-<code>call.asm</code> 的函数思路。如果想真真正正学习 risc-v
-汇编的那还是踏踏实实学题干给出的 MIT 6.004 这门课吧</p>
+<p><img src="https://s2.loli.net/2022/03/29/OoLFJb6kpsQYyRZ.jpg" alt=""></p>
+<p>g() 的栈底保存着返回地址，假设是 main() 调用了 g() 那么返回地址就是 main() 里的某一句代码。再往上是函数参数，这里 g() 只有一个参数，所以只占用一个栈元素。如果，g() 是 <code>g(int x, int y)</code> 这么定义的，那么栈帧就会像下面这个样子：</p>
+<p><img src="https://s2.loli.net/2022/03/29/jVeYqt2CiZIdpAr.jpg" alt=""></p>
+<p>我想再强调一次，这里只是 x86 汇编角度来粗略了解下 <code>call.asm</code> 的函数思路。如果想真真正正学习 risc-v 汇编的那还是踏踏实实学题干给出的 MIT 6.004 这门课吧</p>
 <p>现在来到第二行代码，<code>addi  sp, sp, -16</code>，分配栈空间</p>
-<p>按照调用约定，每个 callee
-负责自己的栈分配与清理，因为你要用什么寄存器，用多少只有你自己清楚。如果还是用上面那个
-main() 调用 g() 来举例子，caller 是 main()，callee 是 g()</p>
-<p>可以发现 g() 将 sp 往下移动了两个栈元素（由于我是 64 位机器，一个
-pointer-word 是 8 字节），虽然我也不清楚编译器让 g()
-到底用了什么寄存器，但其实我们不用关心，只需知道现在栈分配了两个元素，栈帧看起来像这个样子</p>
-<p><img src="https://s2.loli.net/2022/03/29/Oz9kRTIE4taqnXC.jpg" /></p>
-<p>现在来到第三行代码，<code>sd    s0, 8(sp)</code>，保护 s0
-寄存器，栈帧如下</p>
-<p><img src="https://s2.loli.net/2022/03/29/i4IUyaqAGOBS2dt.jpg" /></p>
-<p>第四行代码，<code>addi  s0, sp, 16</code> 取出形参 x，存放于
-s0，如下</p>
-<p><img src="https://s2.loli.net/2022/03/29/1hfkvxDbS89Hzoe.jpg" /></p>
-<p>现在来到第七行代码，<code>addiw a0, a0, 3</code> 即
-<code>a0 = a0 + 3</code>，考虑到 risc-v 以 a0、a1 作为返回值，并且 g()
-返回 <code>x + 3</code>，所以大致猜出这行代码是设置返回值的</p>
+<p>按照调用约定，每个 callee 负责自己的栈分配与清理，因为你要用什么寄存器，用多少只有你自己清楚。如果还是用上面那个 main() 调用 g() 来举例子，caller 是 main()，callee 是 g()</p>
+<p>可以发现 g() 将 sp 往下移动了两个栈元素（由于我是 64 位机器，一个 pointer-word 是 8 字节），虽然我也不清楚编译器让 g() 到底用了什么寄存器，但其实我们不用关心，只需知道现在栈分配了两个元素，栈帧看起来像这个样子</p>
+<p><img src="https://s2.loli.net/2022/03/29/Oz9kRTIE4taqnXC.jpg" alt=""></p>
+<p>现在来到第三行代码，<code>sd    s0, 8(sp)</code>，保护 s0 寄存器，栈帧如下</p>
+<p><img src="https://s2.loli.net/2022/03/29/i4IUyaqAGOBS2dt.jpg" alt=""></p>
+<p>第四行代码，<code>addi  s0, sp, 16</code> 取出形参 x，存放于 s0，如下</p>
+<p><img src="https://s2.loli.net/2022/03/29/1hfkvxDbS89Hzoe.jpg" alt=""></p>
+<p>现在来到第七行代码，<code>addiw a0, a0, 3</code> 即 <code>a0 = a0 + 3</code>，考虑到 risc-v 以 a0、a1 作为返回值，并且 g() 返回 <code>x + 3</code>，所以大致猜出这行代码是设置返回值的</p>
 <p>第八行代码 <code>ld    s0, 8(sp)</code> 恢复 s0</p>
-<p>第九行代码 <code>addi  sp, sp, 16</code>
-清理栈，这使得调用栈又变回原来的样子</p>
-<p><img src="https://s2.loli.net/2022/03/29/Wj6uXSlkzH2U53A.jpg" /></p>
-<p><br></p>
+<p>第九行代码 <code>addi  sp, sp, 16</code> 清理栈，这使得调用栈又变回原来的样子</p>
+<p><img src="https://s2.loli.net/2022/03/29/Wj6uXSlkzH2U53A.jpg" alt=""></p>
+<br>
 <p>再来看第二个函数，f()，其实都是大同小异，就不详细列出了，仅添加注释</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># f()</span><br><span class="line">int f(int x) &#123;</span><br><span class="line">    e:  addi  sp, sp, -16   # 设置调用栈</span><br><span class="line">    10: sd    s0, 8(sp)     # 保护 s0</span><br><span class="line">    12: addi  s0, sp, 16    # 取形参：s0 = x</span><br><span class="line">  return g(x);</span><br><span class="line">&#125;</span><br><span class="line">    14: addiw a0, a0, 3     # 返回值 a0 = a0 + 3</span><br><span class="line">    16: ld    s0, 8(sp)     # 恢复 s0</span><br><span class="line">    18: addi  sp, sp, 16    # 清理栈</span><br><span class="line">    1a: ret</span><br></pre></td></tr></table></figure>
-<p>值得一提的是，在编译地址 14 处编译器作出了优化，这里是调用
-g()，理论上应该有设置参数，入栈的代码的，但这里编译器将 g() 展开成
-<em>inline function</em> 了，所以直接是套用上面 g() 那句返回值的代码</p>
-<p><br></p>
+<p>值得一提的是，在编译地址 14 处编译器作出了优化，这里是调用 g()，理论上应该有设置参数，入栈的代码的，但这里编译器将 g() 展开成 <em>inline function</em> 了，所以直接是套用上面 g() 那句返回值的代码</p>
+<br>
 <p>最后来到 main()，和 f() 一样我这里只摆出注释了</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">void main(void) &#123;</span><br><span class="line">    1c:	addi	sp,sp,-16</span><br><span class="line">    1e:	sd	    ra,8(sp)</span><br><span class="line">    20:	sd	    s0,0(sp)</span><br><span class="line">    22:	addi	s0,sp,16</span><br><span class="line"># 调用 printf()，共三个参数，第一个参数传入</span><br><span class="line"># a0，第二个参数 a1，第三个参数 a2</span><br><span class="line"># 而第一个参数是字符串，根据调用约定：</span><br><span class="line"># 超过两个指针字的参数要传入引用，此处即指针</span><br><span class="line"># 这里编译器给的指针地址是 0x7e8，结合 call.asm</span><br><span class="line"># 开头给出是 .text 段，结尾最后一个地址是 0x7e0</span><br><span class="line"># 大概可以猜出代码段逻辑上是紧邻这个文件后面的，</span><br><span class="line"># 并且 &quot;%d %d\n&quot; 这个字符串就在代码段开头</span><br><span class="line">  printf(&quot;%d %d\n&quot;, f(8)+1, 13);</span><br><span class="line">    24:	li	    a2,13</span><br><span class="line">    26:	li	    a1,12</span><br><span class="line">    28:	auipc	a0,0x0</span><br><span class="line">    2c:	addi	a0,a0,1984 # 7e8 &lt;malloc+0xea&gt;</span><br><span class="line">    30:	auipc	ra,0x0</span><br><span class="line">    34:	jalr	1552(ra) # 640 &lt;printf&gt;</span><br><span class="line"># 调用 exit()，共一个参数，传入 a0</span><br><span class="line">  exit(0);</span><br><span class="line">    38:	li	    a0,0</span><br><span class="line">    3a:	auipc	ra,0x0</span><br><span class="line">    3e:	jalr	638(ra) # 2b8 &lt;exit&gt;</span><br></pre></td></tr></table></figure>
-<p><br></p>
-<h3 id="solution">Solution</h3>
+<br>
+<h3 id="Solution-v16"><a class="header-anchor" href="#Solution-v16"></a>Solution</h3>
 <p>现在让我们重新回到题目中，不难得出：</p>
-<p>注：第一问参考我上面给出的我翻译的 <a
-target="_blank" rel="noopener" href="https://horbyn.github.io/2022/03/29/trans-1/">《调用约定》一文</a>；第三问的编译地址取决于你自己的
-asm 文件</p>
+<p>注：第一问参考我上面给出的我翻译的 <a target="_blank" rel="noopener" href="https://horbyn.github.io/2022/03/29/trans-1/">《调用约定》一文</a>；第三问的编译地址取决于你自己的 asm 文件</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Eng</span></span><br><span class="line"><span class="number">1.</span> a0-a7; a2</span><br><span class="line"><span class="number">2.</span> <span class="function">at the beginning of <span class="title">main</span><span class="params">()</span>, but it is optimized to <span class="keyword">inline</span> function</span>; <span class="function">no <span class="title">g</span><span class="params">()</span></span></span><br><span class="line"><span class="function">3. 0x640</span></span><br><span class="line"><span class="function">4. 0x38</span></span><br><span class="line"><span class="function">5. &quot;HE110 World&quot;</span>; variable i need to change to <span class="number">0x726C6400</span>; i will change <span class="number">57616</span> to <span class="number">0x10e1</span></span><br><span class="line"><span class="number">6.</span> y is unknown; because y is passed with a2 <span class="keyword">while</span> a2 <span class="keyword">not</span> set, as a result, what variable y to use is a unknown value of a2</span><br><span class="line"></span><br><span class="line"><span class="comment">// Chn</span></span><br><span class="line"><span class="number">1.</span> a0-a7; a2</span><br><span class="line"><span class="number">2.</span> <span class="built_in">main</span>() 开头处，但已被优化成 <span class="keyword">inline</span> 了; 没有 <span class="built_in">g</span>()</span><br><span class="line"><span class="number">3.</span> <span class="number">0x640</span></span><br><span class="line"><span class="number">4.</span> <span class="number">0x38</span></span><br><span class="line"><span class="number">5.</span> <span class="string">&quot;HE110 World&quot;</span>; 变量 i 需要变成 <span class="number">0x726C6400</span>; 需要将 <span class="number">57616</span> 变成 <span class="number">0x10e1</span></span><br><span class="line"><span class="number">6.</span> y 是未知值; 因为 a2 没被设置，却会传递给 y 一个值，最后变量 y 使用了 a2 里面保存的未知值</span><br></pre></td></tr></table></figure>
-<p><br></p>
-<h2 id="backtrace-moderate">Backtrace (MODERATE)</h2>
+<br>
+<h2 id="Backtrace-MODERATE"><a class="header-anchor" href="#Backtrace-MODERATE"></a>Backtrace (MODERATE)</h2>
 <blockquote>
-<p>For debugging it is often useful to have a backtrace: a list of the
-function calls on the stack above the point at which the error
-occurred.</p>
+<p>For debugging it is often useful to have a backtrace: a list of the function calls on the stack above the point at which the error occurred.</p>
 </blockquote>
-<p>"能过追踪回来的痕迹对于调试来说是非常有用的，这个追踪痕迹说的是栈帧上面的系统调用列表，而这个列表又是错误发生前调用的所有函数的集合"</p>
+<p>“能过追踪回来的痕迹对于调试来说是非常有用的，这个追踪痕迹说的是栈帧上面的系统调用列表，而这个列表又是错误发生前调用的所有函数的集合”</p>
 <blockquote>
-<p>Implement a backtrace() function in kernel/printf.c. Insert a call to
-this function in sys_sleep, and then run bttest, which calls sys_sleep.
-Your output should be as follows:</p>
-<p>backtrace:<br />
-0x0000000080002cda<br />
-0x0000000080002bb6<br />
+<p>Implement a backtrace() function in kernel/printf.c. Insert a call to this function in sys_sleep, and then run bttest, which calls sys_sleep. Your output should be as follows:</p>
+<p>backtrace:<br>
+0x0000000080002cda<br>
+0x0000000080002bb6<br>
 0x0000000080002898</p>
-<p>After bttest exit qemu. In your terminal: the addresses may be
-slightly different but if you run addr2line -e kernel/kernel (or
-riscv64-unknown-elf-addr2line -e kernel/kernel) and cut-and-paste the
-above addresses as follows:<br />
-    $ addr2line -e kernel/kernel<br />
-    0x0000000080002de2<br />
-    0x0000000080002f4a<br />
-    0x0000000080002bfc<br />
+<p>After bttest exit qemu. In your terminal: the addresses may be slightly different but if you run addr2line -e kernel/kernel (or riscv64-unknown-elf-addr2line -e kernel/kernel) and cut-and-paste the above addresses as follows:<br>
+    $ addr2line -e kernel/kernel<br>
+    0x0000000080002de2<br>
+    0x0000000080002f4a<br>
+    0x0000000080002bfc<br>
     Ctrl-D</p>
-<p>You should see something like this:<br />
-    kernel/sysproc.c:74<br />
-    kernel/syscall.c:224<br />
+<p>You should see something like this:<br>
+    kernel/sysproc.c:74<br>
+    kernel/syscall.c:224<br>
     kernel/trap.c:85</p>
 </blockquote>
-<p>"在 <code>kernel/printf.c</code> 实现一个 backtrace()，然后在
-<code>sys_sleep()</code> 插入一个对该函数的调用，最后调用
-<code>bttest</code>，由它调用
-<code>sys_sleep()</code>。你的输出会像上面第一个 shell 输出那样</p>
-<p>在执行完 <code>bttest</code> 之后，如果你运行
-<code>addr2line -e kernle/kernel</code> 或
-<code>riscv64-unknown-elf-addr2line -e kernel/kernel</code>，你的
-terminal
-上显示的地址信息可以稍微有点不同。但不用担心，只要你复制粘贴像上面第二个
-shell 输出这样的地址</p>
-<p>你应该可以看到一些东西像上面第三个 shell 输出那样（才算对）"</p>
-<p><br></p>
-<h3 id="提示">提示</h3>
+<p>&quot;在 <code>kernel/printf.c</code> 实现一个 backtrace()，然后在 <code>sys_sleep()</code> 插入一个对该函数的调用，最后调用 <code>bttest</code>，由它调用 <code>sys_sleep()</code>。你的输出会像上面第一个 shell 输出那样</p>
+<p>在执行完 <code>bttest</code> 之后，如果你运行 <code>addr2line -e kernle/kernel</code> 或 <code>riscv64-unknown-elf-addr2line -e kernel/kernel</code>，你的 terminal 上显示的地址信息可以稍微有点不同。但不用担心，只要你复制粘贴像上面第二个 shell 输出这样的地址</p>
+<p>你应该可以看到一些东西像上面第三个 shell 输出那样（才算对）&quot;</p>
+<br>
+<h3 id="提示-v13"><a class="header-anchor" href="#提示-v13"></a>提示</h3>
 <blockquote>
-<p>The compiler puts in each stack frame a frame pointer that holds the
-address of the caller's frame pointer. Your backtrace should use these
-frame pointers to walk up the stack and print the saved return address
-in each stack frame.</p>
+<p>The compiler puts in each stack frame a frame pointer that holds the address of the caller’s frame pointer. Your backtrace should use these frame pointers to walk up the stack and print the saved return address in each stack frame.</p>
 </blockquote>
-<p>"编译器为每个栈帧存放一个保存 caller 的 frame pointer 地址。你的
-<code>backtrace()</code> 应该要使用这些 frame pointer
-以呈现出追踪痕迹，然后打印每个栈帧里保存的返回地址" ———— 注：栈里面
-frame pointer 是编译器负责的，而我们的任务只是打印栈帧里的 "saved return
-address" 而已</p>
+<p>“编译器为每个栈帧存放一个保存 caller 的 frame pointer 地址。你的 <code>backtrace()</code> 应该要使用这些 frame pointer 以呈现出追踪痕迹，然后打印每个栈帧里保存的返回地址” ———— 注：栈里面 frame pointer 是编译器负责的，而我们的任务只是打印栈帧里的 “saved return address” 而已</p>
 <blockquote>
-<p>These <a
-target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/lec/l-riscv-slides.pdf">lecture
-notes</a> have a picture of the layout of stack frames. Note that the
-return address lives at a fixed offset (-8) from the frame pointer of a
-stackframe, and that the saved frame pointer lives at fixed offset (-16)
-from the frame pointer.</p>
+<p>These <a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/lec/l-riscv-slides.pdf">lecture notes</a> have a picture of the layout of stack frames. Note that the return address lives at a fixed offset (-8) from the frame pointer of a stackframe, and that the saved frame pointer lives at fixed offset (-16) from the frame pointer.</p>
 </blockquote>
-<p>"这些 <a
-target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/lec/l-riscv-slides.pdf">课程笔记</a>
-有一些关于栈帧结构的图片。注意栈帧的返回地址位于 frame pointer 固定的 -8
-偏移处；而 saved frame pointer 位于 frame pointer 固定的 -16 偏移处"</p>
-<p>我想先上我对 "课程笔记"
-的理解，然后再具体说清楚这个提示究竟是什么意思</p>
-<p>如图所示是我对 "课程笔记" 栈帧的理解</p>
-<p><img src="https://s2.loli.net/2022/03/29/PDrJUHw82BcAqfb.jpg" /></p>
-<p>栈底是返回地址 "Return Addr"，再往前是前一个函数调用相关地址 "To
-Prev. Frame"（本题即 saved frame pointer 的含义），再往前的寄存器 "Saved
-Regis" 其实是函数参数，最后的本地变量 "Local variables"
-就是只有在当前函数有效的变量</p>
-<p>这里有三个概念，分别是 "返回地址"、"frame pointer"（下文出现的 fp
-即是它）和 "saved frame pointer"</p>
+<p>“这些 <a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/lec/l-riscv-slides.pdf">课程笔记</a> 有一些关于栈帧结构的图片。注意栈帧的返回地址位于 frame pointer 固定的 -8 偏移处；而 saved frame pointer 位于 frame pointer 固定的 -16 偏移处”</p>
+<p>我想先上我对 “课程笔记” 的理解，然后再具体说清楚这个提示究竟是什么意思</p>
+<p>如图所示是我对 “课程笔记” 栈帧的理解</p>
+<p><img src="https://s2.loli.net/2022/03/29/PDrJUHw82BcAqfb.jpg" alt=""></p>
+<p>栈底是返回地址 “Return Addr”，再往前是前一个函数调用相关地址 “To Prev. Frame”（本题即 saved frame pointer 的含义），再往前的寄存器 “Saved Regis” 其实是函数参数，最后的本地变量 “Local variables” 就是只有在当前函数有效的变量</p>
+<p>这里有三个概念，分别是 “返回地址”、“frame pointer”（下文出现的 fp 即是它）和 “saved frame pointer”</p>
 <ul>
-<li>第一个 "返回地址"
-其实我也不知道是什么（有可能是字面意思？），但这就是题目要求打印的东西，固定在相对
-fp 的 -8 偏移处</li>
-<li>第二个 "frame pointer" 其实是栈底，对于 x86 arch 即 bp/ebp/rbp
-的指向</li>
-<li>第三个 "saved frame pointer" 其实是上一个系统调用的 fp
-的地址，即通过这个 saved fp 可以找到前一个函数</li>
+<li>第一个 “返回地址” 其实我也不知道是什么（有可能是字面意思？），但这就是题目要求打印的东西，固定在相对 fp 的 -8 偏移处</li>
+<li>第二个 “frame pointer” 其实是栈底，对于 x86 arch 即 bp/ebp/rbp 的指向</li>
+<li>第三个 “saved frame pointer” 其实是上一个系统调用的 fp 的地址，即通过这个 saved fp 可以找到前一个函数</li>
 </ul>
 <p>如果你还是对 frame pointer 感到疑惑我这边也推荐几个资料：</p>
 <ul>
-<li>第一个是一个 <a
-target="_blank" rel="noopener" href="https://gitbook.coder.cat/function-call-principle/content/function-stack-frame.html">x86
-arch 调用约定的栈帧</a>，其实我觉得思路都是差不多的，所以可以参考下</li>
-<li>第二个是 <a
-target="_blank" rel="noopener" href="https://people.cs.rutgers.edu/~pxk/419/notes/frames.html">frame
-pointer 的解释</a>，着重看第一段第二行开始的内容</li>
+<li>第一个是一个 <a target="_blank" rel="noopener" href="https://gitbook.coder.cat/function-call-principle/content/function-stack-frame.html">x86 arch 调用约定的栈帧</a>，其实我觉得思路都是差不多的，所以可以参考下</li>
+<li>第二个是 <a target="_blank" rel="noopener" href="https://people.cs.rutgers.edu/~pxk/419/notes/frames.html">frame pointer 的解释</a>，着重看第一段第二行开始的内容</li>
 </ul>
-<p>最后总结下上面的提示究竟想表达什么意思？答：通过 fp - 8
-找到要打印的内容；通过 fp - 16 找到上一个函数调用</p>
+<p>最后总结下上面的提示究竟想表达什么意思？答：通过 fp - 8 找到要打印的内容；通过 fp - 16 找到上一个函数调用</p>
 <blockquote>
-<p>Xv6 allocates one page for each stack in the xv6 kernel at
-PAGE-aligned address. You can compute the top and bottom address of the
-stack page by using PGROUNDDOWN(fp) and PGROUNDUP(fp) (see
-kernel/riscv.h). These number are helpful for backtrace to terminate its
-loop.</p>
+<p>Xv6 allocates one page for each stack in the xv6 kernel at PAGE-aligned address. You can compute the top and bottom address of the stack page by using PGROUNDDOWN(fp) and PGROUNDUP(fp) (see kernel/riscv.h). These number are helpful for backtrace to terminate its loop.</p>
 </blockquote>
-<p>"xv6 为每个栈在页对齐的地址上分配一页，你可以通过 PGROUNDDOWN(fp) 和
-PGROUNDUP(fp)（详见
-<code>kernel/riscv.h</code>）计算栈顶和栈底地址。这些数值对于终止
-backtrace() 的循环非常有帮助" ———— PGROUNDDOWN() 相当于向下取整（比如
-4.2、4.8 都取整为 4）也即是栈顶；PGROUNDUP() 相当于向上取整（比如
-4.2、4.8 取整为 5）也即是栈底</p>
-<p><img src="https://s2.loli.net/2022/03/29/eXWxhERCSfl9P8U.jpg" /></p>
+<p>“xv6 为每个栈在页对齐的地址上分配一页，你可以通过 PGROUNDDOWN(fp) 和 PGROUNDUP(fp)（详见 <code>kernel/riscv.h</code>）计算栈顶和栈底地址。这些数值对于终止 backtrace() 的循环非常有帮助” ———— PGROUNDDOWN() 相当于向下取整（比如 4.2、4.8 都取整为 4）也即是栈顶；PGROUNDUP() 相当于向上取整（比如 4.2、4.8 取整为 5）也即是栈底</p>
+<p><img src="https://s2.loli.net/2022/03/29/eXWxhERCSfl9P8U.jpg" alt=""></p>
 <blockquote>
-<p>Once your backtrace is working, call it from panic in kernel/printf.c
-so that you see the kernel's backtrace when it panics.</p>
+<p>Once your backtrace is working, call it from panic in kernel/printf.c so that you see the kernel’s backtrace when it panics.</p>
 </blockquote>
-<p>"一旦你完成 backtrace()，你可以在 <code>kernel/printf.c</code> 的
-panic() 中调用，这样你就可以在内核遭遇 panic
-级别错误时看到它的函数调用痕迹"</p>
-<p><br></p>
-<h3 id="summary-1">Summary</h3>
+<p>“一旦你完成 backtrace()，你可以在 <code>kernel/printf.c</code> 的 panic() 中调用，这样你就可以在内核遭遇 panic 级别错误时看到它的函数调用痕迹”</p>
+<br>
+<h3 id="Summary-v16"><a class="header-anchor" href="#Summary-v16"></a>Summary</h3>
 <p>现在整理下思路吧：</p>
 <ul>
 <li>首先牢记核心任务，就是从当前调用开始，依次打印返回地址，直至追踪到第一个函数</li>
 <li>怎么往前追踪上一个函数？就依赖 fp - 16 这个偏移了</li>
-<li>迭代边界怎么处理？因为一个栈最大最大只有一页，而且还是页对齐的，所以每取得一个
-fp 地址后，就检查它是不是在 PGROUNDDOWN() 和 PGROUNDUP()
-区间内（其实只需判比 PGROUNDUP()
-小就可以了，因为往回找其实是一个栈地址不断增加的过程）</li>
+<li>迭代边界怎么处理？因为一个栈最大最大只有一页，而且还是页对齐的，所以每取得一个 fp 地址后，就检查它是不是在 PGROUNDDOWN() 和 PGROUNDUP() 区间内（其实只需判比 PGROUNDUP() 小就可以了，因为往回找其实是一个栈地址不断增加的过程）</li>
 </ul>
 <p>理论基础是栈帧结构</p>
-<p><br></p>
-<h3 id="solution-1">Solution</h3>
+<br>
+<h3 id="Solution-v17"><a class="header-anchor" href="#Solution-v17"></a>Solution</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/defs.h</span></span><br><span class="line"><span class="comment">// printf.c 注释处</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">backtrace</span><span class="params">(<span class="type">void</span>)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/sysproc.c</span></span><br><span class="line"><span class="function">uint64</span></span><br><span class="line"><span class="function"><span class="title">sys_sleep</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">        <span class="built_in">sleep</span>(&amp;ticks, &amp;tickslock);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">backtrace</span>();<span class="comment">// +</span></span><br><span class="line">    <span class="built_in">release</span>(&amp;tickslock);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/printf.c</span></span><br><span class="line"><span class="function"><span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">panic</span><span class="params">(<span class="type">char</span> *s)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="built_in">backtrace</span>();  <span class="comment">// +</span></span><br><span class="line">    panicked = <span class="number">1</span>; <span class="comment">// freeze uart output from other CPUs</span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">backtrace</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;backtrace:\n&quot;</span>);</span><br><span class="line">    <span class="comment">// 当前函数 frame pointer 的地址</span></span><br><span class="line">    uint64 s0 = <span class="built_in">r_fp</span>();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 遍历栈帧</span></span><br><span class="line">    uint64 end = <span class="built_in">PGROUNDUP</span>(s0);</span><br><span class="line">    uint64 framep = s0;</span><br><span class="line">    <span class="keyword">for</span> (;framep &lt; end; ) &#123;</span><br><span class="line">        <span class="comment">// 取偏移 -8 的 return addr</span></span><br><span class="line">        uint64 *retaddr = (uint64 *)(framep - <span class="number">8</span>);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;%p\n&quot;</span>, *retaddr);</span><br><span class="line">        <span class="comment">// 取偏移 -16 的 saved frame pointer</span></span><br><span class="line">        uint64 *savframep = (uint64 *)(framep - <span class="number">16</span>);</span><br><span class="line">        framep = *savframep;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/riscv.h</span></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="keyword">inline</span> uint64</span></span><br><span class="line"><span class="function"><span class="title">r_fp</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    uint64 x;</span><br><span class="line">    <span class="function"><span class="keyword">asm</span> <span class="title">volatile</span><span class="params">(<span class="string">&quot;mv %0, s0&quot;</span> : <span class="string">&quot;=r&quot;</span> (x) )</span></span>;</span><br><span class="line">    <span class="keyword">return</span> x;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><br></p>
-<h2 id="alarm-hard">Alarm (HARD)</h2>
-<h3 id="要求-1">要求</h3>
+<br>
+<h2 id="Alarm-HARD"><a class="header-anchor" href="#Alarm-HARD"></a>Alarm (HARD)</h2>
+<h3 id="要求-v16"><a class="header-anchor" href="#要求-v16"></a>要求</h3>
 <blockquote>
-<p>In this exercise you'll add a feature to xv6 that periodically alerts
-a process as it uses CPU time. This might be useful for compute-bound
-processes that want to limit how much CPU time they chew up, or for
-processes that want to compute but also want to take some periodic
-action. More generally, you'll be implementing a primitive form of
-user-level interrupt/fault handlers; you could use something similar to
-handle page faults in the application, for example. Your solution is
-correct if it passes alarmtest and usertests.</p>
+<p>In this exercise you’ll add a feature to xv6 that periodically alerts a process as it uses CPU time. This might be useful for compute-bound processes that want to limit how much CPU time they chew up, or for processes that want to compute but also want to take some periodic action. More generally, you’ll be implementing a primitive form of user-level interrupt/fault handlers; you could use something similar to handle page faults in the application, for example. Your solution is correct if it passes alarmtest and usertests.</p>
 </blockquote>
-<p>"在这个练习中你要为 xv6 增加一个周期性提醒正在使用 cpu
-时间的进程的功能。这对于那些处于执行边界的进程限制自己到底使用了多少 cpu
-时间是非常有用的，又或者是那些既想执行运算又想周期性执行其他某一功能的程序也是非常有用。一般来说，你要实现这样一个功能是通过用户中断/错误例程原语的形式实现的，这样的原语使得你可以用在其他程序的页错误事件的处理上。如果你通过了
-alarmtest 和 usertest 那么你的答案就是正确的"</p>
+<p>“在这个练习中你要为 xv6 增加一个周期性提醒正在使用 cpu 时间的进程的功能。这对于那些处于执行边界的进程限制自己到底使用了多少 cpu 时间是非常有用的，又或者是那些既想执行运算又想周期性执行其他某一功能的程序也是非常有用。一般来说，你要实现这样一个功能是通过用户中断/错误例程原语的形式实现的，这样的原语使得你可以用在其他程序的页错误事件的处理上。如果你通过了 alarmtest 和 usertest 那么你的答案就是正确的”</p>
 <blockquote>
-<p>You should add a new sigalarm(interval, handler) system call. If an
-application calls sigalarm(n, fn), then after every n "ticks" of CPU
-time that the program consumes, the kernel should cause application
-function fn to be called. When fn returns, the application should resume
-where it left off. A tick is a fairly arbitrary unit of time in xv6,
-determined by how often a hardware timer generates interrupts. If an
-application calls sigalarm(0, 0), the kernel should stop generating
-periodic alarm calls.</p>
+<p>You should add a new sigalarm(interval, handler) system call. If an application calls sigalarm(n, fn), then after every n “ticks” of CPU time that the program consumes, the kernel should cause application function fn to be called. When fn returns, the application should resume where it left off. A tick is a fairly arbitrary unit of time in xv6, determined by how often a hardware timer generates interrupts. If an application calls sigalarm(0, 0), the kernel should stop generating periodic alarm calls.</p>
 </blockquote>
-<p>"你需要新增一个 sigalarm(interval, handler)
-系统调用。如果一个应用程序调用 sigalarm*(n, fn)，那么程序每消耗 CPU 的 n
-个 'tick' 之后，内核就会调用函数 fn()。当 fn()
-返回时，应用程序应该在它离开的地方继续执行。一个 tick 时 xv6
-里面一个相对独立的时间单元，由硬件计时器生成中断的频率决定。如果一个应用程序调用
-sigalarm(0, 0) 那么内核不会生成周期性的 alarm 调用" ————
-注：这一大段内容里面 "任务型描述" 只有首位两句，即 "每过 interval
-个时间片，内核会调用 handler" 以及 "sigalarm(0, 0) 不调用 handler"</p>
+<p>“你需要新增一个 sigalarm(interval, handler) 系统调用。如果一个应用程序调用 sigalarm*(n, fn)，那么程序每消耗 CPU 的 n 个 ‘tick’ 之后，内核就会调用函数 fn()。当 fn() 返回时，应用程序应该在它离开的地方继续执行。一个 tick 时 xv6 里面一个相对独立的时间单元，由硬件计时器生成中断的频率决定。如果一个应用程序调用 sigalarm(0, 0) 那么内核不会生成周期性的 alarm 调用” ———— 注：这一大段内容里面 “任务型描述” 只有首位两句，即 “每过 interval 个时间片，内核会调用 handler” 以及 “sigalarm(0, 0) 不调用 handler”</p>
 <blockquote>
-<p>You'll find a file user/alarmtest.c in your xv6 repository. Add it to
-the Makefile. It won't compile correctly until you've added sigalarm and
-sigreturn system calls (see below).</p>
+<p>You’ll find a file user/alarmtest.c in your xv6 repository. Add it to the Makefile. It won’t compile correctly until you’ve added sigalarm and sigreturn system calls (see below).</p>
 </blockquote>
-<p>"你需要在你本地 xv6 repo 里找到
-<code>user/alarmtest.c</code>，将（要实现的 sigalarm()）增加到
-Makefile。你将不能通过编译直至你已经增加了 sigalarm() 和
-sigreturn()（详见下文）两个系统调用"</p>
-<p>这个 assignment 稍微有些不同，分成了 test0 和 test1/test2
-两部分，但我真正做完后发现其实应该合起来看才算一个完整的闭环。test0
-负责更改执行流（调用 handler），test1/test2 负责返回。所以我会将
-test0、test1/test2 两部分内容合在一起，以下是它们的要求：</p>
+<p>“你需要在你本地 xv6 repo 里找到 <code>user/alarmtest.c</code>，将（要实现的 sigalarm()）增加到 Makefile。你将不能通过编译直至你已经增加了 sigalarm() 和 sigreturn()（详见下文）两个系统调用”</p>
+<p>这个 assignment 稍微有些不同，分成了 test0 和 test1/test2 两部分，但我真正做完后发现其实应该合起来看才算一个完整的闭环。test0 负责更改执行流（调用 handler），test1/test2 负责返回。所以我会将 test0、test1/test2 两部分内容合在一起，以下是它们的要求：</p>
 <blockquote>
-<p>Get started by modifying the kernel to jump to the alarm handler in
-user space, which will cause test0 to print "alarm!". Don't worry yet
-what happens after the "alarm!" output; it's OK for now if your program
-crashes after printing "alarm!".</p>
+<p>Get started by modifying the kernel to jump to the alarm handler in user space, which will cause test0 to print “alarm!”. Don’t worry yet what happens after the “alarm!” output; it’s OK for now if your program crashes after printing “alarm!”.</p>
 </blockquote>
-<p>"通过修改内核跳转至用户空间的 alarm handler 开始，这会使 test0() 打印
-'alarm!'。不要担心在 test0() 输出 'alarm!'
-之后发生的东西，其实你的程序在打印 'alarm!'
-之后崩溃也是正常的（注：因为现在只完成了 test0）"</p>
+<p>“通过修改内核跳转至用户空间的 alarm handler 开始，这会使 test0() 打印 ‘alarm!’。不要担心在 test0() 输出 ‘alarm!’ 之后发生的东西，其实你的程序在打印 ‘alarm!’ 之后崩溃也是正常的（注：因为现在只完成了 test0）”</p>
 <blockquote>
-<p>Chances are that alarmtest crashes in test0 or test1 after it prints
-"alarm!", or that alarmtest (eventually) prints "test1 failed", or that
-alarmtest exits without printing "test1 passed". To fix this, you must
-ensure that, when the alarm handler is done, control returns to the
-instruction at which the user program was originally interrupted by the
-timer interrupt. You must ensure that the register contents are restored
-to the values they held at the time of the interrupt, so that the user
-program can continue undisturbed after the alarm. Finally, you should
-"re-arm" the alarm counter after each time it goes off, so that the
-handler is called periodically.</p>
+<p>Chances are that alarmtest crashes in test0 or test1 after it prints “alarm!”, or that alarmtest (eventually) prints “test1 failed”, or that alarmtest exits without printing “test1 passed”. To fix this, you must ensure that, when the alarm handler is done, control returns to the instruction at which the user program was originally interrupted by the timer interrupt. You must ensure that the register contents are restored to the values they held at the time of the interrupt, so that the user program can continue undisturbed after the alarm. Finally, you should “re-arm” the alarm counter after each time it goes off, so that the handler is called periodically.</p>
 </blockquote>
-<p>"（上面那个测试的）现象是正常的，比如：alarmtest 执行完 test0() 或
-test1() 并打印完 'alarm!' 之后崩溃；或者 alarmtest 打印 'test1
-failed'，又或者 alarmtest 没有打印 'test1 passed'
-就退出。为了修复这个问题，你必须确保 alarm handler
-完成之后控制流能够返回程序原来被时间片中断打断的地方。同时你也要确保寄存器内容能够恢复回中断的时候保存的值，因为这样做才能使得用户程序在
-alarm 之后能够不被扰乱地继续向后执行。最后，你应该在每次离开后复位 alarm
-counter（注：alarmtest.c 里面的一个 static 变量），以便 handler
-可以周期性地调用"</p>
+<p>“（上面那个测试的）现象是正常的，比如：alarmtest 执行完 test0() 或 test1() 并打印完 ‘alarm!’ 之后崩溃；或者 alarmtest 打印 ‘test1 failed’，又或者 alarmtest 没有打印 ‘test1 passed’ 就退出。为了修复这个问题，你必须确保 alarm handler 完成之后控制流能够返回程序原来被时间片中断打断的地方。同时你也要确保寄存器内容能够恢复回中断的时候保存的值，因为这样做才能使得用户程序在 alarm 之后能够不被扰乱地继续向后执行。最后，你应该在每次离开后复位 alarm counter（注：alarmtest.c 里面的一个 static 变量），以便 handler 可以周期性地调用”</p>
 <blockquote>
-<p>As a starting point, we've made a design decision for you: user alarm
-handlers are required to call the sigreturn system call when they have
-finished. Have a look at periodic in alarmtest.c for an example. This
-means that you can add code to usertrap and sys_sigreturn that cooperate
-to cause the user process to resume properly after it has handled the
-alarm.</p>
+<p>As a starting point, we’ve made a design decision for you: user alarm handlers are required to call the sigreturn system call when they have finished. Have a look at periodic in alarmtest.c for an example. This means that you can add code to usertrap and sys_sigreturn that cooperate to cause the user process to resume properly after it has handled the alarm.</p>
 </blockquote>
-<p>"我们为你设计了一个解决思路，你可以从这一点着手考虑。这就是，用户
-alarm handler 在它们每次执行完成后，都需要调用 sigreturn()
-系统调用返回。详细情况请阅读 <code>user/alarmtest.c</code> 里面的
-periodic()。这意味着你需要为 usertrap() 和 sys_sigreturn()
-增加的代码是能够相互协作起来，最终使用户进程在处理完 alarm
-之后在恰当的地方继续执行下去"</p>
-<p>一口气做了一年的阅读理解，现在来总结下这个 assignment
-的任务要求：</p>
+<p>“我们为你设计了一个解决思路，你可以从这一点着手考虑。这就是，用户 alarm handler 在它们每次执行完成后，都需要调用 sigreturn() 系统调用返回。详细情况请阅读 <code>user/alarmtest.c</code> 里面的 periodic()。这意味着你需要为 usertrap() 和 sys_sigreturn() 增加的代码是能够相互协作起来，最终使用户进程在处理完 alarm 之后在恰当的地方继续执行下去”</p>
+<p>一口气做了一年的阅读理解，现在来总结下这个 assignment 的任务要求：</p>
 <ul>
-<li>首先核心功能是，每经过一段时间，内核需要跳转至另外的函数调用即
-handler</li>
-<li>test0 负责处理怎么跳转的，其实 test0
-只需管跳转就好，不需要考虑返回的问题就已经能够 pass 了</li>
+<li>首先核心功能是，每经过一段时间，内核需要跳转至另外的函数调用即 handler</li>
+<li>test0 负责处理怎么跳转的，其实 test0 只需管跳转就好，不需要考虑返回的问题就已经能够 pass 了</li>
 <li>test1/test2 负责处理怎么返回，要求能在中断的地方返回</li>
 </ul>
-<p>理论基础是 traps 的调用过程，也即是 <a
-target="_blank" rel="noopener" href="https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec06-isolation-and-system-call-entry-exit-robert">lec
-6: Isolation &amp; system call entry/exit</a> 的内容</p>
-<p><br></p>
-<h3 id="提示-1">提示</h3>
+<p>理论基础是 traps 的调用过程，也即是 <a target="_blank" rel="noopener" href="https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec06-isolation-and-system-call-entry-exit-robert">lec 6: Isolation &amp; system call entry/exit</a> 的内容</p>
+<br>
+<h3 id="提示-v14"><a class="header-anchor" href="#提示-v14"></a>提示</h3>
 <p>以下是 test0 的提示：</p>
 <blockquote>
-<p>Your sys_sigalarm() should store the alarm interval and the pointer
-to the handler function in new fields in the proc structure (in
-kernel/proc.h).</p>
+<p>Your sys_sigalarm() should store the alarm interval and the pointer to the handler function in new fields in the proc structure (in kernel/proc.h).</p>
 </blockquote>
-<p>"你的 sys_sigalarm() 需要在 <code>proc</code> 结构体（位于
-<code>kernel/proc.h</code>）的新字段中保存 alarm 的时间间隔和 handler
-函数指针"</p>
+<p>“你的 sys_sigalarm() 需要在 <code>proc</code> 结构体（位于 <code>kernel/proc.h</code>）的新字段中保存 alarm 的时间间隔和 handler 函数指针”</p>
 <blockquote>
-<p>You'll need to keep track of how many ticks have passed since the
-last call (or are left until the next call) to a process's alarm
-handler; you'll need a new field in struct proc for this too. You can
-initialize proc fields in allocproc() in proc.c.</p>
+<p>You’ll need to keep track of how many ticks have passed since the last call (or are left until the next call) to a process’s alarm handler; you’ll need a new field in struct proc for this too. You can initialize proc fields in allocproc() in proc.c.</p>
 </blockquote>
-<p>"你需要为一个进程的 alarm handler
-保持追踪，记录下自从上次结束后过去了多少个
-ticks，或者距下次调用开始时还剩余多少个 ticks。同时，你也需要在
-<code>proc</code> 结构体里为这个功能新增一个字段。你可能要在
-<code>kernel/proc.c</code> 的 allocproc() 里面初始化 <code>proc</code>
-结构体的这些字段"</p>
+<p>“你需要为一个进程的 alarm handler 保持追踪，记录下自从上次结束后过去了多少个 ticks，或者距下次调用开始时还剩余多少个 ticks。同时，你也需要在 <code>proc</code> 结构体里为这个功能新增一个字段。你可能要在 <code>kernel/proc.c</code> 的 allocproc() 里面初始化 <code>proc</code> 结构体的这些字段”</p>
 <blockquote>
-<p>Every tick, the hardware clock forces an interrupt, which is handled
-in usertrap() in kernel/trap.c.</p>
+<p>Every tick, the hardware clock forces an interrupt, which is handled in usertrap() in kernel/trap.c.</p>
 </blockquote>
-<p>"硬件计时器强制中断的每个 tick 位于 <code>kernel/trap.c</code> 的
-usertrap() 里进行处理"</p>
+<p>“硬件计时器强制中断的每个 tick 位于 <code>kernel/trap.c</code> 的 usertrap() 里进行处理”</p>
 <blockquote>
-<p>You only want to manipulate a process's alarm ticks if there's a
-timer interrupt; you want something like<br />
+<p>You only want to manipulate a process’s alarm ticks if there’s a timer interrupt; you want something like<br>
     <code>if(which_dev == 2) ...</code></p>
 </blockquote>
-<p>"如果出现了一个时间片中断你只需要处理进程的 alarm
-tick，像上面那个样子"</p>
+<p>“如果出现了一个时间片中断你只需要处理进程的 alarm tick，像上面那个样子”</p>
 <blockquote>
-<p>Only invoke the alarm function if the process has a timer
-outstanding. Note that the address of the user's alarm function might be
-0 (e.g., in user/alarmtest.asm, periodic is at address 0).</p>
+<p>Only invoke the alarm function if the process has a timer outstanding. Note that the address of the user’s alarm function might be 0 (e.g., in user/alarmtest.asm, periodic is at address 0).</p>
 </blockquote>
-<p>"只有在时间片到达时间间隔时才调用 alarm，注意用户 alarm
-函数的地址可能是 0（例如，在 <code>user/alarmtest.asm</code>
-里面，periodic() 的地址是 0）" ———— 注，这里就是说，sigalarm()
-第二个参数传入 0 是符合逻辑的</p>
+<p>“只有在时间片到达时间间隔时才调用 alarm，注意用户 alarm 函数的地址可能是 0（例如，在 <code>user/alarmtest.asm</code> 里面，periodic() 的地址是 0）” ———— 注，这里就是说，sigalarm() 第二个参数传入 0 是符合逻辑的</p>
 <blockquote>
-<p>You'll need to modify usertrap() so that when a process's alarm
-interval expires, the user process executes the handler function. When a
-trap on the RISC-V returns to user space, what determines the
-instruction address at which user-space code resumes execution?</p>
+<p>You’ll need to modify usertrap() so that when a process’s alarm interval expires, the user process executes the handler function. When a trap on the RISC-V returns to user space, what determines the instruction address at which user-space code resumes execution?</p>
 </blockquote>
-<p>"你要修改 usertrap()，以便在进程的 alarm
-时间间隔到了，用户进程可以运行 handler。请思考一下这个问题，当一个在
-risc-v 的 trap
-返回到用户空间时，是什么决定了继续在用户空间执行的指令地址？" ————
-注：epc 寄存器</p>
-<p><br></p>
+<p>“你要修改 usertrap()，以便在进程的 alarm 时间间隔到了，用户进程可以运行 handler。请思考一下这个问题，当一个在 risc-v 的 trap 返回到用户空间时，是什么决定了继续在用户空间执行的指令地址？” ———— 注：epc 寄存器</p>
+<br>
 <p>以下是 test1/test2 的提示：</p>
 <blockquote>
-<p>Your solution will require you to save and restore registers---what
-registers do you need to save and restore to resume the interrupted code
-correctly? (Hint: it will be many).</p>
+<p>Your solution will require you to save and restore registers—what registers do you need to save and restore to resume the interrupted code correctly? (Hint: it will be many).</p>
 </blockquote>
-<p>"你的实现需要涉及保存和恢复寄存器现场 ————
-也请想一想，到底有什么寄存器你要为中断代码继续执行所要保存以及恢复的（可能很多）"</p>
+<p>“你的实现需要涉及保存和恢复寄存器现场 ———— 也请想一想，到底有什么寄存器你要为中断代码继续执行所要保存以及恢复的（可能很多）”</p>
 <blockquote>
-<p>Have usertrap save enough state in struct proc when the timer goes
-off that sigreturn can correctly return to the interrupted user
-code.</p>
+<p>Have usertrap save enough state in struct proc when the timer goes off that sigreturn can correctly return to the interrupted user code.</p>
 </blockquote>
-<p>"在时间片耗尽的时候 usertrap() 在 <code>proc</code>
-结构体里面保存了足够的状态吗？以使 sigreturn()
-能够正确返回到被中断的用户代码？"</p>
+<p>“在时间片耗尽的时候 usertrap() 在 <code>proc</code> 结构体里面保存了足够的状态吗？以使 sigreturn() 能够正确返回到被中断的用户代码？”</p>
 <blockquote>
-<p>Prevent re-entrant calls to the handler----if a handler hasn't
-returned yet, the kernel shouldn't call it again. test2 tests this.</p>
+<p>Prevent re-entrant calls to the handler----if a handler hasn’t returned yet, the kernel shouldn’t call it again. test2 tests this.</p>
 </blockquote>
-<p>"阻止重复调用未完成的 handler，即如果一个 handler
-尚未返回，内核不应该再次调用。test2 测试这一步骤"</p>
-<p><br></p>
-<h3 id="summary-2">Summary</h3>
+<p>“阻止重复调用未完成的 handler，即如果一个 handler 尚未返回，内核不应该再次调用。test2 测试这一步骤”</p>
+<br>
+<h3 id="Summary-v17"><a class="header-anchor" href="#Summary-v17"></a>Summary</h3>
 <p>好了，现在我们把第二年的阅读理解也做完了，所以到点总结下上面的提示说了什么内容吧（其实把提示一个个做完，就是完成了）：</p>
 <ul>
-<li>首先要安装系统调用，这里推荐下我前几篇 blog 总结的 <a
-target="_blank" rel="noopener" href="https://horbyn.github.io/2022/03/16/xv6-2/#/INTRO-v2">系统调用安装流程（位于开头处）</a></li>
-<li>在 <code>proc</code>
-结构体里面新增三个字段，分别是：interval（记录时间间隔）、handler（记录
-handler 函数调用的指针）以及 ticks（记录 tick 累加和）</li>
-<li>在 <code>kernel/proc.c</code> 的 usertrap()
-里面关于时间片中断的地方，加入 test0 的处理逻辑 ————
-就是每耗尽一个时间片，tick 累加和累加，然后若 tick
-累加和等于时间间隔就跳转去 handler</li>
-<li>强行覆盖 epc 寄存器，这样时间片中断执行完后，就能够跳转去 handler
-的地址了（后面 test1/test2 再考虑返回的处理逻辑）————
-这是问你哪个寄存器决定了返回到用户空间继续执行那个提示的答案</li>
-<li>继续在 <code>proc</code> 结构体里面新增一个字段，用以保存整个
-<code>trapframe</code> 结构体 ————
-这是问你要保存和恢复什么寄存器那个提示的答案 ————
-我是这么考虑的，如果你忽略跳转地址的强行覆盖，那这就是一次完整的中断过程。比如
-test0() 执行时发生了时间片中断，那么忽略强制跳转
-handler，下次返回的时候寄存器仍然是 test0()
-离开时候的值。但现在我们强行跳转至 handler，也即时间片中断返回后我们是
-"回到" 了 periodic() 函数里面，但是实际上寄存器环境依然是 test0()
-的，那这就出大问题了。因为 periodic() 会执行一些指令，这些指令会改变之前
-test0() 的现场，就算最终执行流返回 test0() 也没意义了，因为 test0()
-的现场已经被破坏了。所以，handler
-的现场需要另外保存，所以我们需要新增一整个 <code>trapframe</code>
-结构体字段。下图会展示这样一个调用过程</li>
-<li>运用一些手段控制未执行完的 handler 重复调用的问题 ————
-我的想法是设一个标志，用以标识可不可以调用 handler。问题就变成了，在
-sigreturn() 的时候打开标志，允许下一次 handler 的调用，而在调用 handler
-的同时清楚标志，表示现在正在执行 handler，不允许继续调用</li>
+<li>首先要安装系统调用，这里推荐下我前几篇 blog 总结的 <a target="_blank" rel="noopener" href="https://horbyn.github.io/2022/03/16/xv6-2/#/INTRO-v2">系统调用安装流程（位于开头处）</a></li>
+<li>在 <code>proc</code> 结构体里面新增三个字段，分别是：interval（记录时间间隔）、handler（记录 handler 函数调用的指针）以及 ticks（记录 tick 累加和）</li>
+<li>在 <code>kernel/proc.c</code> 的 usertrap() 里面关于时间片中断的地方，加入 test0 的处理逻辑 ———— 就是每耗尽一个时间片，tick 累加和累加，然后若 tick 累加和等于时间间隔就跳转去 handler</li>
+<li>强行覆盖 epc 寄存器，这样时间片中断执行完后，就能够跳转去 handler 的地址了（后面 test1/test2 再考虑返回的处理逻辑）———— 这是问你哪个寄存器决定了返回到用户空间继续执行那个提示的答案</li>
+<li>继续在 <code>proc</code> 结构体里面新增一个字段，用以保存整个 <code>trapframe</code> 结构体 ———— 这是问你要保存和恢复什么寄存器那个提示的答案 ———— 我是这么考虑的，如果你忽略跳转地址的强行覆盖，那这就是一次完整的中断过程。比如 test0() 执行时发生了时间片中断，那么忽略强制跳转 handler，下次返回的时候寄存器仍然是 test0() 离开时候的值。但现在我们强行跳转至 handler，也即时间片中断返回后我们是 “回到” 了 periodic() 函数里面，但是实际上寄存器环境依然是 test0() 的，那这就出大问题了。因为 periodic() 会执行一些指令，这些指令会改变之前 test0() 的现场，就算最终执行流返回 test0() 也没意义了，因为 test0() 的现场已经被破坏了。所以，handler 的现场需要另外保存，所以我们需要新增一整个 <code>trapframe</code> 结构体字段。下图会展示这样一个调用过程</li>
+<li>运用一些手段控制未执行完的 handler 重复调用的问题 ———— 我的想法是设一个标志，用以标识可不可以调用 handler。问题就变成了，在 sigreturn() 的时候打开标志，允许下一次 handler 的调用，而在调用 handler 的同时清楚标志，表示现在正在执行 handler，不允许继续调用</li>
 </ul>
 <p>以下这张图展示了倒数第二点我想表达的逻辑：</p>
-<p><img src="https://s2.loli.net/2022/03/29/fN8HxZI1i23Dk9S.jpg" /></p>
-<p>如图所示，黑线表示调用跳转的执行流，紫线表示调用返回的执行流，红框框表示了强制覆盖返回地址的逻辑。实际上最后一步（第
-⑤ 步）应该返回 test0()，此时的寄存器现场仍然是 test0() 的，但实际上是
-"返回" 了 handler，所以需要另外开辟一个 trapframe 来保存 handler
-自己的现场</p>
-<p><br></p>
-<h3 id="solution-2">Solution</h3>
+<p><img src="https://s2.loli.net/2022/03/29/fN8HxZI1i23Dk9S.jpg" alt=""></p>
+<p>如图所示，黑线表示调用跳转的执行流，紫线表示调用返回的执行流，红框框表示了强制覆盖返回地址的逻辑。实际上最后一步（第 ⑤ 步）应该返回 test0()，此时的寄存器现场仍然是 test0() 的，但实际上是 “返回” 了 handler，所以需要另外开辟一个 trapframe 来保存 handler 自己的现场</p>
+<br>
+<h3 id="Solution-v18"><a class="header-anchor" href="#Solution-v18"></a>Solution</h3>
 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># path: ./Makefile</span></span><br><span class="line">UPROGS=\</span><br><span class="line">    ...</span><br><span class="line">    $U/_alarmtest\</span><br></pre></td></tr></table></figure>
 <figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># path: user/usys.pl</span></span><br><span class="line">entry(<span class="string">&quot;sigalarm&quot;</span>);</span><br><span class="line">entry(<span class="string">&quot;sigreturn&quot;</span>);</span><br></pre></td></tr></table></figure>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/syscall.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SYS_sigalarm  22</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SYS_sigreturn 23</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/syscall.c</span></span><br><span class="line"><span class="function"><span class="keyword">extern</span> uint64 <span class="title">sys_sigalarm</span><span class="params">(<span class="type">void</span>)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">extern</span> uint64 <span class="title">sys_sigreturn</span><span class="params">(<span class="type">void</span>)</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="function"><span class="type">static</span> <span class="title">uint64</span> <span class="params">(*syscalls[])</span><span class="params">(<span class="type">void</span>)</span> </span>= &#123;</span><br><span class="line">...</span><br><span class="line">[SYS_sigalarm] sys_sigalarm,</span><br><span class="line">[SYS_sigreturn] sys_sigreturn,</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: user/user.h</span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">sigalarm</span><span class="params">(<span class="type">int</span>, <span class="type">void</span> (*)(<span class="type">void</span>))</span></span>;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">sigreturn</span><span class="params">(<span class="type">void</span>)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/proc.h</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">proc</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// lab traps, test0</span></span><br><span class="line">    <span class="type">int</span> interval;</span><br><span class="line">    uint64 handler;</span><br><span class="line">    <span class="type">int</span> ticks;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// lab traps, test1</span></span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">trapframe</span> oritf;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// lab traps, test2</span></span><br><span class="line">    <span class="type">int</span> cannot;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/proc.c</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">struct</span> <span class="title class_">proc</span>*</span><br><span class="line"><span class="built_in">allocproc</span>(<span class="type">void</span>) &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// lab traps, test0</span></span><br><span class="line">    p-&gt;interval = <span class="number">0</span>;</span><br><span class="line">    p-&gt;handler = <span class="number">0</span>;</span><br><span class="line">    p-&gt;ticks = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> p;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/trap.c</span></span><br><span class="line"><span class="function"><span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">usertrap</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">r_scause</span>() == <span class="number">8</span>) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span>((which_dev = <span class="built_in">devintr</span>()) != <span class="number">0</span>)&#123;</span><br><span class="line">        <span class="keyword">if</span> (which_dev == <span class="number">2</span>) &#123;</span><br><span class="line">        <span class="comment">// lab traps, test0</span></span><br><span class="line">        <span class="comment">// 当时间片耗尽（即过去了一个 ticks），需要处理 interval</span></span><br><span class="line">        p-&gt;ticks++;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 检查当前 ticks 累加值是否到数了</span></span><br><span class="line">        <span class="keyword">if</span> (p-&gt;interval == p-&gt;ticks &amp;&amp; p-&gt;cannot != <span class="number">1</span>) &#123;</span><br><span class="line">            p-&gt;ticks = <span class="number">0</span>;</span><br><span class="line">            <span class="comment">// 为什么可以强行改变原来的返回地址？</span></span><br><span class="line">            <span class="comment">// 其实需要 test0、test1、test2 连起来一起看</span></span><br><span class="line">            <span class="comment">// test0 只管改变执行方向，test1/2 负责返回</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">// test1/2:</span></span><br><span class="line">            <span class="built_in">memmove</span>(&amp;p-&gt;oritf, p-&gt;trapframe, <span class="built_in">sizeof</span>(<span class="keyword">struct</span> trapframe));</span><br><span class="line">            p-&gt;trapframe-&gt;epc = p-&gt;handler;</span><br><span class="line">            <span class="comment">// test 2:</span></span><br><span class="line">            p-&gt;cannot = <span class="number">1</span>;<span class="comment">// cannot</span></span><br><span class="line">        &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;usertrap(): unexpected scause %p pid=%d\n&quot;</span>, <span class="built_in">r_scause</span>(), p-&gt;pid);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;            sepc=%p stval=%p\n&quot;</span>, <span class="built_in">r_sepc</span>(), <span class="built_in">r_stval</span>());</span><br><span class="line">        p-&gt;killed = <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><br></p>
-<h2 id="写在后面">写在后面</h2>
+<br>
+<h2 id="写在后面"><a class="header-anchor" href="#写在后面"></a>写在后面</h2>
 <p>共耗时 15h26m</p>
 
     </article>
@@ -1141,7 +913,7 @@ sigreturn() 的时候打开标志，允许下一次 handler 的调用，而在�
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#lab"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#risc-v-assembly-easy"><span class="toc-number">2.</span> <span class="toc-text">RISC-V assembly (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82"><span class="toc-number">2.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary"><span class="toc-number">2.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution"><span class="toc-number">2.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#backtrace-moderate"><span class="toc-number">3.</span> <span class="toc-text">Backtrace (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA"><span class="toc-number">3.1.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary-1"><span class="toc-number">3.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-1"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#alarm-hard"><span class="toc-number">4.</span> <span class="toc-text">Alarm (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-1"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-1"><span class="toc-number">4.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary-2"><span class="toc-number">4.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-2"><span class="toc-number">4.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E5%90%8E%E9%9D%A2"><span class="toc-number">5.</span> <span class="toc-text">写在后面</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB-v6"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RISC-V-assembly-EASY"><span class="toc-number">2.</span> <span class="toc-text">RISC-V assembly (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v15"><span class="toc-number">2.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v15"><span class="toc-number">2.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v16"><span class="toc-number">2.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Backtrace-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">Backtrace (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v13"><span class="toc-number">3.1.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v16"><span class="toc-number">3.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v17"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Alarm-HARD"><span class="toc-number">4.</span> <span class="toc-text">Alarm (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v16"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v14"><span class="toc-number">4.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v17"><span class="toc-number">4.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v18"><span class="toc-number">4.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E5%90%8E%E9%9D%A2"><span class="toc-number">5.</span> <span class="toc-text">写在后面</span></a></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -1215,7 +987,14 @@ sigreturn() 的时候打开标志，允许下一次 handler 的调用，而在�
         
         
         
+        
+        
+        
+        
+        
     
+        
+        
         
         
         
@@ -1284,7 +1063,7 @@ sigreturn() 的时候打开标志，允许下一次 handler 的调用，而在�
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 12
+        Total : 13
         </div>
         <!-- search  -->
         
@@ -1298,6 +1077,12 @@ sigreturn() 的时候打开标志，允许下一次 handler 的调用，而在�
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
             
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/11</span>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6⌋ lab 7：networking</a>
+        </li>
+    
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/05</span>
