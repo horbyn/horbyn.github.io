@@ -21,7 +21,7 @@
     <meta name="description" content="">
     <meta name="description" content="综合来说，虽然有一个 assignment 标记着困难难度，但技术上的困难几乎没有，更多的应该是文字多步骤多，不过确实需要知道 trap 的程序流，否则可能会无从下手">
 <meta property="og:type" content="article">
-<meta property="og:title" content="⌈xv6⌋ lab 4：Traps">
+<meta property="og:title" content="⌈xv6-fall2021⌋ lab 4：Traps">
 <meta property="og:url" content="http://example.com/2022/03/29/xv6-4/">
 <meta property="og:site_name">
 <meta property="og:description" content="综合来说，虽然有一个 assignment 标记着困难难度，但技术上的困难几乎没有，更多的应该是文字多步骤多，不过确实需要知道 trap 的程序流，否则可能会无从下手">
@@ -36,7 +36,7 @@
 <meta property="og:image" content="https://s2.loli.net/2022/03/29/eXWxhERCSfl9P8U.jpg">
 <meta property="og:image" content="https://s2.loli.net/2022/03/29/fN8HxZI1i23Dk9S.jpg">
 <meta property="article:published_time" content="2022-03-29T15:09:43.000Z">
-<meta property="article:modified_time" content="2022-04-05T14:04:20.690Z">
+<meta property="article:modified_time" content="2022-04-15T10:42:15.693Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="xv6">
 <meta name="twitter:card" content="summary">
@@ -45,7 +45,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <link rel="icon" href="/assets/link.png">
     
-    <title>⌈xv6⌋ lab 4：Traps · HorbynzZ</title>
+    <title>⌈xv6-fall2021⌋ lab 4：Traps · HorbynzZ</title>
     <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
 /* This file is meant as a standalone workflow for
 - testing support for link[rel=preload]
@@ -270,7 +270,7 @@
                 <a href="/">Horbynz hub</a>
             </div>
             <div class="post-title header-element">
-                <a href="#" class="post-name">⌈xv6⌋ lab 4：Traps</a>
+                <a href="#" class="post-name">⌈xv6-fall2021⌋ lab 4：Traps</a>
             </div>
         </div>
     
@@ -316,7 +316,7 @@
         <h1 class="intro-title">
             <!-- 主页  -->
             
-                ⌈xv6⌋ lab 4：Traps
+                ⌈xv6-fall2021⌋ lab 4：Traps
             <!-- 404 -->
             
         </h1>
@@ -504,11 +504,11 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="LAB-v6"><a class="header-anchor" href="#LAB-v6"></a>LAB</h2>
+        <h2 id="LAB-v4"><a class="header-anchor" href="#LAB-v4"></a>LAB</h2>
 <p>传送门：<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/traps.html">Lab: traps</a></p>
 <br>
 <h2 id="RISC-V-assembly-EASY"><a class="header-anchor" href="#RISC-V-assembly-EASY"></a>RISC-V assembly (EASY)</h2>
-<h3 id="要求-v15"><a class="header-anchor" href="#要求-v15"></a>要求</h3>
+<h3 id="要求-v11"><a class="header-anchor" href="#要求-v11"></a>要求</h3>
 <blockquote>
 <p>There is a file user/call.c in your xv6 repo. make fs.img compiles it and also produces a readable assembly version of the program in user/call.asm.</p>
 </blockquote>
@@ -523,7 +523,7 @@
 <p>“回答这里的一些问题（将答案保存在 <code>answers-traps.txt</code> 里面）”</p>
 <p>这道题不是编程题，所以直接给答案就行。但是另一方面，我对 riscv 不是很感兴趣（起码目前是这样），我只是想学 <em>operating system principles</em> 而已，而且我手边还有一个 <em>x86 arch kernel</em> 在烂尾。所以在此之前，我只会根据 <em>x86 assembly</em> 的知识大概分享下 <code>user/call.asm</code> 的含义，<strong>仅供参考</strong></p>
 <br>
-<h3 id="Summary-v15"><a class="header-anchor" href="#Summary-v15"></a>Summary</h3>
+<h3 id="Summary-v11"><a class="header-anchor" href="#Summary-v11"></a>Summary</h3>
 <p>真正开始之前先分享几个参考资料：</p>
 <ul>
 <li>第一个是 <a target="_blank" rel="noopener" href="https://msyksphinz-self.github.io/riscv-isadoc/html/index.html">RISC-V ISA</a>，遇到什么指令不懂就查它，需要注意的是 xv6 实验架构是 RV32I/RV64I</li>
@@ -558,7 +558,7 @@
 <p>最后来到 main()，和 f() 一样我这里只摆出注释了</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">void main(void) &#123;</span><br><span class="line">    1c:	addi	sp,sp,-16</span><br><span class="line">    1e:	sd	    ra,8(sp)</span><br><span class="line">    20:	sd	    s0,0(sp)</span><br><span class="line">    22:	addi	s0,sp,16</span><br><span class="line"># 调用 printf()，共三个参数，第一个参数传入</span><br><span class="line"># a0，第二个参数 a1，第三个参数 a2</span><br><span class="line"># 而第一个参数是字符串，根据调用约定：</span><br><span class="line"># 超过两个指针字的参数要传入引用，此处即指针</span><br><span class="line"># 这里编译器给的指针地址是 0x7e8，结合 call.asm</span><br><span class="line"># 开头给出是 .text 段，结尾最后一个地址是 0x7e0</span><br><span class="line"># 大概可以猜出代码段逻辑上是紧邻这个文件后面的，</span><br><span class="line"># 并且 &quot;%d %d\n&quot; 这个字符串就在代码段开头</span><br><span class="line">  printf(&quot;%d %d\n&quot;, f(8)+1, 13);</span><br><span class="line">    24:	li	    a2,13</span><br><span class="line">    26:	li	    a1,12</span><br><span class="line">    28:	auipc	a0,0x0</span><br><span class="line">    2c:	addi	a0,a0,1984 # 7e8 &lt;malloc+0xea&gt;</span><br><span class="line">    30:	auipc	ra,0x0</span><br><span class="line">    34:	jalr	1552(ra) # 640 &lt;printf&gt;</span><br><span class="line"># 调用 exit()，共一个参数，传入 a0</span><br><span class="line">  exit(0);</span><br><span class="line">    38:	li	    a0,0</span><br><span class="line">    3a:	auipc	ra,0x0</span><br><span class="line">    3e:	jalr	638(ra) # 2b8 &lt;exit&gt;</span><br></pre></td></tr></table></figure>
 <br>
-<h3 id="Solution-v16"><a class="header-anchor" href="#Solution-v16"></a>Solution</h3>
+<h3 id="Solution-v11"><a class="header-anchor" href="#Solution-v11"></a>Solution</h3>
 <p>现在让我们重新回到题目中，不难得出：</p>
 <p>注：第一问参考我上面给出的我翻译的 <a target="_blank" rel="noopener" href="https://horbyn.github.io/2022/03/29/trans-1/">《调用约定》一文</a>；第三问的编译地址取决于你自己的 asm 文件</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Eng</span></span><br><span class="line"><span class="number">1.</span> a0-a7; a2</span><br><span class="line"><span class="number">2.</span> <span class="function">at the beginning of <span class="title">main</span><span class="params">()</span>, but it is optimized to <span class="keyword">inline</span> function</span>; <span class="function">no <span class="title">g</span><span class="params">()</span></span></span><br><span class="line"><span class="function">3. 0x640</span></span><br><span class="line"><span class="function">4. 0x38</span></span><br><span class="line"><span class="function">5. &quot;HE110 World&quot;</span>; variable i need to change to <span class="number">0x726C6400</span>; i will change <span class="number">57616</span> to <span class="number">0x10e1</span></span><br><span class="line"><span class="number">6.</span> y is unknown; because y is passed with a2 <span class="keyword">while</span> a2 <span class="keyword">not</span> set, as a result, what variable y to use is a unknown value of a2</span><br><span class="line"></span><br><span class="line"><span class="comment">// Chn</span></span><br><span class="line"><span class="number">1.</span> a0-a7; a2</span><br><span class="line"><span class="number">2.</span> <span class="built_in">main</span>() 开头处，但已被优化成 <span class="keyword">inline</span> 了; 没有 <span class="built_in">g</span>()</span><br><span class="line"><span class="number">3.</span> <span class="number">0x640</span></span><br><span class="line"><span class="number">4.</span> <span class="number">0x38</span></span><br><span class="line"><span class="number">5.</span> <span class="string">&quot;HE110 World&quot;</span>; 变量 i 需要变成 <span class="number">0x726C6400</span>; 需要将 <span class="number">57616</span> 变成 <span class="number">0x10e1</span></span><br><span class="line"><span class="number">6.</span> y 是未知值; 因为 a2 没被设置，却会传递给 y 一个值，最后变量 y 使用了 a2 里面保存的未知值</span><br></pre></td></tr></table></figure>
@@ -589,7 +589,7 @@
 <p>在执行完 <code>bttest</code> 之后，如果你运行 <code>addr2line -e kernle/kernel</code> 或 <code>riscv64-unknown-elf-addr2line -e kernel/kernel</code>，你的 terminal 上显示的地址信息可以稍微有点不同。但不用担心，只要你复制粘贴像上面第二个 shell 输出这样的地址</p>
 <p>你应该可以看到一些东西像上面第三个 shell 输出那样（才算对）&quot;</p>
 <br>
-<h3 id="提示-v13"><a class="header-anchor" href="#提示-v13"></a>提示</h3>
+<h3 id="提示-v11"><a class="header-anchor" href="#提示-v11"></a>提示</h3>
 <blockquote>
 <p>The compiler puts in each stack frame a frame pointer that holds the address of the caller’s frame pointer. Your backtrace should use these frame pointers to walk up the stack and print the saved return address in each stack frame.</p>
 </blockquote>
@@ -624,7 +624,7 @@
 </blockquote>
 <p>“一旦你完成 backtrace()，你可以在 <code>kernel/printf.c</code> 的 panic() 中调用，这样你就可以在内核遭遇 panic 级别错误时看到它的函数调用痕迹”</p>
 <br>
-<h3 id="Summary-v16"><a class="header-anchor" href="#Summary-v16"></a>Summary</h3>
+<h3 id="Summary-v12"><a class="header-anchor" href="#Summary-v12"></a>Summary</h3>
 <p>现在整理下思路吧：</p>
 <ul>
 <li>首先牢记核心任务，就是从当前调用开始，依次打印返回地址，直至追踪到第一个函数</li>
@@ -633,11 +633,11 @@
 </ul>
 <p>理论基础是栈帧结构</p>
 <br>
-<h3 id="Solution-v17"><a class="header-anchor" href="#Solution-v17"></a>Solution</h3>
+<h3 id="Solution-v12"><a class="header-anchor" href="#Solution-v12"></a>Solution</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/defs.h</span></span><br><span class="line"><span class="comment">// printf.c 注释处</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">backtrace</span><span class="params">(<span class="type">void</span>)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/sysproc.c</span></span><br><span class="line"><span class="function">uint64</span></span><br><span class="line"><span class="function"><span class="title">sys_sleep</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">        <span class="built_in">sleep</span>(&amp;ticks, &amp;tickslock);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">backtrace</span>();<span class="comment">// +</span></span><br><span class="line">    <span class="built_in">release</span>(&amp;tickslock);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/printf.c</span></span><br><span class="line"><span class="function"><span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">panic</span><span class="params">(<span class="type">char</span> *s)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="built_in">backtrace</span>();  <span class="comment">// +</span></span><br><span class="line">    panicked = <span class="number">1</span>; <span class="comment">// freeze uart output from other CPUs</span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">backtrace</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;backtrace:\n&quot;</span>);</span><br><span class="line">    <span class="comment">// 当前函数 frame pointer 的地址</span></span><br><span class="line">    uint64 s0 = <span class="built_in">r_fp</span>();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 遍历栈帧</span></span><br><span class="line">    uint64 end = <span class="built_in">PGROUNDUP</span>(s0);</span><br><span class="line">    uint64 framep = s0;</span><br><span class="line">    <span class="keyword">for</span> (;framep &lt; end; ) &#123;</span><br><span class="line">        <span class="comment">// 取偏移 -8 的 return addr</span></span><br><span class="line">        uint64 *retaddr = (uint64 *)(framep - <span class="number">8</span>);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;%p\n&quot;</span>, *retaddr);</span><br><span class="line">        <span class="comment">// 取偏移 -16 的 saved frame pointer</span></span><br><span class="line">        uint64 *savframep = (uint64 *)(framep - <span class="number">16</span>);</span><br><span class="line">        framep = *savframep;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/riscv.h</span></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="keyword">inline</span> uint64</span></span><br><span class="line"><span class="function"><span class="title">r_fp</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    uint64 x;</span><br><span class="line">    <span class="function"><span class="keyword">asm</span> <span class="title">volatile</span><span class="params">(<span class="string">&quot;mv %0, s0&quot;</span> : <span class="string">&quot;=r&quot;</span> (x) )</span></span>;</span><br><span class="line">    <span class="keyword">return</span> x;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <br>
 <h2 id="Alarm-HARD"><a class="header-anchor" href="#Alarm-HARD"></a>Alarm (HARD)</h2>
-<h3 id="要求-v16"><a class="header-anchor" href="#要求-v16"></a>要求</h3>
+<h3 id="要求-v12"><a class="header-anchor" href="#要求-v12"></a>要求</h3>
 <blockquote>
 <p>In this exercise you’ll add a feature to xv6 that periodically alerts a process as it uses CPU time. This might be useful for compute-bound processes that want to limit how much CPU time they chew up, or for processes that want to compute but also want to take some periodic action. More generally, you’ll be implementing a primitive form of user-level interrupt/fault handlers; you could use something similar to handle page faults in the application, for example. Your solution is correct if it passes alarmtest and usertests.</p>
 </blockquote>
@@ -671,7 +671,7 @@
 </ul>
 <p>理论基础是 traps 的调用过程，也即是 <a target="_blank" rel="noopener" href="https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec06-isolation-and-system-call-entry-exit-robert">lec 6: Isolation &amp; system call entry/exit</a> 的内容</p>
 <br>
-<h3 id="提示-v14"><a class="header-anchor" href="#提示-v14"></a>提示</h3>
+<h3 id="提示-v12"><a class="header-anchor" href="#提示-v12"></a>提示</h3>
 <p>以下是 test0 的提示：</p>
 <blockquote>
 <p>Your sys_sigalarm() should store the alarm interval and the pointer to the handler function in new fields in the proc structure (in kernel/proc.h).</p>
@@ -713,7 +713,7 @@
 </blockquote>
 <p>“阻止重复调用未完成的 handler，即如果一个 handler 尚未返回，内核不应该再次调用。test2 测试这一步骤”</p>
 <br>
-<h3 id="Summary-v17"><a class="header-anchor" href="#Summary-v17"></a>Summary</h3>
+<h3 id="Summary-v13"><a class="header-anchor" href="#Summary-v13"></a>Summary</h3>
 <p>好了，现在我们把第二年的阅读理解也做完了，所以到点总结下上面的提示说了什么内容吧（其实把提示一个个做完，就是完成了）：</p>
 <ul>
 <li>首先要安装系统调用，这里推荐下我前几篇 blog 总结的 <a target="_blank" rel="noopener" href="https://horbyn.github.io/2022/03/16/xv6-2/#/INTRO-v2">系统调用安装流程（位于开头处）</a></li>
@@ -727,7 +727,7 @@
 <p><img src="https://s2.loli.net/2022/03/29/fN8HxZI1i23Dk9S.jpg" alt=""></p>
 <p>如图所示，黑线表示调用跳转的执行流，紫线表示调用返回的执行流，红框框表示了强制覆盖返回地址的逻辑。实际上最后一步（第 ⑤ 步）应该返回 test0()，此时的寄存器现场仍然是 test0() 的，但实际上是 “返回” 了 handler，所以需要另外开辟一个 trapframe 来保存 handler 自己的现场</p>
 <br>
-<h3 id="Solution-v18"><a class="header-anchor" href="#Solution-v18"></a>Solution</h3>
+<h3 id="Solution-v13"><a class="header-anchor" href="#Solution-v13"></a>Solution</h3>
 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># path: ./Makefile</span></span><br><span class="line">UPROGS=\</span><br><span class="line">    ...</span><br><span class="line">    $U/_alarmtest\</span><br></pre></td></tr></table></figure>
 <figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># path: user/usys.pl</span></span><br><span class="line">entry(<span class="string">&quot;sigalarm&quot;</span>);</span><br><span class="line">entry(<span class="string">&quot;sigreturn&quot;</span>);</span><br></pre></td></tr></table></figure>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/syscall.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SYS_sigalarm  22</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SYS_sigreturn 23</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/syscall.c</span></span><br><span class="line"><span class="function"><span class="keyword">extern</span> uint64 <span class="title">sys_sigalarm</span><span class="params">(<span class="type">void</span>)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">extern</span> uint64 <span class="title">sys_sigreturn</span><span class="params">(<span class="type">void</span>)</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="function"><span class="type">static</span> <span class="title">uint64</span> <span class="params">(*syscalls[])</span><span class="params">(<span class="type">void</span>)</span> </span>= &#123;</span><br><span class="line">...</span><br><span class="line">[SYS_sigalarm] sys_sigalarm,</span><br><span class="line">[SYS_sigreturn] sys_sigreturn,</span><br><span class="line">...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: user/user.h</span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">sigalarm</span><span class="params">(<span class="type">int</span>, <span class="type">void</span> (*)(<span class="type">void</span>))</span></span>;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">sigreturn</span><span class="params">(<span class="type">void</span>)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/proc.h</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">proc</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// lab traps, test0</span></span><br><span class="line">    <span class="type">int</span> interval;</span><br><span class="line">    uint64 handler;</span><br><span class="line">    <span class="type">int</span> ticks;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// lab traps, test1</span></span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">trapframe</span> oritf;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// lab traps, test2</span></span><br><span class="line">    <span class="type">int</span> cannot;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/proc.c</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">struct</span> <span class="title class_">proc</span>*</span><br><span class="line"><span class="built_in">allocproc</span>(<span class="type">void</span>) &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// lab traps, test0</span></span><br><span class="line">    p-&gt;interval = <span class="number">0</span>;</span><br><span class="line">    p-&gt;handler = <span class="number">0</span>;</span><br><span class="line">    p-&gt;ticks = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> p;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/trap.c</span></span><br><span class="line"><span class="function"><span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">usertrap</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">r_scause</span>() == <span class="number">8</span>) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span>((which_dev = <span class="built_in">devintr</span>()) != <span class="number">0</span>)&#123;</span><br><span class="line">        <span class="keyword">if</span> (which_dev == <span class="number">2</span>) &#123;</span><br><span class="line">        <span class="comment">// lab traps, test0</span></span><br><span class="line">        <span class="comment">// 当时间片耗尽（即过去了一个 ticks），需要处理 interval</span></span><br><span class="line">        p-&gt;ticks++;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 检查当前 ticks 累加值是否到数了</span></span><br><span class="line">        <span class="keyword">if</span> (p-&gt;interval == p-&gt;ticks &amp;&amp; p-&gt;cannot != <span class="number">1</span>) &#123;</span><br><span class="line">            p-&gt;ticks = <span class="number">0</span>;</span><br><span class="line">            <span class="comment">// 为什么可以强行改变原来的返回地址？</span></span><br><span class="line">            <span class="comment">// 其实需要 test0、test1、test2 连起来一起看</span></span><br><span class="line">            <span class="comment">// test0 只管改变执行方向，test1/2 负责返回</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">// test1/2:</span></span><br><span class="line">            <span class="built_in">memmove</span>(&amp;p-&gt;oritf, p-&gt;trapframe, <span class="built_in">sizeof</span>(<span class="keyword">struct</span> trapframe));</span><br><span class="line">            p-&gt;trapframe-&gt;epc = p-&gt;handler;</span><br><span class="line">            <span class="comment">// test 2:</span></span><br><span class="line">            p-&gt;cannot = <span class="number">1</span>;<span class="comment">// cannot</span></span><br><span class="line">        &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;usertrap(): unexpected scause %p pid=%d\n&quot;</span>, <span class="built_in">r_scause</span>(), p-&gt;pid);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;            sepc=%p stval=%p\n&quot;</span>, <span class="built_in">r_sepc</span>(), <span class="built_in">r_stval</span>());</span><br><span class="line">        p-&gt;killed = <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -743,7 +743,7 @@
             <p>Author：<a href="http://example.com">Horbyn</a>
             <p>Link：<a href="http://example.com/2022/03/29/xv6-4/">http://example.com/2022/03/29/xv6-4/</a>
             <p>Publish date：<a href="http://example.com/2022/03/29/xv6-4/">March 29th 2022, 11:09:43 pm</a>
-            <p>Update date：<a href="http://example.com/2022/03/29/xv6-4/">April 5th 2022, 10:04:20 pm</a>
+            <p>Update date：<a href="http://example.com/2022/03/29/xv6-4/">April 15th 2022, 6:42:15 pm</a>
             -->
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
@@ -753,8 +753,8 @@
         <li class="next">
             
                 <div class="nextSlogan">Next Post</div>
-                <a href="/2022/04/04/xv6-5/" title="⌈xv6⌋ lab 5：COW">
-                    <div class="nextTitle">⌈xv6⌋ lab 5：COW</div>
+                <a href="/2022/04/04/xv6-5/" title="⌈xv6-fall2021⌋ lab 5：COW">
+                    <div class="nextTitle">⌈xv6-fall2021⌋ lab 5：COW</div>
                 </a>
             
         </li>
@@ -913,7 +913,7 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB-v6"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RISC-V-assembly-EASY"><span class="toc-number">2.</span> <span class="toc-text">RISC-V assembly (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v15"><span class="toc-number">2.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v15"><span class="toc-number">2.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v16"><span class="toc-number">2.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Backtrace-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">Backtrace (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v13"><span class="toc-number">3.1.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v16"><span class="toc-number">3.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v17"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Alarm-HARD"><span class="toc-number">4.</span> <span class="toc-text">Alarm (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v16"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v14"><span class="toc-number">4.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v17"><span class="toc-number">4.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v18"><span class="toc-number">4.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E5%90%8E%E9%9D%A2"><span class="toc-number">5.</span> <span class="toc-text">写在后面</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB-v4"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#RISC-V-assembly-EASY"><span class="toc-number">2.</span> <span class="toc-text">RISC-V assembly (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v11"><span class="toc-number">2.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v11"><span class="toc-number">2.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v11"><span class="toc-number">2.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Backtrace-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">Backtrace (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v11"><span class="toc-number">3.1.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v12"><span class="toc-number">3.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v12"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Alarm-HARD"><span class="toc-number">4.</span> <span class="toc-text">Alarm (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v12"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v12"><span class="toc-number">4.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v13"><span class="toc-number">4.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v13"><span class="toc-number">4.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E5%90%8E%E9%9D%A2"><span class="toc-number">5.</span> <span class="toc-text">写在后面</span></a></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -992,7 +992,24 @@
         
         
         
+        
+        
+        
+        
+        
     
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -1063,7 +1080,7 @@
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 13
+        Total : 14
         </div>
         <!-- search  -->
         
@@ -1079,20 +1096,26 @@
             
         
         <li class="archive-post-item">
+            <span class="archive-post-date">04/15</span>
+            <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
             <span class="archive-post-date">04/11</span>
-            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6⌋ lab 7：networking</a>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/05</span>
-            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6⌋ lab 6：Multithreading</a>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/04</span>
-            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6⌋ lab 5：COW</a>
+            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
         </li>
     
         
@@ -1104,13 +1127,13 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/29</span>
-            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6⌋ lab 4：Traps</a>
+            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/25</span>
-            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6⌋ lab 3：Page tables</a>
+            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
         </li>
     
         
@@ -1122,7 +1145,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/16</span>
-            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6⌋ lab 2：System calls</a>
+            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
         </li>
     
         
@@ -1134,7 +1157,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">02/28</span>
-            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6⌋ lab 1：Xv6 and Unix utilities</a>
+            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
         </li>
     
         
@@ -1146,7 +1169,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">02/25</span>
-            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6⌋ MIT 6.828 环境配置</a>
+            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
         </li>
     
         

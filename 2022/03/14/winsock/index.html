@@ -689,7 +689,7 @@
 <p>我把每一条消息固定了长度，只因简化处理逻辑。消息分为包头和包体两部分，包头含 <code>type 类型</code>、<code>size 消息长度</code> 两个字段，共 3 Bytes。包体不同类型不同定义：对于类型一，用于封装用户列表，包体全部 128 Bytes 都用来封装用户的 sockaddr_in 结构体，这个数字是根据 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L51">MAX_CLIENT</a> 和 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L55">MSG_SIZE</a> 这两个宏得到的，总是可以囊括全部的用户 sockaddr_in 结构体信息；对于类型二，用于封装聊天信息，包体开头 16 Bytes 用于封装 Client 本地的 sockaddr_in，这样对端才知道消息来自于哪个 IP 哪个端口，剩下的字节均用于封装具体的消息。值得一提的是，虽然聊天信息本身就是字符串，封装时确实也可以用 <code>strcat()</code> 来处理，但我这里以 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L747">以二进制形式封装聊天数据</a> 实测也可以，算是提供另外一个思路。但就像前面说的那样，对字符串使用 <code>memcpy()</code> 前提是确保拷贝长度无误，否则慎用</p>
 <p>以上思路仅供参考，你也可以定义自己喜欢的协议格式，其实剩余的函数就是对照上面的协议格式进行 “封包” 和 “解包” 而已，我就不展开了</p>
 <br>
-<h2 id="写在最后-v3"><a class="header-anchor" href="#写在最后-v3"></a>写在最后</h2>
+<h2 id="写在最后"><a class="header-anchor" href="#写在最后"></a>写在最后</h2>
 <p>我想分享下这个过程中我遇到的两个 bug，是什么现象又是怎么解决的</p>
 <br>
 <h3 id="BUG-1-闪退"><a class="header-anchor" href="#BUG-1-闪退"></a>BUG 1: 闪退</h3>
@@ -736,16 +736,16 @@
         <li class="next">
             
                 <div class="nextSlogan">Next Post</div>
-                <a href="/2022/03/16/xv6-2/" title="⌈xv6⌋ lab 2：System calls">
-                    <div class="nextTitle">⌈xv6⌋ lab 2：System calls</div>
+                <a href="/2022/03/16/xv6-2/" title="⌈xv6-fall2021⌋ lab 2：System calls">
+                    <div class="nextTitle">⌈xv6-fall2021⌋ lab 2：System calls</div>
                 </a>
             
         </li>
         <li class="previous">
             
                 <div class="prevSlogan">Previous Post</div>
-                <a href="/2022/02/28/xv6-1/" title="⌈xv6⌋ lab 1：Xv6 and Unix utilities">
-                    <div class="prevTitle">⌈xv6⌋ lab 1：Xv6 and Unix utilities</div>
+                <a href="/2022/02/28/xv6-1/" title="⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities">
+                    <div class="prevTitle">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</div>
                 </a>
             
         </li>
@@ -896,7 +896,7 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%8B%E7%BB%8D-v2"><span class="toc-number">1.</span> <span class="toc-text">介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LICENSE"><span class="toc-number">2.</span> <span class="toc-text">LICENSE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%BC%94%E7%A4%BA"><span class="toc-number">3.</span> <span class="toc-text">演示</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E6%B5%8B%E8%AF%95"><span class="toc-number">3.1.</span> <span class="toc-text">本地测试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%80%E5%9F%9F%E7%BD%91%E6%B5%8B%E8%AF%95"><span class="toc-number">3.2.</span> <span class="toc-text">局域网测试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BC%BA%E9%99%B7"><span class="toc-number">4.</span> <span class="toc-text">缺陷</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E6%AC%A1%E5%BC%80%E5%8F%91"><span class="toc-number">5.</span> <span class="toc-text">二次开发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%9C%80%E6%B1%82%E5%88%86%E6%9E%90"><span class="toc-number">6.</span> <span class="toc-text">需求分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%86%E5%A4%87%E7%9F%A5%E8%AF%86"><span class="toc-number">7.</span> <span class="toc-text">准备知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-Framework"><span class="toc-number">7.1.</span> <span class="toc-text">Win32 Framework</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-Controls"><span class="toc-number">7.2.</span> <span class="toc-text">Win32 Controls</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Winsock-Framework"><span class="toc-number">7.3.</span> <span class="toc-text">Winsock Framework</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Select-Model-Nonblocking"><span class="toc-number">7.4.</span> <span class="toc-text">Select Model &amp;&amp; Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E8%BE%B9%E7%95%8C"><span class="toc-number">7.5.</span> <span class="toc-text">消息边界</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%A0%E8%BE%93%E4%BA%8C%E8%BF%9B%E5%88%B6"><span class="toc-number">7.6.</span> <span class="toc-text">传输二进制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF"><span class="toc-number">8.</span> <span class="toc-text">实现思路</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-%E6%B6%88%E6%81%AF%E5%BE%AA%E7%8E%AF"><span class="toc-number">8.1.</span> <span class="toc-text">Win32 消息循环</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%8D%E5%8A%A1%E5%99%A8%E9%80%BB%E8%BE%91"><span class="toc-number">8.2.</span> <span class="toc-text">服务器逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ServerConfig"><span class="toc-number">8.3.</span> <span class="toc-text">ServerConfig()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ServerRun"><span class="toc-number">8.4.</span> <span class="toc-text">ServerRun()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91"><span class="toc-number">8.5.</span> <span class="toc-text">客户端逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8D%8F%E8%AE%AE"><span class="toc-number">8.6.</span> <span class="toc-text">自定义协议</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v3"><span class="toc-number">9.</span> <span class="toc-text">写在最后</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#BUG-1-%E9%97%AA%E9%80%80"><span class="toc-number">9.1.</span> <span class="toc-text">BUG 1: 闪退</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BUG-2-%E6%97%A0%E5%93%8D%E5%BA%94"><span class="toc-number">9.2.</span> <span class="toc-text">BUG 2: 无响应</span></a></li></ol></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%8B%E7%BB%8D-v2"><span class="toc-number">1.</span> <span class="toc-text">介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LICENSE"><span class="toc-number">2.</span> <span class="toc-text">LICENSE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%BC%94%E7%A4%BA"><span class="toc-number">3.</span> <span class="toc-text">演示</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E6%B5%8B%E8%AF%95"><span class="toc-number">3.1.</span> <span class="toc-text">本地测试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%80%E5%9F%9F%E7%BD%91%E6%B5%8B%E8%AF%95"><span class="toc-number">3.2.</span> <span class="toc-text">局域网测试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BC%BA%E9%99%B7"><span class="toc-number">4.</span> <span class="toc-text">缺陷</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E6%AC%A1%E5%BC%80%E5%8F%91"><span class="toc-number">5.</span> <span class="toc-text">二次开发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%9C%80%E6%B1%82%E5%88%86%E6%9E%90"><span class="toc-number">6.</span> <span class="toc-text">需求分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%86%E5%A4%87%E7%9F%A5%E8%AF%86"><span class="toc-number">7.</span> <span class="toc-text">准备知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-Framework"><span class="toc-number">7.1.</span> <span class="toc-text">Win32 Framework</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-Controls"><span class="toc-number">7.2.</span> <span class="toc-text">Win32 Controls</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Winsock-Framework"><span class="toc-number">7.3.</span> <span class="toc-text">Winsock Framework</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Select-Model-Nonblocking"><span class="toc-number">7.4.</span> <span class="toc-text">Select Model &amp;&amp; Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E8%BE%B9%E7%95%8C"><span class="toc-number">7.5.</span> <span class="toc-text">消息边界</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%A0%E8%BE%93%E4%BA%8C%E8%BF%9B%E5%88%B6"><span class="toc-number">7.6.</span> <span class="toc-text">传输二进制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF"><span class="toc-number">8.</span> <span class="toc-text">实现思路</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-%E6%B6%88%E6%81%AF%E5%BE%AA%E7%8E%AF"><span class="toc-number">8.1.</span> <span class="toc-text">Win32 消息循环</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%8D%E5%8A%A1%E5%99%A8%E9%80%BB%E8%BE%91"><span class="toc-number">8.2.</span> <span class="toc-text">服务器逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ServerConfig"><span class="toc-number">8.3.</span> <span class="toc-text">ServerConfig()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ServerRun"><span class="toc-number">8.4.</span> <span class="toc-text">ServerRun()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91"><span class="toc-number">8.5.</span> <span class="toc-text">客户端逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8D%8F%E8%AE%AE"><span class="toc-number">8.6.</span> <span class="toc-text">自定义协议</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">9.</span> <span class="toc-text">写在最后</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#BUG-1-%E9%97%AA%E9%80%80"><span class="toc-number">9.1.</span> <span class="toc-text">BUG 1: 闪退</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BUG-2-%E6%97%A0%E5%93%8D%E5%BA%94"><span class="toc-number">9.2.</span> <span class="toc-text">BUG 2: 无响应</span></a></li></ol></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -975,7 +975,24 @@
         
         
         
+        
+        
+        
+        
+        
     
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -1046,7 +1063,7 @@
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 13
+        Total : 14
         </div>
         <!-- search  -->
         
@@ -1062,20 +1079,26 @@
             
         
         <li class="archive-post-item">
+            <span class="archive-post-date">04/15</span>
+            <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
             <span class="archive-post-date">04/11</span>
-            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6⌋ lab 7：networking</a>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/05</span>
-            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6⌋ lab 6：Multithreading</a>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/04</span>
-            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6⌋ lab 5：COW</a>
+            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
         </li>
     
         
@@ -1087,13 +1110,13 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/29</span>
-            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6⌋ lab 4：Traps</a>
+            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/25</span>
-            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6⌋ lab 3：Page tables</a>
+            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
         </li>
     
         
@@ -1105,7 +1128,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/16</span>
-            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6⌋ lab 2：System calls</a>
+            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
         </li>
     
         
@@ -1117,7 +1140,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">02/28</span>
-            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6⌋ lab 1：Xv6 and Unix utilities</a>
+            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
         </li>
     
         
@@ -1129,7 +1152,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">02/25</span>
-            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6⌋ MIT 6.828 环境配置</a>
+            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
         </li>
     
         

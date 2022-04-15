@@ -21,7 +21,7 @@
     <meta name="description" content="">
     <meta name="description" content="本次 lab 对应三个 moderate 难度的任务，关系线程调度、如何加锁等原理">
 <meta property="og:type" content="article">
-<meta property="og:title" content="⌈xv6⌋ lab 6：Multithreading">
+<meta property="og:title" content="⌈xv6-fall2021⌋ lab 6：Multithreading">
 <meta property="og:url" content="http://example.com/2022/04/05/xv6-6/">
 <meta property="og:site_name">
 <meta property="og:description" content="本次 lab 对应三个 moderate 难度的任务，关系线程调度、如何加锁等原理">
@@ -29,7 +29,7 @@
 <meta property="og:image" content="https://pic.imgdb.cn/item/624be6fd239250f7c547ef17.jpg">
 <meta property="og:image" content="https://pic.imgdb.cn/item/624bed84239250f7c554c190.jpg">
 <meta property="article:published_time" content="2022-04-05T13:55:42.000Z">
-<meta property="article:modified_time" content="2022-04-05T14:01:56.252Z">
+<meta property="article:modified_time" content="2022-04-15T10:42:22.848Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="xv6">
 <meta name="twitter:card" content="summary">
@@ -38,7 +38,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <link rel="icon" href="/assets/link.png">
     
-    <title>⌈xv6⌋ lab 6：Multithreading · HorbynzZ</title>
+    <title>⌈xv6-fall2021⌋ lab 6：Multithreading · HorbynzZ</title>
     <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
 /* This file is meant as a standalone workflow for
 - testing support for link[rel=preload]
@@ -263,7 +263,7 @@
                 <a href="/">Horbynz hub</a>
             </div>
             <div class="post-title header-element">
-                <a href="#" class="post-name">⌈xv6⌋ lab 6：Multithreading</a>
+                <a href="#" class="post-name">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
             </div>
         </div>
     
@@ -309,7 +309,7 @@
         <h1 class="intro-title">
             <!-- 主页  -->
             
-                ⌈xv6⌋ lab 6：Multithreading
+                ⌈xv6-fall2021⌋ lab 6：Multithreading
             <!-- 404 -->
             
         </h1>
@@ -497,10 +497,10 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="LAB-v5"><a class="header-anchor" href="#LAB-v5"></a>LAB</h2>
+        <h2 id="LAB-v6"><a class="header-anchor" href="#LAB-v6"></a>LAB</h2>
 <p>传送门：<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/thread.html">Lab: Multithreading</a></p>
 <br>
-<h2 id="INTRO-v4"><a class="header-anchor" href="#INTRO-v4"></a>INTRO</h2>
+<h2 id="INTRO-v5"><a class="header-anchor" href="#INTRO-v5"></a>INTRO</h2>
 <p>读 <a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf">xv6-handout-fall 2021, chapter 7</a> 有感，以下是 xv6 线程（进程）切换过程</p>
 <p>如何标识一个线程？</p>
 <ul>
@@ -546,7 +546,7 @@
 </ol>
 <br>
 <h2 id="Uthread-switching-between-threads-MODERATE"><a class="header-anchor" href="#Uthread-switching-between-threads-MODERATE"></a>Uthread: switching between threads (MODERATE)</h2>
-<h3 id="要求-v12"><a class="header-anchor" href="#要求-v12"></a>要求</h3>
+<h3 id="要求-v14"><a class="header-anchor" href="#要求-v14"></a>要求</h3>
 <blockquote>
 <p>In this exercise you will design the context switch mechanism for a user-level threading system, and then implement it.</p>
 </blockquote>
@@ -568,10 +568,10 @@
 </blockquote>
 <p>“你需要在 thread_schedule() 中调用 thread_switch()；传递任何你需要的参数给 thread_switch，只要保证能够从线程 t 切换至 next_thread”</p>
 <br>
-<h3 id="提示-v12"><a class="header-anchor" href="#提示-v12"></a>提示</h3>
+<h3 id="提示-v14"><a class="header-anchor" href="#提示-v14"></a>提示</h3>
 <p>这次提示很简单，就是切换过程中只需要保存 callee 的上下文，并且阅读 <code>user/uthread.asm</code> 对 debugging 非常有参考意义</p>
 <br>
-<h3 id="Summary-v12"><a class="header-anchor" href="#Summary-v12"></a>Summary</h3>
+<h3 id="Summary-v15"><a class="header-anchor" href="#Summary-v15"></a>Summary</h3>
 <p>主要参考 xv6 线程调度的程序流就行，对比这里，试想当前场景是从线程 t 切换为 next_thread，那么：</p>
 <ul>
 <li>核心任务是保存线程 t 的上下文，然后恢复 next_thread 的上下文，最后返回地址改为 next_thread 上次中断处</li>
@@ -583,12 +583,12 @@
 <li>每个线程在执行时都需要自己的栈，但栈是往低处长的（grow downwards），所以保存栈地址应该是高地址</li>
 </ul>
 <br>
-<h3 id="Solution-v13"><a class="header-anchor" href="#Solution-v13"></a>Solution</h3>
+<h3 id="Solution-v18"><a class="header-anchor" href="#Solution-v18"></a>Solution</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: user/uthread.c</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">context</span> &#123;</span><br><span class="line">  uint64 ra;</span><br><span class="line">  uint64 sp;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// callee-saved</span></span><br><span class="line">  uint64 s0;</span><br><span class="line">  uint64 s1;</span><br><span class="line">  uint64 s2;</span><br><span class="line">  uint64 s3;</span><br><span class="line">  uint64 s4;</span><br><span class="line">  uint64 s5;</span><br><span class="line">  uint64 s6;</span><br><span class="line">  uint64 s7;</span><br><span class="line">  uint64 s8;</span><br><span class="line">  uint64 s9;</span><br><span class="line">  uint64 s10;</span><br><span class="line">  uint64 s11;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">thread</span> &#123;</span><br><span class="line">  <span class="type">char</span>       stack[STACK_SIZE]; <span class="comment">/* the thread&#x27;s stack */</span></span><br><span class="line">  <span class="type">int</span>        state;             <span class="comment">/* FREE, RUNNING, RUNNABLE */</span></span><br><span class="line">  <span class="keyword">struct</span> <span class="title class_">context</span> cont;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">thread_schedule</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (current_thread != next_thread) &#123;         <span class="comment">/* switch threads?  */</span></span><br><span class="line">        ...</span><br><span class="line">        <span class="comment">/* YOUR CODE HERE</span></span><br><span class="line"><span class="comment">         * Invoke thread_switch to switch from t to next_thread:</span></span><br><span class="line"><span class="comment">         * thread_switch(??, ??);</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="built_in">thread_switch</span>((uint64)&amp;t-&gt;cont, (uint64)&amp;next_thread-&gt;cont);</span><br><span class="line">    &#125; <span class="keyword">else</span></span><br><span class="line">        next_thread = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">thread_create</span><span class="params">(<span class="type">void</span> (*func)())</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// YOUR CODE HERE</span></span><br><span class="line">    t-&gt;cont.ra = (uint64)func;</span><br><span class="line">    t-&gt;cont.sp = (uint64)&amp;t-&gt;stack[STACK_SIZE - <span class="number">1</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">	.text</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">     * save the old thread&#x27;s registers,</span><br><span class="line">     * restore the new thread&#x27;s registers.</span><br><span class="line">     */</span><br><span class="line"></span><br><span class="line">	.globl thread_switch</span><br><span class="line">thread_switch:</span><br><span class="line">	/* YOUR CODE HERE */</span><br><span class="line">	sd ra, 0(a0)</span><br><span class="line">	sd sp, 8(a0)</span><br><span class="line">	sd s0, 16(a0)</span><br><span class="line">	sd s1, 24(a0)</span><br><span class="line">	sd s2, 32(a0)</span><br><span class="line">	sd s3, 40(a0)</span><br><span class="line">	sd s4, 48(a0)</span><br><span class="line">	sd s5, 56(a0)</span><br><span class="line">	sd s6, 64(a0)</span><br><span class="line">	sd s7, 72(a0)</span><br><span class="line">	sd s8, 80(a0)</span><br><span class="line">	sd s9, 88(a0)</span><br><span class="line">	sd s10, 96(a0)</span><br><span class="line">	sd s11, 104(a0)</span><br><span class="line"></span><br><span class="line">	ld ra, 0(a1)</span><br><span class="line">	ld sp, 8(a1)</span><br><span class="line">	ld s0, 16(a1)</span><br><span class="line">	ld s1, 24(a1)</span><br><span class="line">	ld s2, 32(a1)</span><br><span class="line">	ld s3, 40(a1)</span><br><span class="line">	ld s4, 48(a1)</span><br><span class="line">	ld s5, 56(a1)</span><br><span class="line">	ld s6, 64(a1)</span><br><span class="line">	ld s7, 72(a1)</span><br><span class="line">	ld s8, 80(a1)</span><br><span class="line">	ld s9, 88(a1)</span><br><span class="line">	ld s10, 96(a1)</span><br><span class="line">	ld s11, 104(a1)</span><br><span class="line"></span><br><span class="line">	ret    /* return to ra */</span><br></pre></td></tr></table></figure>
 <br>
 <h2 id="Using-threads-MODERATE"><a class="header-anchor" href="#Using-threads-MODERATE"></a>Using threads (MODERATE)</h2>
-<h3 id="要求-v13"><a class="header-anchor" href="#要求-v13"></a>要求</h3>
+<h3 id="要求-v15"><a class="header-anchor" href="#要求-v15"></a>要求</h3>
 <blockquote>
 <p>The file notxv6/ph.c contains a simple hash table that is correct if used from a single thread, but incorrect when used from multiple threads. In your main xv6 directory (perhaps ~/xv6-labs-2021), type this:</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$ </span><span class="language-bash">make ph</span></span><br><span class="line"><span class="meta">$ </span><span class="language-bash">./ph 1</span></span><br></pre></td></tr></table></figure>
@@ -625,7 +625,7 @@
 </blockquote>
 <p>“修改你的代码以便 put 操作在正确的前提下能并行运行，当 <code>make grade</code> 提示你的代码均通过 ph_safe 和 ph_fast 两个测试时才算完成。其中 ph_fast 测试要求两个线程运行速度至少是单个 put 线程的 1.25 倍”</p>
 <br>
-<h3 id="Summary-v13"><a class="header-anchor" href="#Summary-v13"></a>Summary</h3>
+<h3 id="Summary-v16"><a class="header-anchor" href="#Summary-v16"></a>Summary</h3>
 <p>首先阅读 main()，可以发现逻辑大约如此：</p>
 <ul>
 <li>创建 put 操作线程</li>
@@ -642,11 +642,11 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[thread 0] 当前索引匹配 table[0]，并检查到不存在结点，所以进入了 insert()，正准备执行</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 1] 在 put() 循环中也找到 table[0]，也检测到结点不存在，正准备调用 insert()</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 0] 调用 insert() 结束后，在原本结点 i 这个地方新增了一个 &#123;key, value&#125; 键值对的结点</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 1] 调用 insert() 最终覆盖了 thread 0 新追加的结点</span><br></pre></td></tr></table></figure>
 <p>所以锁的请求应该往回调用，放在循环结束后而判断前比较合适</p>
 <br>
-<h3 id="Solution-v14"><a class="header-anchor" href="#Solution-v14"></a>Solution</h3>
+<h3 id="Solution-v19"><a class="header-anchor" href="#Solution-v19"></a>Solution</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// notxv6/ph.c</span></span><br><span class="line"><span class="type">pthread_mutex_t</span> lock;</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">insert</span><span class="params">(<span class="type">int</span> key, <span class="type">int</span> value, <span class="keyword">struct</span> entry **p, <span class="keyword">struct</span> entry *n)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    *p = e;</span><br><span class="line">    <span class="built_in">pthread_mutex_unlock</span>(&amp;lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">static</span> </span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">put</span><span class="params">(<span class="type">int</span> key, <span class="type">int</span> value)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">for</span> (e = table[i]; e != <span class="number">0</span>; e = e-&gt;next) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// lab multithreading</span></span><br><span class="line">    <span class="built_in">pthread_mutex_lock</span>(&amp;lock);</span><br><span class="line">    <span class="keyword">if</span>(e) &#123;</span><br><span class="line">        <span class="comment">// update the existing key.</span></span><br><span class="line">        e-&gt;value = value;</span><br><span class="line">        <span class="built_in">pthread_mutex_unlock</span>(&amp;lock);</span><br><span class="line">    &#125; <span class="keyword">else</span> ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span></span><br><span class="line"><span class="built_in">main</span>(<span class="type">int</span> argc, <span class="type">char</span> *argv[]) &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; NKEYS; i++) &#123;</span><br><span class="line">        keys[i] = <span class="built_in">random</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// lab multithreading</span></span><br><span class="line">    <span class="built_in">pthread_mutex_init</span>(&amp;lock, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// first the puts</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    t0 = <span class="built_in">now</span>();</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
 <br>
 <h2 id="Barrier-MODERATE"><a class="header-anchor" href="#Barrier-MODERATE"></a>Barrier (MODERATE)</h2>
-<h3 id="要求-v14"><a class="header-anchor" href="#要求-v14"></a>要求</h3>
+<h3 id="要求-v16"><a class="header-anchor" href="#要求-v16"></a>要求</h3>
 <blockquote>
 <p>In this assignment you’ll implement a barrier: a point in an application at which all participating threads must wait until all other participating threads reach that point too. You’ll use pthread condition variables, which are a sequence coordination technique similar to xv6’s sleep and wakeup.</p>
 </blockquote>
@@ -672,7 +672,7 @@
 <p>———— 这里的竞争情况我理解为 lost wakeup：即线程 0 正检查条件以进入沉睡（此时可能外界看起来状态为 SLEEPING，但实际还未完全切换过去），却发生了调度。后来其他线程唤醒了线程 0。之后调度又回到线程 0，但是线程 0 先执行的仍然是进入沉睡的检查，最终丢失了唤醒信号从而死锁</p>
 <p>———— 回到这个场景里，前半句说的竞争情况，应该是让我们注意不要丢失线程在 barrier() 的 lost wakeup；后半句说的重复使用 <code>bstate.nthread</code>，应该是让我们注意到这是一个共享数据，第二个线程访问的时候，就算 re-using，这需要通过锁来保护</p>
 <br>
-<h3 id="Summary-v14"><a class="header-anchor" href="#Summary-v14"></a>Summary</h3>
+<h3 id="Summary-v17"><a class="header-anchor" href="#Summary-v17"></a>Summary</h3>
 <p>现在总结以下思路：</p>
 <ul>
 <li>根据题意，核心思想是每个线程都需要撞上 barrier，即停在这里。什么时候可以重新继续？答案是所有线程到达的时候。所以 barrier() 里面的逻辑最直接的想法是：当前撞上 barrier 的线程数量未够，就在 condition variables 上挂起；直到所有线程到达</li>
@@ -680,7 +680,7 @@
 <li>同时需要在 condition variables 释放时，变量 round 自增，同时当前循环的线程数归零</li>
 </ul>
 <br>
-<h3 id="Solution-v15"><a class="header-anchor" href="#Solution-v15"></a>Solution</h3>
+<h3 id="Solution-v20"><a class="header-anchor" href="#Solution-v20"></a>Solution</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: notxv6/barrier.c</span></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">barrier</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">// YOUR CODE HERE</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// Block until all threads have called barrier() and</span></span><br><span class="line">    <span class="comment">// then increment bstate.round.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="built_in">pthread_mutex_lock</span>(&amp;bstate.barrier_mutex);</span><br><span class="line">    ++bstate.nthread;</span><br><span class="line">    <span class="keyword">if</span> (bstate.nthread != nthread) &#123;</span><br><span class="line">        <span class="built_in">pthread_cond_wait</span>(&amp;bstate.barrier_cond, &amp;bstate.barrier_mutex);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        bstate.round++;</span><br><span class="line">        bstate.nthread = <span class="number">0</span>;</span><br><span class="line">        <span class="built_in">pthread_cond_broadcast</span>(&amp;bstate.barrier_cond);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">pthread_mutex_unlock</span>(&amp;bstate.barrier_mutex);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <br>
 <h2 id="写在最后-v6"><a class="header-anchor" href="#写在最后-v6"></a>写在最后</h2>
@@ -694,7 +694,7 @@
             <p>Author：<a href="http://example.com">Horbyn</a>
             <p>Link：<a href="http://example.com/2022/04/05/xv6-6/">http://example.com/2022/04/05/xv6-6/</a>
             <p>Publish date：<a href="http://example.com/2022/04/05/xv6-6/">April 5th 2022, 9:55:42 pm</a>
-            <p>Update date：<a href="http://example.com/2022/04/05/xv6-6/">April 5th 2022, 10:01:56 pm</a>
+            <p>Update date：<a href="http://example.com/2022/04/05/xv6-6/">April 15th 2022, 6:42:22 pm</a>
             -->
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
@@ -704,16 +704,16 @@
         <li class="next">
             
                 <div class="nextSlogan">Next Post</div>
-                <a href="/2022/04/11/xv6-7/" title="⌈xv6⌋ lab 7：networking">
-                    <div class="nextTitle">⌈xv6⌋ lab 7：networking</div>
+                <a href="/2022/04/11/xv6-7/" title="⌈xv6-fall2021⌋ lab 7：networking">
+                    <div class="nextTitle">⌈xv6-fall2021⌋ lab 7：networking</div>
                 </a>
             
         </li>
         <li class="previous">
             
                 <div class="prevSlogan">Previous Post</div>
-                <a href="/2022/04/04/xv6-5/" title="⌈xv6⌋ lab 5：COW">
-                    <div class="prevTitle">⌈xv6⌋ lab 5：COW</div>
+                <a href="/2022/04/04/xv6-5/" title="⌈xv6-fall2021⌋ lab 5：COW">
+                    <div class="prevTitle">⌈xv6-fall2021⌋ lab 5：COW</div>
                 </a>
             
         </li>
@@ -864,7 +864,7 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB-v5"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INTRO-v4"><span class="toc-number">2.</span> <span class="toc-text">INTRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Uthread-switching-between-threads-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">Uthread: switching between threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v12"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v12"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v12"><span class="toc-number">3.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v13"><span class="toc-number">3.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Using-threads-MODERATE"><span class="toc-number">4.</span> <span class="toc-text">Using threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v13"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v13"><span class="toc-number">4.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v14"><span class="toc-number">4.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Barrier-MODERATE"><span class="toc-number">5.</span> <span class="toc-text">Barrier (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v14"><span class="toc-number">5.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v14"><span class="toc-number">5.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v15"><span class="toc-number">5.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v6"><span class="toc-number">6.</span> <span class="toc-text">写在最后</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB-v6"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INTRO-v5"><span class="toc-number">2.</span> <span class="toc-text">INTRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Uthread-switching-between-threads-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">Uthread: switching between threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v14"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v14"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v15"><span class="toc-number">3.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v18"><span class="toc-number">3.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Using-threads-MODERATE"><span class="toc-number">4.</span> <span class="toc-text">Using threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v15"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v16"><span class="toc-number">4.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v19"><span class="toc-number">4.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Barrier-MODERATE"><span class="toc-number">5.</span> <span class="toc-text">Barrier (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v16"><span class="toc-number">5.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v17"><span class="toc-number">5.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v20"><span class="toc-number">5.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v6"><span class="toc-number">6.</span> <span class="toc-text">写在最后</span></a></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -943,7 +943,24 @@
         
         
         
+        
+        
+        
+        
+        
     
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -1014,7 +1031,7 @@
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 13
+        Total : 14
         </div>
         <!-- search  -->
         
@@ -1030,20 +1047,26 @@
             
         
         <li class="archive-post-item">
+            <span class="archive-post-date">04/15</span>
+            <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
             <span class="archive-post-date">04/11</span>
-            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6⌋ lab 7：networking</a>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/05</span>
-            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6⌋ lab 6：Multithreading</a>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/04</span>
-            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6⌋ lab 5：COW</a>
+            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
         </li>
     
         
@@ -1055,13 +1078,13 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/29</span>
-            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6⌋ lab 4：Traps</a>
+            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
         </li>
     
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/25</span>
-            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6⌋ lab 3：Page tables</a>
+            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
         </li>
     
         
@@ -1073,7 +1096,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/16</span>
-            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6⌋ lab 2：System calls</a>
+            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
         </li>
     
         
@@ -1085,7 +1108,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">02/28</span>
-            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6⌋ lab 1：Xv6 and Unix utilities</a>
+            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
         </li>
     
         
@@ -1097,7 +1120,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">02/25</span>
-            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6⌋ MIT 6.828 环境配置</a>
+            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
         </li>
     
         
