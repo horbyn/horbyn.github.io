@@ -643,7 +643,7 @@ mjx-container[display="true"] + br {
 <p>至此，完成了系统调用添加的流程</p>
 <br>
 <h2 id="System-call-tracing-MODERATE"><a class="header-anchor" href="#System-call-tracing-MODERATE"></a>System call tracing (MODERATE)</h2>
-<h3 id="要求-v4"><a class="header-anchor" href="#要求-v4"></a>要求</h3>
+<h3 id="要求-v6"><a class="header-anchor" href="#要求-v6"></a>要求</h3>
 <blockquote>
 <p>In this assignment you will add a system call tracing feature that may help you when debugging later labs. You’ll create a new trace system call that will control tracing. It should take one argument, an integer “mask”, whose bits specify which system calls to trace. For example, to trace the fork system call, a program calls trace(1 &lt;&lt; SYS_fork), where SYS_fork is a syscall number from kernel/syscall.h. You have to modify the xv6 kernel to print out a line when each system call is about to return, if the system call’s number is set in the mask. The line should contain the process id, the name of the system call and the return value; you don’t need to print the system call arguments. The trace system call should enable tracing for the process that calls it and any children that it subsequently forks, but should not affect other processes.</p>
 </blockquote>
@@ -659,7 +659,7 @@ mjx-container[display="true"] + br {
 </blockquote>
 <p>“我们提供了一个用户态的 trace 命令，该命令运行了另一个能够启动追踪的程序（参考 <code>user/trace.c</code>）” ———— 这句话其实是说，实际上系统调用并不是直接执行的，而是通过运行用户态的这个程序，再由这个程序去真正执行系统调用</p>
 <br>
-<h3 id="提示-v4"><a class="header-anchor" href="#提示-v4"></a>提示</h3>
+<h3 id="提示-v6"><a class="header-anchor" href="#提示-v6"></a>提示</h3>
 <blockquote>
 <p>Run make qemu and you will see that the compiler cannot compile user/trace.c, because the user-space stubs for the system call don’t exist yet: add a prototype for the system call to user/user.h, a stub to user/usys.pl, and a syscall number to kernel/syscall.h. The Makefile invokes the perl script user/usys.pl, which produces user/usys.S, the actual system call stubs, which use the RISC-V ecall instruction to transition to the kernel. Once you fix the compilation issues, run trace 32 grep hello README; it will fail because you haven’t implemented the system call in the kernel yet.</p>
 </blockquote>
@@ -677,7 +677,7 @@ mjx-container[display="true"] + br {
 </blockquote>
 <p>“修改 syscall()（见 <code>kernel/syscall.c</code>）为能够打印 trace 的输出。你需要增加一个数组，该数组可以找出对应系统调用的名称”</p>
 <br>
-<h3 id="Summary-v3"><a class="header-anchor" href="#Summary-v3"></a>Summary</h3>
+<h3 id="Summary-v8"><a class="header-anchor" href="#Summary-v8"></a>Summary</h3>
 <p>现在总结一下任务：</p>
 <ul>
 <li>如果系统调用号在掩码中是置位，那么对应系统调用在返回时要打印要求给定的信息</li>
@@ -690,17 +690,17 @@ mjx-container[display="true"] + br {
 <li>修改 <code>kernel/syscall.c</code> 里面用于打印 trace 信息的 syscall() ———— 增加一个保存系统调用名称的数组</li>
 </ul>
 <br>
-<h3 id="Solution-v4"><a class="header-anchor" href="#Solution-v4"></a>Solution</h3>
+<h3 id="Solution-v6"><a class="header-anchor" href="#Solution-v6"></a>Solution</h3>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//// path: kernel/syscall.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SYS_trace   22</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/syscall.c</span></span><br><span class="line"><span class="comment">// Line 107 左右 "extern" 块处</span></span><br><span class="line"><span class="keyword">extern</span> uint64 <span class="title function_">sys_trace</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"><span class="comment">// *syscall[] 函数指针数组处</span></span><br><span class="line">[SYS_trace]   sys_trace,</span><br><span class="line"><span class="comment">// 新增系统调用名称数组</span></span><br><span class="line"><span class="type">static</span> <span class="type">char</span> *syscallname[NELEM(syscalls)] = {</span><br><span class="line">  <span class="string">""</span>,       <span class="string">"fork"</span>,   <span class="string">"exit"</span>,   <span class="string">"wait"</span>,   <span class="string">"pipe"</span>,</span><br><span class="line">  <span class="string">"read"</span>,   <span class="string">"kill"</span>,   <span class="string">"exec"</span>,   <span class="string">"fstat"</span>,  <span class="string">"chdir"</span>,</span><br><span class="line">  <span class="string">"dup"</span>,    <span class="string">"getpid"</span>, <span class="string">"sbrk"</span>,   <span class="string">"sleep"</span>,  <span class="string">"uptime"</span>,</span><br><span class="line">  <span class="string">"open"</span>,   <span class="string">"write"</span>,  <span class="string">"mknod"</span>,  <span class="string">"unlink"</span>, <span class="string">"link"</span>,</span><br><span class="line">  <span class="string">"mkdir"</span>,  <span class="string">"close"</span>,  <span class="string">"trace"</span>,</span><br><span class="line">};</span><br><span class="line"><span class="comment">// syscall() 的 if() 内新增</span></span><br><span class="line"><span class="keyword">if</span> (p-&gt;tmask &gt;= <span class="number">2</span>) {</span><br><span class="line">    <span class="type">int</span> mask = p-&gt;tmask;</span><br><span class="line">    <span class="type">int</span> move = <span class="number">1</span> &lt;&lt; num;</span><br><span class="line">    <span class="keyword">if</span> (mask &amp; move)</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"%d: syscall %s -&gt; %d\n"</span>, p-&gt;pid, syscallname[num], p-&gt;trapframe-&gt;a0);</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/proc.h</span></span><br><span class="line"><span class="comment">// struct proc {} 内</span></span><br><span class="line"><span class="type">int</span> tmask;<span class="comment">// 记录 trace 命令传入的参数</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/proc.c</span></span><br><span class="line"><span class="comment">// int fork(void) 内</span></span><br><span class="line">np-&gt;tmask = p-&gt;tmask;</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/sysproc.c</span></span><br><span class="line">uint64</span><br><span class="line"><span class="title function_">sys_trace</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">{</span><br><span class="line">    <span class="type">int</span> mask;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 要检索 trace() 的参数，用 syscall.c 里的函数来检查</span></span><br><span class="line">    <span class="comment">// 例子参考 kernel/sysproc.c</span></span><br><span class="line">    <span class="comment">// 为什么要检查参数？xv6-handout-ch4.4 有说明</span></span><br><span class="line">    <span class="keyword">if</span>(argint(<span class="number">0</span>, &amp;mask) &lt; <span class="number">0</span>)<span class="comment">// 检查 a0 里用户传入的参数，保存到变量 mask</span></span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    myproc()-&gt;tmask = mask;<span class="comment">// 保存到 trapframe</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: user/user.h</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">trace</span><span class="params">(<span class="type">int</span>)</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: user/usys.pl</span></span><br><span class="line">entry(<span class="string">"trace"</span>);</span><br></pre></td></tr></table></figure>
 <br>
 <h2 id="Sysinfo-MODERATE"><a class="header-anchor" href="#Sysinfo-MODERATE"></a>Sysinfo (MODERATE)</h2>
-<h3 id="要求-v5"><a class="header-anchor" href="#要求-v5"></a>要求</h3>
+<h3 id="要求-v7"><a class="header-anchor" href="#要求-v7"></a>要求</h3>
 <blockquote>
 <p>In this assignment you will add a system call, sysinfo, that collects information about the running system. The system call takes one argument: a pointer to a struct sysinfo (see kernel/sysinfo.h). The kernel should fill out the fields of this struct: the freemem field should be set to the number of bytes of free memory, and the nproc field should be set to the number of processes whose state is not UNUSED. We provide a test program sysinfotest; you pass this assignment if it prints “sysinfotest: OK”.</p>
 </blockquote>
 <p>“你要实现一个叫做 <em>sysinfo</em> 的系统调用，用以收集一些系统运行的信息。该系统调用接收一个参数：一个指向 <em>sysinfo 结构体</em> 的指针（见 <code>kernel/sysinfo.h</code>）。内核应该能填充该结构体的一些字段：<em>freemem</em> 字段记录可用内存的字节数；<em>nproc</em> 字段记录处于 <em>UNUSED</em> 状态的进程的数量。我们提供了一个测试脚本，sysinfotest，如果你运行时该脚本打印 ‘sysinfotest: OK’ 那就是通过测试了”</p>
 <br>
-<h3 id="提示-v5"><a class="header-anchor" href="#提示-v5"></a>提示</h3>
+<h3 id="提示-v7"><a class="header-anchor" href="#提示-v7"></a>提示</h3>
 <blockquote>
 <p>To declare the prototype for sysinfo() in user/user.h you need predeclare the existence of struct sysinfo:</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">struct sysinfo;</span><br><span class="line">int sysinfo(struct sysinfo *);  </span><br></pre></td></tr></table></figure>
@@ -719,7 +719,7 @@ mjx-container[display="true"] + br {
 </blockquote>
 <p>“在 <code>kernel/proc.c</code> 增加一个用以收集进程数量的函数”</p>
 <br>
-<h3 id="Summary-v4"><a class="header-anchor" href="#Summary-v4"></a>Summary</h3>
+<h3 id="Summary-v9"><a class="header-anchor" href="#Summary-v9"></a>Summary</h3>
 <p>这个 assignment 难点在于如何统计 <em>空闲内存</em> 以及 <em>进程数量</em></p>
 <p>对于空闲内存，这需要好好阅读 <code>kernel/kalloc.c</code>，分析里面每个函数以及 <em>run 结构体</em> <em>kmen 结构体</em> 的作用：</p>
 <ul>
@@ -729,10 +729,10 @@ mjx-container[display="true"] + br {
 <p>因此，统计空闲内存数量就变成了，遍历 <em>kmem 结构体</em> 里面的空闲块链表就行。需要注意的是链表结点是空闲块，最后数完后返回的需要是字节的数量</p>
 <p>对于进程数量，需要阅读 <code>kernel/proc.c</code> 好好分析进程的组织形式，我是通过参考 <em>procinit()</em>、<em>allocproc()</em>、<em>sheduler()</em> 和 <em>kill()</em> 了解的。简单来说就是进程以数组形式组织，之后对进程作出什么操作只需要遍历即可</p>
 <br>
-<h3 id="Solution-v5"><a class="header-anchor" href="#Solution-v5"></a>Solution</h3>
+<h3 id="Solution-v7"><a class="header-anchor" href="#Solution-v7"></a>Solution</h3>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//// path: kernel/syscall.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SYS_sysinfo 23</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/syscall.c</span></span><br><span class="line"><span class="comment">// Line 107 左右 "extern" 块处</span></span><br><span class="line"><span class="keyword">extern</span> uint64 <span class="title function_">sys_sysinfo</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"><span class="comment">// *syscall[] 函数指针数组处</span></span><br><span class="line">[SYS_sysinfo] sys_sysinfo,</span><br><span class="line"><span class="comment">// 新增系统调用名称数组</span></span><br><span class="line"><span class="type">static</span> <span class="type">char</span> *syscallname[NELEM(syscalls)] = {</span><br><span class="line">  ... ... <span class="string">"sysinfo"</span>,</span><br><span class="line">};</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/defs.h</span></span><br><span class="line"><span class="comment">// kalloc.c 注释处</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">freenum</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"><span class="comment">// proc.c 注释处</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">procnum</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/kalloc.c</span></span><br><span class="line"><span class="type">int</span></span><br><span class="line"><span class="title function_">freenum</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">{</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">run</span> *<span class="title">p</span> =</span> kmem.freelist;</span><br><span class="line">    <span class="type">int</span> cr = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (p) {</span><br><span class="line">        ++cr;</span><br><span class="line">        p = p-&gt;next;</span><br><span class="line">    }</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> cr * PGSIZE;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/proc.c</span></span><br><span class="line"><span class="type">int</span></span><br><span class="line"><span class="title function_">procnum</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">{</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">proc</span> *<span class="title">p</span>;</span></span><br><span class="line">  <span class="type">int</span> cr = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">for</span>(p = proc; p &lt; &amp;proc[NPROC]; p++)</span><br><span class="line">    <span class="keyword">if</span> (p-&gt;state != UNUSED)    cr++;</span><br><span class="line">  <span class="keyword">return</span> cr;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: kernel/sysproc.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">"sysinfo.h"</span></span></span><br><span class="line">uint64</span><br><span class="line"><span class="title function_">sys_sysinfo</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">{</span><br><span class="line">	uint64 uptr;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sysinfo</span> <span class="title">info</span>;</span></span><br><span class="line">  	<span class="class"><span class="keyword">struct</span> <span class="title">proc</span> *<span class="title">p</span> =</span> myproc();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span>(argaddr(<span class="number">0</span>, &amp;uptr) &lt; <span class="number">0</span>)    <span class="keyword">return</span> <span class="number">-1</span>;<span class="comment">// 获取用户传入的指针</span></span><br><span class="line">	info.freemem = freenum();</span><br><span class="line">	info.nproc = procnum();</span><br><span class="line">	<span class="keyword">if</span>(copyout(p-&gt;pagetable, uptr, (<span class="type">char</span>*)&amp;info, <span class="keyword">sizeof</span>(info)) &lt; <span class="number">0</span>)    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="comment">//// path: user/user.h</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sysinfo</span>;</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">sysinfo</span><span class="params">(<span class="keyword">struct</span> sysinfo *)</span>;</span><br><span class="line"><span class="comment">//// path: user/usys.pl</span></span><br><span class="line">entry(<span class="string">"sysinfo"</span>);</span><br></pre></td></tr></table></figure>
 <br>
-<h2 id="写在最后-v3"><a class="header-anchor" href="#写在最后-v3"></a>写在最后</h2>
+<h2 id="写在最后-v2"><a class="header-anchor" href="#写在最后-v2"></a>写在最后</h2>
 <p>耗时 7h56m，比第一个 lab 耗时快 30h 要好太多了</p>
 
     </article>
@@ -916,7 +916,7 @@ mjx-container[display="true"] + br {
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB-v2"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INTRO-v2"><span class="toc-number">2.</span> <span class="toc-text">INTRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#System-call-tracing-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">System call tracing (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v4"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v4"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v3"><span class="toc-number">3.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v4"><span class="toc-number">3.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Sysinfo-MODERATE"><span class="toc-number">4.</span> <span class="toc-text">Sysinfo (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v5"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v5"><span class="toc-number">4.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v4"><span class="toc-number">4.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v5"><span class="toc-number">4.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v3"><span class="toc-number">5.</span> <span class="toc-text">写在最后</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB-v2"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INTRO-v2"><span class="toc-number">2.</span> <span class="toc-text">INTRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#System-call-tracing-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">System call tracing (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v6"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v6"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v8"><span class="toc-number">3.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v6"><span class="toc-number">3.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Sysinfo-MODERATE"><span class="toc-number">4.</span> <span class="toc-text">Sysinfo (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v7"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v7"><span class="toc-number">4.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v9"><span class="toc-number">4.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v7"><span class="toc-number">4.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v2"><span class="toc-number">5.</span> <span class="toc-text">写在最后</span></a></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -1000,7 +1000,24 @@ mjx-container[display="true"] + br {
         
         
         
+        
+        
+        
+        
+        
     
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -1083,7 +1100,7 @@ mjx-container[display="true"] + br {
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 14
+        Total : 15
         </div>
         <!-- search  -->
         
@@ -1097,6 +1114,12 @@ mjx-container[display="true"] + br {
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
             
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/17</span>
+            <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
+        </li>
+    
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/15</span>
@@ -1192,14 +1215,14 @@ mjx-container[display="true"] + br {
                 cpp
             </span>
         
-            <span class="sidebar-tag-name" data-tags="translation">
-                <span class="iconfont-archer">&#xe606;</span>
-                translation
-            </span>
-        
             <span class="sidebar-tag-name" data-tags="xv6">
                 <span class="iconfont-archer">&#xe606;</span>
                 xv6
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
             </span>
         
             <span class="sidebar-tag-name" data-tags="winsock">

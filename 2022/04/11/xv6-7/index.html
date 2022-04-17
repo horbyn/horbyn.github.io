@@ -498,7 +498,7 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="ABOUT-v2"><a class="header-anchor" href="#ABOUT-v2"></a>ABOUT</h2>
+        <h2 id="ABOUT"><a class="header-anchor" href="#ABOUT"></a>ABOUT</h2>
 <p>实验地址：<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/net.html">Lab: networking</a></p>
 <br>
 <h2 id="INTO"><a class="header-anchor" href="#INTO"></a>INTO</h2>
@@ -600,7 +600,7 @@
 </blockquote>
 <p>“xv6 可能会在超过一个进程上面使用 E1000，或者当中断到达时在内核线程上使用 E1000。你需要锁住共享数据”</p>
 <br>
-<h2 id="实验思路-v3"><a class="header-anchor" href="#实验思路-v3"></a>实验思路</h2>
+<h2 id="实验思路"><a class="header-anchor" href="#实验思路"></a>实验思路</h2>
 <p>首先从 “背景” 这个 section 中，可以得知以下内容：</p>
 <ul>
 <li>E1000 是网卡驱动与之沟通的对象，我们的实验任务是实现它的驱动。不过这个硬件是 xv6 模拟的，包括局域网（LAN）也是</li>
@@ -673,10 +673,10 @@
 <p>我刚开始观察到 <code>struct mbuf</code> 这个结构体有一个字段是 next，并且接收环的描述符里也有一个状态位为 E1000_RXD_STAT_EOP，标识着同一个包里最后一个分块（应该是这样理解？），那么我就很自然地想要利用这两个字段。结果我卡在 receiver 这里，很多包重复收发了很多次（<code>make server</code> 重复发出 <em>a message from xv6</em>、<code>packets.pcap</code> 重复打印相同输出）。所以，结果就是，和这两个字段一点都不相关，其实最终完成后，我才发现真的很简单，原来是我想复杂了</p>
 <p>可能它这个提示的意思，仅仅是让我们注意一个中断尽可能多地接收所有包而已。目前未知我觉得还是不太能理解这句提示意思，虽然我 pass 了实验。当然，一切都交给你自己探索了</p>
 <br>
-<h2 id="Solution-v17"><a class="header-anchor" href="#Solution-v17"></a>Solution</h2>
+<h2 id="Solution-v14"><a class="header-anchor" href="#Solution-v14"></a>Solution</h2>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/net.h</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">net_rx</span><span class="params">(<span class="keyword">struct</span> mbuf *)</span></span>;<span class="comment">// 需要声明这个函数，不然 receiver 无法找到进入网络栈的函数签名</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/e1000.c</span></span><br><span class="line"><span class="comment">// 从内存读取要传输的包</span></span><br><span class="line"><span class="comment">// 形参 mbuf 是包含要发送的包的 mbuf</span></span><br><span class="line"><span class="function"><span class="type">int</span></span></span><br><span class="line"><span class="function"><span class="title">e1000_transmit</span><span class="params">(<span class="keyword">struct</span> mbuf *m)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// Your code here.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// the mbuf contains an ethernet frame; program it into</span></span><br><span class="line">    <span class="comment">// the TX descriptor ring so that the e1000 sends it. Stash</span></span><br><span class="line">    <span class="comment">// a pointer so that it can be freed after sending.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// mbuf 包含了一个以太网帧，编程使 mbuf 送入 tx 描述符环</span></span><br><span class="line">    <span class="comment">// 而使 E1000 可以发送出去</span></span><br><span class="line">    <span class="comment">// 储存一个指针以便发送完后释放它</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">acquire</span>(&amp;e1000_lock);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 获取 tx 环索引</span></span><br><span class="line">    <span class="comment">// 这是 E1000 期待的待发送数据包所在的描述符索引</span></span><br><span class="line">    uint32 idx = regs[E1000_TDT]; </span><br><span class="line"></span><br><span class="line">    <span class="comment">// 检查环溢出，并释放上一次传输完的 mbuf</span></span><br><span class="line">    <span class="keyword">if</span> ((tx_ring[idx].status &amp; E1000_TXD_STAT_DD) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">release</span>(&amp;e1000_lock);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (tx_mbufs[idx])</span><br><span class="line">        <span class="built_in">mbuffree</span>(tx_mbufs[idx]);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 填充描述符</span></span><br><span class="line">    tx_ring[idx].addr = (uint64)m-&gt;head;</span><br><span class="line">    tx_ring[idx].length = m-&gt;len;</span><br><span class="line">    tx_ring[idx].cmd = E1000_TXD_CMD_RS</span><br><span class="line">                            | E1000_TXD_CMD_EOP;</span><br><span class="line">    tx_mbufs[idx] = m;<span class="comment">// stash away the pointer to the mbuf</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 更新环位置</span></span><br><span class="line">    regs[E1000_TDT] = (regs[E1000_TDT] + <span class="number">1</span>) % TX_RING_SIZE;</span><br><span class="line">    <span class="built_in">release</span>(&amp;e1000_lock);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 向内存写入收到的包</span></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">e1000_recv</span><span class="params">(<span class="type">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// Your code here.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// Check for packets that have arrived from the e1000</span></span><br><span class="line">    <span class="comment">// Create and deliver an mbuf for each packet (using net_rx()).</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// 检查已经到达 E1000 的包</span></span><br><span class="line">    <span class="comment">// 使用 net_rx() 为每个包送入 E1000</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">        <span class="built_in">acquire</span>(&amp;e1000_lock);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 获取 RX 索引</span></span><br><span class="line">        <span class="comment">// 如果当前描述符还未有数据到达，需要后移即加一模除</span></span><br><span class="line">        <span class="comment">// 因为一开始这个描述符肯定为空，那么随着 E1000 不断接收</span></span><br><span class="line">        <span class="comment">// 数据包————即写入数据，头指针会赶上尾指针</span></span><br><span class="line">        <span class="comment">// 而当尾指针等于头指针时，硬件视为队列空————即已经没有</span></span><br><span class="line">        <span class="comment">// 地方再接收数据包了</span></span><br><span class="line">        <span class="comment">// 如果读到当前描述符空却不后移，那么每次循环都会读到空，</span></span><br><span class="line">        <span class="comment">// 那么 E1000 就再也无法接收数据包</span></span><br><span class="line">        uint32 idx = (regs[E1000_RDT] + <span class="number">1</span>) % RX_RING_SIZE;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 判断包是否可用，即 E100 是否真的写入数据包了</span></span><br><span class="line">        <span class="keyword">if</span> ((rx_ring[idx].status &amp; E1000_RXD_STAT_DD) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">release</span>(&amp;e1000_lock);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 更新包缓冲区（mbuf），即填充 mbuf 结构体，并推送网络栈</span></span><br><span class="line">        rx_mbufs[idx]-&gt;len = rx_ring[idx].length;</span><br><span class="line">        <span class="built_in">release</span>(&amp;e1000_lock);</span><br><span class="line">        <span class="built_in">net_rx</span>(rx_mbufs[idx]);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 为刚才的 mbuf 新分配空间</span></span><br><span class="line">        rx_mbufs[idx] = <span class="built_in">mbufalloc</span>(<span class="number">0</span>);</span><br><span class="line">        rx_ring[idx].addr = (uint64)rx_mbufs[idx]-&gt;head;</span><br><span class="line">        rx_ring[idx].status = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 更新尾指针，更新为最后处理的环描述符的索引</span></span><br><span class="line">        regs[E1000_RDT] = idx;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <br>
-<h2 id="写在最后-v5"><a class="header-anchor" href="#写在最后-v5"></a>写在最后</h2>
+<h2 id="写在最后-v4"><a class="header-anchor" href="#写在最后-v4"></a>写在最后</h2>
 <p>看吧，实际编程真的非常简单。不过看回 6.828 时期的这个 lab，那就非常难了，因为初始化是需要你完成，网络栈也需要你完成，再加上 transmiter 和 receiver 这两个，想挑战的可以试下</p>
 <p>最终耗时 12h42m</p>
 
@@ -858,7 +858,7 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ABOUT-v2"><span class="toc-number">1.</span> <span class="toc-text">ABOUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INTO"><span class="toc-number">2.</span> <span class="toc-text">INTO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%83%8C%E6%99%AF%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89%EF%BC%88%E8%AF%91%EF%BC%89"><span class="toc-number">3.</span> <span class="toc-text">背景（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89%EF%BC%88%E8%AF%91%EF%BC%89"><span class="toc-number">4.</span> <span class="toc-text">实验要求（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89%EF%BC%88%E8%AF%91%EF%BC%89"><span class="toc-number">5.</span> <span class="toc-text">实验提示（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%80%9D%E8%B7%AF-v3"><span class="toc-number">6.</span> <span class="toc-text">实验思路</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B8%A9%E5%9D%91%E7%82%B9"><span class="toc-number">6.1.</span> <span class="toc-text">踩坑点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Solution-v17"><span class="toc-number">7.</span> <span class="toc-text">Solution</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v5"><span class="toc-number">8.</span> <span class="toc-text">写在最后</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ABOUT"><span class="toc-number">1.</span> <span class="toc-text">ABOUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INTO"><span class="toc-number">2.</span> <span class="toc-text">INTO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%83%8C%E6%99%AF%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89%EF%BC%88%E8%AF%91%EF%BC%89"><span class="toc-number">3.</span> <span class="toc-text">背景（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89%EF%BC%88%E8%AF%91%EF%BC%89"><span class="toc-number">4.</span> <span class="toc-text">实验要求（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89%EF%BC%88%E8%AF%91%EF%BC%89"><span class="toc-number">5.</span> <span class="toc-text">实验提示（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%80%9D%E8%B7%AF"><span class="toc-number">6.</span> <span class="toc-text">实验思路</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B8%A9%E5%9D%91%E7%82%B9"><span class="toc-number">6.1.</span> <span class="toc-text">踩坑点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Solution-v14"><span class="toc-number">7.</span> <span class="toc-text">Solution</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v4"><span class="toc-number">8.</span> <span class="toc-text">写在最后</span></a></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -942,7 +942,24 @@
         
         
         
+        
+        
+        
+        
+        
     
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -1025,7 +1042,7 @@
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 14
+        Total : 15
         </div>
         <!-- search  -->
         
@@ -1039,6 +1056,12 @@
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
             
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/17</span>
+            <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
+        </li>
+    
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/15</span>
@@ -1134,14 +1157,14 @@
                 cpp
             </span>
         
-            <span class="sidebar-tag-name" data-tags="translation">
-                <span class="iconfont-archer">&#xe606;</span>
-                translation
-            </span>
-        
             <span class="sidebar-tag-name" data-tags="xv6">
                 <span class="iconfont-archer">&#xe606;</span>
                 xv6
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
             </span>
         
             <span class="sidebar-tag-name" data-tags="winsock">
