@@ -21,25 +21,21 @@
     <meta name="description" content="">
     <meta name="description" content="虽然我很反感八股文，但是有时考察理论可能不得不这么来，const 作为重灾区，我自然希望能够在考察前能迅速捡起，于是便诞生了本文">
 <meta property="og:type" content="article">
-<meta property="og:title" content="C&#x2F;C++ 八股文之 const">
+<meta property="og:title" content="C&#x2F;C++ 八股文：const">
 <meta property="og:url" content="http://example.com/2022/03/20/cpp-2/">
 <meta property="og:site_name">
 <meta property="og:description" content="虽然我很反感八股文，但是有时考察理论可能不得不这么来，const 作为重灾区，我自然希望能够在考察前能迅速捡起，于是便诞生了本文">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://s2.loli.net/2022/03/23/JDbGTNoM9heaZvr.jpg">
-<meta property="og:image" content="https://s2.loli.net/2022/03/23/JDbGTNoM9heaZvr.jpg">
-<meta property="og:image" content="https://s2.loli.net/2022/03/23/LVfmJDeyICUXgri.jpg">
 <meta property="article:published_time" content="2022-03-20T04:13:36.000Z">
-<meta property="article:modified_time" content="2022-03-23T15:35:32.301Z">
+<meta property="article:modified_time" content="2022-04-22T07:05:48.900Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="cpp">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://s2.loli.net/2022/03/23/JDbGTNoM9heaZvr.jpg">
     <meta http-equiv="Cache-control" content="no-cache">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <link rel="icon" href="/assets/link.png">
     
-    <title>C/C++ 八股文之 const · HorbynzZ</title>
+    <title>C/C++ 八股文：const · HorbynzZ</title>
     <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
 /* This file is meant as a standalone workflow for
 - testing support for link[rel=preload]
@@ -264,7 +260,7 @@
                 <a href="/">Horbynz hub</a>
             </div>
             <div class="post-title header-element">
-                <a href="#" class="post-name">C/C++ 八股文之 const</a>
+                <a href="#" class="post-name">C/C++ 八股文：const</a>
             </div>
         </div>
     
@@ -310,7 +306,7 @@
         <h1 class="intro-title">
             <!-- 主页  -->
             
-                C/C++ 八股文之 const
+                C/C++ 八股文：const
             <!-- 404 -->
             
         </h1>
@@ -498,74 +494,109 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="Summary"><a class="header-anchor" href="#Summary"></a>Summary</h2>
+        <h2 id="summary">Summary</h2>
 <p>前排提示，本来源于 C++ Primer，Section 2.4，const 的学习记录</p>
 <p>一句话总结（看粗体即可，其他辅助理解）：</p>
 <ul>
-<li><strong>对常量的引用</strong>，形式是 <strong><code>const int &amp;ri = ci; // ci 是 const int</code></strong>，细节有三点：
+<li><strong>对常量的引用</strong>，形式是
+<strong><code>const int &amp;ri = ci; // ci 是 const int</code></strong>，细节有三点：
 <ul>
-<li><strong>不允许普通引用绑定常量</strong>，即 <code>int &amp;ri = ci; // 错误， ci 是 const int</code>，因为 <code>ri</code> 是普通引用，理论上可以修改所绑定对象，但此处所绑定对象是常量，所以编译器不允许这种行为</li>
-<li><strong>允许用任何表达式作为初始值</strong>，即 <code>const int &amp;ri = 10; // 正确，绑定字面量</code> 或 <code>const int &amp;ri = dval; // dval 是 double，正确，绑定其他类型的非常量</code>，原因详见下文</li>
-<li><strong>对常量的引用实际含义是，限定引用的操作而不限定引用对象本身</strong>，即 <code>const int &amp;r1 = i; r1 = 100; // i 是 int，错误，引用的修改操作不允许</code> 但 <code>int &amp;r2 = i; r2 = 100; // 正确，所引用的对象本身可以用其他方式实现修改</code>，具体含义详见下文</li>
-</ul>
-</li>
-<li><strong>指向常量的指针</strong>（可对比上面对常量的引用类比理解），形式是 <strong><code>const int *pi = ci; // ci 是 const int</code></strong>，细节有四点：
+<li><strong>不允许普通引用绑定常量</strong>，即
+<code>int &amp;ri = ci; // 错误， ci 是 const int</code>，因为
+<code>ri</code>
+是普通引用，理论上可以修改所绑定对象，但此处所绑定对象是常量，所以编译器不允许这种行为</li>
+<li><strong>允许用任何表达式作为初始值</strong>，即
+<code>const int &amp;ri = 10; // 正确，绑定字面量</code> 或
+<code>const int &amp;ri = dval; // dval 是 double，正确，绑定其他类型的非常量</code>，原因详见下文</li>
+<li><strong>对常量的引用实际含义是，限定引用的操作而不限定引用对象本身</strong>，即
+<code>const int &amp;r1 = i; r1 = 100; // i 是 int，错误，引用的修改操作不允许</code>
+但
+<code>int &amp;r2 = i; r2 = 100; // 正确，所引用的对象本身可以用其他方式实现修改</code>，具体含义详见下文</li>
+</ul></li>
+<li><strong>指向常量的指针</strong>（可对比上面对常量的引用类比理解），形式是
+<strong><code>const int *pi = ci; // ci 是 const int</code></strong>，细节有四点：
 <ul>
-<li><strong>记忆方法是从右往左看</strong>，即第一个符号是 <code>int *</code> 意味着是一个指针，第二个符号是 <code>const</code> 意味着是常量，综合即一个指针指向常量，所以是指向常量的指针。由于底下的数据是常量，所以通过解引来修改底下数据是不允许的，但又由于指针本身是变量，可以改变指向。所以记忆方法大概是 <code>const *，可以改变指向但不可解引</code></li>
-<li><strong>（与对常量的引用同）不允许普通指针指向常量</strong>，即 <code>int *pi = ci; // 错误，ci 是 const int</code>，原因是普通指针 <code>pi</code> 有修改常量的风险，编译器因此不允许</li>
-<li><strong>（与对常量的引用不同）初始值只能是相同类型的常量或非常量</strong>，即 <code>const int *pi = 10; // 错误，指向字面量</code> 或 <code>const int *pi = dval; // dval 是 const double，错误，指向其他类型</code></li>
-<li><strong>（与对常量的引用同）指向常量的指针实际含义是，限定指针的操作而不限定所指向的对象本身</strong>，即 <code>const int *p1 = i; *p1 = 100; // i 是 int，错误，通过指针实现修改操作不被允许</code> 但 <code>p1 = &amp;j; // j 是 int，正确，改变指针指向允许</code>，同时，和上面一样所指向的对象本身也可以以其他形式被改变如 <code>int *p2 = &amp;i; *p2 = 100; // 正确，所指向的对象本身可以用其他方式实现修改</code></li>
-</ul>
-</li>
-<li><strong>常量指针</strong>，形式是 <strong><code>int *const p = &amp;i; // i 是 int</code></strong>，细节有三点：
+<li><strong>记忆方法是从右往左看</strong>，即第一个符号是
+<code>int *</code> 意味着是一个指针，第二个符号是 <code>const</code>
+意味着是常量，综合即一个指针指向常量，所以是指向常量的指针。由于底下的数据是常量，所以通过解引来修改底下数据是不允许的，但又由于指针本身是变量，可以改变指向。所以记忆方法大概是
+<code>const *，可以改变指向但不可解引</code></li>
+<li><strong>（与对常量的引用同）不允许普通指针指向常量</strong>，即
+<code>int *pi = ci; // 错误，ci 是 const int</code>，原因是普通指针
+<code>pi</code> 有修改常量的风险，编译器因此不允许</li>
+<li><strong>（与对常量的引用不同）初始值只能是相同类型的常量或非常量</strong>，即
+<code>const int *pi = 10; // 错误，指向字面量</code> 或
+<code>const int *pi = dval; // dval 是 const double，错误，指向其他类型</code></li>
+<li><strong>（与对常量的引用同）指向常量的指针实际含义是，限定指针的操作而不限定所指向的对象本身</strong>，即
+<code>const int *p1 = i; *p1 = 100; // i 是 int，错误，通过指针实现修改操作不被允许</code>
+但
+<code>p1 = &amp;j; // j 是 int，正确，改变指针指向允许</code>，同时，和上面一样所指向的对象本身也可以以其他形式被改变如
+<code>int *p2 = &amp;i; *p2 = 100; // 正确，所指向的对象本身可以用其他方式实现修改</code></li>
+</ul></li>
+<li><strong>常量指针</strong>，形式是
+<strong><code>int *const p = &amp;i; // i 是 int</code></strong>，细节有三点：
 <ul>
-<li><strong>记忆方法也是从右往左看</strong>，即第一个符号是 <code>const</code> 意味着是一个常量，第二个符号是 <code>int *</code> 意味着是指针，综合即一个常量的指针，简称常量指针。含义是指针本身是常量，但底下的数据不关心。所以记忆起来大概是 <code>*const，常量指针（不能修改指向）但可以解引</code></li>
-<li><strong>只能初始化不能赋值</strong>，即 <code>int *const cp = &amp;i; // i 是 int，正确，这是初始化</code> 但初始化后 <code>cp = &amp;ci; // ci 是 const int，错误，这是赋值，不允许常量指针重新赋值</code></li>
-</ul>
-</li>
+<li><strong>记忆方法也是从右往左看</strong>，即第一个符号是
+<code>const</code> 意味着是一个常量，第二个符号是 <code>int *</code>
+意味着是指针，综合即一个常量的指针，简称常量指针。含义是指针本身是常量，但底下的数据不关心。所以记忆起来大概是
+<code>*const，常量指针（不能修改指向）但可以解引</code></li>
+<li><strong>只能初始化不能赋值</strong>，即
+<code>int *const cp = &amp;i; // i 是 int，正确，这是初始化</code>
+但初始化后
+<code>cp = &amp;ci; // ci 是 const int，错误，这是赋值，不允许常量指针重新赋值</code></li>
+</ul></li>
 <li><strong>顶层/底层 const 看下图理解</strong>，有一点细节：
 <ul>
-<li><code>const int i = 100; const int *const pi = &amp;i;</code> 都属于底层 const</li>
-</ul>
-</li>
+<li><code>const int i = 100; const int *const pi = &amp;i;</code>
+都属于底层 const</li>
+</ul></li>
 <li><strong>constexpr</strong>，有两点细节：
 <ul>
 <li><strong>含义是编译阶段就能确定</strong>，详见下文</li>
-<li><strong>constexpr 指针属于底层 const</strong>，原因是 constexpr 仅对指针有效而对所指向对象无效</li>
+<li><strong>constexpr 指针属于底层 const</strong>，原因是 constexpr
+仅对指针有效而对所指向对象无效</li>
+</ul></li>
 </ul>
-</li>
-</ul>
-<p><img src="https://s2.loli.net/2022/03/23/JDbGTNoM9heaZvr.jpg" alt=""></p>
-<br>
-<h2 id="const-和初始化"><a class="header-anchor" href="#const-和初始化"></a>const 和初始化</h2>
+<p><img
+src="https://pic.imgdb.cn/item/62625383239250f7c560bcbe.jpg" /></p>
+<p><br></p>
+<h2 id="const-和初始化">const 和初始化</h2>
 <p>用一个对象去初始化另一个对象，是不是 const 都没问题：</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> i = <span class="number">10</span>;</span><br><span class="line"><span class="type">const</span> <span class="type">int</span> ci = <span class="number">20</span>;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> j = ci;             <span class="comment">// 用 const 初始化普通变量</span></span><br><span class="line"><span class="type">const</span> cj = i;           <span class="comment">// 用普通变量初始化 const</span></span><br></pre></td></tr></table></figure>
-<br>
-<h2 id="对常量的引用（reference-to-const）"><a class="header-anchor" href="#对常量的引用（reference-to-const）"></a>对常量的引用（reference to const）</h2>
+<p><br></p>
+<h2 id="对常量的引用reference-to-const">对常量的引用（reference to
+const）</h2>
 <p>怎么理解这个概念？看下面两行代码：</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> ci = <span class="number">1024</span>;    <span class="comment">// 这叫常量</span></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> &amp;r1 = ci;     <span class="comment">// r 叫对常量的引用，含义是把引用绑定到常量上</span></span><br></pre></td></tr></table></figure>
 <p>但是，</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> &amp;r2 = ci;           <span class="comment">// 这样就不行，因为 r2 可以修改所引用对象</span></span><br><span class="line">                        <span class="comment">// 但是 ci 是常量，不允许修改</span></span><br><span class="line">                        <span class="comment">// 这么写即程序员企图用 r2 修改常量</span></span><br><span class="line">                        <span class="comment">// 编译器不允许这种行为</span></span><br></pre></td></tr></table></figure>
 <p>这里还有一个地方值得一提</p>
-<p>可能大家都喜欢将 “对常量的引用” 称为 “常量引用”，但严格来说并不对。原因是，引用不是对象，引用只是别名。而且，引用本来就是不可改变其绑定对象的，也即是引用本身就相当于常量</p>
-<p>所以，常量引用这种说法可能更倾向于 <code>int &amp;r1, &amp;r2;</code> 这些形式，而对常量的引用则更倾向于 <code>const int &amp;r3 = ci; // ci 是 const int</code> 这种形式</p>
-<p>但是，实际上不会分得这么严格，大多时候程序员说的常量引用往往就是 <code>const int &amp;r = ci;</code> 的意思。只不过，本文为了不产生歧义，统一将 <code>const int &amp;r = ci;</code> 形式称为 “对常量的引用”</p>
+<p>可能大家都喜欢将 "对常量的引用" 称为
+"常量引用"，但严格来说并不对。原因是，引用不是对象，引用只是别名。而且，引用本来就是不可改变其绑定对象的，也即是引用本身就相当于常量</p>
+<p>所以，常量引用这种说法可能更倾向于 <code>int &amp;r1, &amp;r2;</code>
+这些形式，而对常量的引用则更倾向于
+<code>const int &amp;r3 = ci; // ci 是 const int</code> 这种形式</p>
+<p>但是，实际上不会分得这么严格，大多时候程序员说的常量引用往往就是
+<code>const int &amp;r = ci;</code>
+的意思。只不过，本文为了不产生歧义，统一将
+<code>const int &amp;r = ci;</code> 形式称为 "对常量的引用"</p>
 <p>另外，还有一个特别重要的细节：<strong>对常量的引用实际上，只限制引用可参与的操作</strong>：</p>
 <p>可以这么理解，对常量的引用含义是将引用绑定到常量上，也即是说仅对引用可参与的操作做出限制（不允许修改引用），但对于要引用的对象是什么？是不是常量等方面不作出限定</p>
 <p>所以，这个引用绑定的对象其实是有可能被修改的，比如：</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> i = <span class="number">42</span>;</span><br><span class="line"><span class="type">int</span> &amp;r1 = i;</span><br><span class="line"><span class="type">const</span> <span class="type">int</span> &amp;r2 = i;</span><br><span class="line">r1 = <span class="number">0</span>;                 <span class="comment">// 允许，通过普通引用修改所引用对象</span></span><br><span class="line"><span class="comment">//r2 = 0;               // 不允许，禁止通过对常量的引用修改对象</span></span><br></pre></td></tr></table></figure>
-<br>
-<h3 id="初始化"><a class="header-anchor" href="#初始化"></a>初始化</h3>
+<p><br></p>
+<h3 id="初始化">初始化</h3>
 <p>只有一条法则：<strong>允许用任何表达式作为初始值</strong>，如：</p>
 <p>允许对常量的引用绑定到非常量上</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> &amp;r1 = <span class="number">10</span>;     <span class="comment">// 正确</span></span><br></pre></td></tr></table></figure>
 <p>也允许对常量的引用绑定其他类型</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">double</span> dval = <span class="number">3.14</span>;</span><br><span class="line"><span class="type">const</span> <span class="type">int</span> &amp;r2 = dval;   <span class="comment">// 也正确</span></span><br><span class="line"><span class="comment">// int &amp;r3 = dval;      // 错误，用一个普通引用绑定对常量的引用</span></span><br><span class="line">                        <span class="comment">// 也即程序员企图用普通引用修改某个常量</span></span><br><span class="line">                        <span class="comment">// 编译器不允许这种行为</span></span><br></pre></td></tr></table></figure>
 <p>要理解上面这个法则，首先要了解对常量的引用初始化这个过程发生过了什么：</p>
-<p>这就是，初始化分为两步（以上面 <code>const int &amp;r2 = dval;</code> 为例说明）</p>
+<p>这就是，初始化分为两步（以上面 <code>const int &amp;r2 = dval;</code>
+为例说明）</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> temp = dval;  <span class="comment">// 编译器使用临时变量完成了类型转换</span></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> &amp;r2 = temp;</span><br></pre></td></tr></table></figure>
-<br>
-<h2 id="指向常量的指针（pointer-to-const）"><a class="header-anchor" href="#指向常量的指针（pointer-to-const）"></a>指向常量的指针（pointer to const）</h2>
+<p><br></p>
+<h2 id="指向常量的指针pointer-to-const">指向常量的指针（pointer to
+const）</h2>
 <p>语法上和上面的对常量的引用很像，但是由于引用不是对象而指针是对象，所以总体来说还是有些内容有区别</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> &amp;ri = i;      <span class="comment">// 对常量的引用</span></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> *pi = ci;     <span class="comment">// 指向常量的指针</span></span><br></pre></td></tr></table></figure>
 <p>先来看类似的部分</p>
@@ -575,47 +606,65 @@
 <p>也是一样理解，对常量的引用绑定到常量上，即不允许修改所引用的对象。这里也只对指针可参与的操作作出限定（不允许指针修改对象），但对于指向的对象是不是常量不限制</p>
 <p>所以，这个指向的对象也是有可能被修改的，比如：</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> i = <span class="number">42</span>;</span><br><span class="line"><span class="type">int</span> *p1 = &amp;i;</span><br><span class="line"><span class="type">const</span> <span class="type">int</span> *p2 = &amp;i;</span><br><span class="line">*p1 = <span class="number">0</span>;                <span class="comment">// 允许，通过普通指针修改所指向对象</span></span><br><span class="line"><span class="comment">//*p2 = 0;              // 不允许，禁止通过指向常量的指针修改对象</span></span><br></pre></td></tr></table></figure>
-<br>
-<h3 id="初始化-v2"><a class="header-anchor" href="#初始化-v2"></a>初始化</h3>
+<p><br></p>
+<h3 id="初始化-1">初始化</h3>
 <p>这里和对常量的引用，可以用任意表达式初始化不同。指向常量的指针只能是<strong>相同类型的，常量或非常量</strong>才可以用来做初始化</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> &amp;r1 = <span class="number">10</span>;     <span class="comment">// 对常量的引用可以使用字面量</span></span><br><span class="line"><span class="comment">//const int *p1 = 10;   // 不可以</span></span><br><span class="line"></span><br><span class="line"><span class="type">const</span> <span class="type">double</span> d = <span class="number">3.14</span>;</span><br><span class="line"><span class="type">const</span> <span class="type">int</span> &amp;r2 = d;      <span class="comment">// 对常量的引用可以使用其他类型</span></span><br><span class="line"><span class="comment">//const int *p2 = &amp;d;   // 不可以</span></span><br><span class="line"></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> *p3 = &amp;i;     <span class="comment">// i 是 int，指向常量的指针允许这种初始化</span></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> *p4 = &amp;ci;    <span class="comment">// ci 是 const int，也允许</span></span><br></pre></td></tr></table></figure>
-<br>
-<h2 id="const-指针（常量指针）"><a class="header-anchor" href="#const-指针（常量指针）"></a>const 指针（常量指针）</h2>
+<p><br></p>
+<h2 id="const-指针常量指针">const 指针（常量指针）</h2>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> *<span class="type">const</span> cp = &amp;ci;    <span class="comment">// cp 是一个常量指针</span></span><br></pre></td></tr></table></figure>
 <p>字面意思，指针本身是常量，所以指针不可以改变（也即指针不能改变指向），所以常量指针必须初始化</p>
-<h3 id="初始化-v3"><a class="header-anchor" href="#初始化-v3"></a>初始化</h3>
+<h3 id="初始化-2">初始化</h3>
 <p>既可以用常量对象，也可以用普通对象初始化</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> i = <span class="number">10</span>;</span><br><span class="line"><span class="type">int</span> *<span class="type">const</span> cp1 = &amp;i;    <span class="comment">// 用普通对象初始化</span></span><br><span class="line"><span class="type">const</span> <span class="type">int</span> ci = <span class="number">120</span>;</span><br><span class="line"><span class="type">int</span> *<span class="type">const</span> cp2 = &amp;ci;   <span class="comment">// 也可以用常量对象初始化</span></span><br></pre></td></tr></table></figure>
-<br>
-<h2 id="八股文重灾区之如何记忆"><a class="header-anchor" href="#八股文重灾区之如何记忆"></a>八股文重灾区之如何记忆</h2>
+<p><br></p>
+<h2 id="八股文重灾区之如何记忆">八股文重灾区之如何记忆</h2>
 <p>答：从右往左读</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> *p1;</span><br></pre></td></tr></table></figure>
-<p>从右往左第一个符号 <code>int *</code> 是一个指针，第二个符号 <code>const</code> 是常量，合起来就是 “一个指针” “常量”，也就是 “一个指针<strong>指向</strong>常量”（其中，中间加上 “指向” 两个字来连接）</p>
+<p>从右往左第一个符号 <code>int *</code> 是一个指针，第二个符号
+<code>const</code> 是常量，合起来就是 "一个指针" "常量"，也就是
+"一个指针<strong>指向</strong>常量"（其中，中间加上 "指向"
+两个字来连接）</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> *<span class="type">const</span> p2 = &amp;ci;    <span class="comment">// ci 是 const int</span></span><br></pre></td></tr></table></figure>
-<p>从右往左第一个符号 <code>const</code> 是常量，第二个符号 <code>int *</code> 是指针，合起来就是 “常量指针”</p>
-<br>
-<h2 id="顶层-底层-const（top-level-low-level-const）"><a class="header-anchor" href="#顶层-底层-const（top-level-low-level-const）"></a>顶层/底层 const（top-level/low-level const）</h2>
+<p>从右往左第一个符号 <code>const</code> 是常量，第二个符号
+<code>int *</code> 是指针，合起来就是 "常量指针"</p>
+<p><br></p>
+<h2 id="顶层底层-consttop-levellow-level-const">顶层/底层
+const（top-level/low-level const）</h2>
 <p>直接上图说明指针和 const 的情况</p>
-<p><img src="https://s2.loli.net/2022/03/23/JDbGTNoM9heaZvr.jpg" alt=""></p>
+<p><img
+src="https://pic.imgdb.cn/item/62625383239250f7c560bcbe.jpg" /></p>
 <p>但是，情况换成引用和 const，以下理解是错的</p>
-<p><img src="https://s2.loli.net/2022/03/23/LVfmJDeyICUXgri.jpg" alt=""></p>
-<p>要注意但凡引用加上 const，只能是底层 const（形式上是 <code>const int &amp;ri = ci; // ci 是 const int</code>）。因为引用这个概念本来就不允许修改，你见过重新赋值的引用吗？所以从这一点来看引用就相当于常量</p>
-<p>但是要考虑到引用本身不是对象，它是绑定到其他对象身上作为别名而存在的概念。而指针本身就是个对象，这才有顶层的概念，引用不是对象，去哪里找这个 “顶层”？所以引用加上 const 只能是底层 const</p>
+<p><img
+src="https://pic.imgdb.cn/item/62625383239250f7c560bccf.jpg" /></p>
+<p>要注意但凡引用加上 const，只能是底层 const（形式上是
+<code>const int &amp;ri = ci; // ci 是 const int</code>）。因为引用这个概念本来就不允许修改，你见过重新赋值的引用吗？所以从这一点来看引用就相当于常量</p>
+<p>但是要考虑到引用本身不是对象，它是绑定到其他对象身上作为别名而存在的概念。而指针本身就是个对象，这才有顶层的概念，引用不是对象，去哪里找这个
+"顶层"？所以引用加上 const 只能是底层 const</p>
 <p>值得一提的是，以下两种形式也属于底层 const</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="type">int</span> ci = <span class="number">1000</span>;</span><br><span class="line"><span class="type">const</span> <span class="type">int</span> *<span class="type">const</span> cp = &amp;ci;</span><br></pre></td></tr></table></figure>
-<p>因为底层 const 突出的概念是 “底层数据不可修改”，第一个常量不可修改吧，所以算底层 const；第二个虽然看左半部分是顶层 const，但右半部分的含义也是不可修改底层数据，所以实际上也是算底层 const</p>
-<br>
-<h2 id="constexpr"><a class="header-anchor" href="#constexpr"></a>constexpr</h2>
+<p>因为底层 const 突出的概念是
+"底层数据不可修改"，第一个常量不可修改吧，所以算底层
+const；第二个虽然看左半部分是顶层
+const，但右半部分的含义也是不可修改底层数据，所以实际上也是算底层
+const</p>
+<p><br></p>
+<h2 id="constexpr">constexpr</h2>
 <p>这个限定符就只有一个含义：<strong>编译阶段就能确定表达式的值</strong></p>
 <p>怎么理解呢？看下面两个函数：</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">int</span> <span class="title">sum1</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> a + b;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">constexpr</span> <span class="type">int</span> <span class="title">sum2</span><span class="params">(<span class="type">int</span> a, <span class="type">int</span> b)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> a + b;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 此处打上断点，称为断点 1</span></span><br><span class="line">    <span class="type">int</span> i1 = <span class="built_in">sum1</span>(<span class="number">10</span>, <span class="number">20</span>);</span><br><span class="line">    <span class="comment">// 此处也打上断点，称为断点 2</span></span><br><span class="line">    <span class="keyword">constexpr</span> <span class="type">int</span> i2 = <span class="built_in">sum2</span>(<span class="number">100</span>, <span class="number">20000</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>用<strong>单步调试模式</strong>执行上面的代码，你会发现，断点 1 会跳入函数体内，但断点 2 不会跳入函数体内</p>
-<p>这是因为，<code>i2</code> 的值早在编译阶段就算出来了，所以执行的时候就不需要进入函数</p>
-<p>但要注意，constexpr 的表达式一定要是能够确定才行，如果编译阶段发现表达式确定不下来，那就变成普通函数了</p>
-<h3 id="constexpr-和指针"><a class="header-anchor" href="#constexpr-和指针"></a>constexpr 和指针</h3>
+<p>用<strong>单步调试模式</strong>执行上面的代码，你会发现，断点 1
+会跳入函数体内，但断点 2 不会跳入函数体内</p>
+<p>这是因为，<code>i2</code>
+的值早在编译阶段就算出来了，所以执行的时候就不需要进入函数</p>
+<p>但要注意，constexpr
+的表达式一定要是能够确定才行，如果编译阶段发现表达式确定不下来，那就变成普通函数了</p>
+<h3 id="constexpr-和指针">constexpr 和指针</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 这是一个 constexpr 指针</span></span><br><span class="line"><span class="keyword">constexpr</span> <span class="type">int</span> *p = <span class="literal">nullptr</span>;</span><br></pre></td></tr></table></figure>
 <p>对于指针，限定符只限定指针，而与指针所指对象无关</p>
-<p>这是说，constexpr 只对指针可参与的操作作出限定（不允许指针修改对象），但对于指向的对象是不是常量不限制————这其实就是 <code>const int *p;</code> 指向常量的指针的性质</p>
+<p>这是说，constexpr
+只对指针可参与的操作作出限定（不允许指针修改对象），但对于指向的对象是不是常量不限制————这其实就是
+<code>const int *p;</code> 指向常量的指针的性质</p>
 <p>也就是说，constexpr 指针是一个顶层 const</p>
 
     </article>
@@ -626,7 +675,7 @@
             <p>Author：<a href="http://example.com">Horbyn</a>
             <p>Link：<a href="http://example.com/2022/03/20/cpp-2/">http://example.com/2022/03/20/cpp-2/</a>
             <p>Publish date：<a href="http://example.com/2022/03/20/cpp-2/">March 20th 2022, 12:13:36 pm</a>
-            <p>Update date：<a href="http://example.com/2022/03/20/cpp-2/">March 23rd 2022, 11:35:32 pm</a>
+            <p>Update date：<a href="http://example.com/2022/03/20/cpp-2/">April 22nd 2022, 3:05:48 pm</a>
             -->
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
@@ -796,7 +845,10 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Summary"><span class="toc-number">1.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#const-%E5%92%8C%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-number">2.</span> <span class="toc-text">const 和初始化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AF%B9%E5%B8%B8%E9%87%8F%E7%9A%84%E5%BC%95%E7%94%A8%EF%BC%88reference-to-const%EF%BC%89"><span class="toc-number">3.</span> <span class="toc-text">对常量的引用（reference to const）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-number">3.1.</span> <span class="toc-text">初始化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8C%87%E5%90%91%E5%B8%B8%E9%87%8F%E7%9A%84%E6%8C%87%E9%92%88%EF%BC%88pointer-to-const%EF%BC%89"><span class="toc-number">4.</span> <span class="toc-text">指向常量的指针（pointer to const）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96-v2"><span class="toc-number">4.1.</span> <span class="toc-text">初始化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#const-%E6%8C%87%E9%92%88%EF%BC%88%E5%B8%B8%E9%87%8F%E6%8C%87%E9%92%88%EF%BC%89"><span class="toc-number">5.</span> <span class="toc-text">const 指针（常量指针）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96-v3"><span class="toc-number">5.1.</span> <span class="toc-text">初始化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E8%82%A1%E6%96%87%E9%87%8D%E7%81%BE%E5%8C%BA%E4%B9%8B%E5%A6%82%E4%BD%95%E8%AE%B0%E5%BF%86"><span class="toc-number">6.</span> <span class="toc-text">八股文重灾区之如何记忆</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%A1%B6%E5%B1%82-%E5%BA%95%E5%B1%82-const%EF%BC%88top-level-low-level-const%EF%BC%89"><span class="toc-number">7.</span> <span class="toc-text">顶层&#x2F;底层 const（top-level&#x2F;low-level const）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#constexpr"><span class="toc-number">8.</span> <span class="toc-text">constexpr</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#constexpr-%E5%92%8C%E6%8C%87%E9%92%88"><span class="toc-number">8.1.</span> <span class="toc-text">constexpr 和指针</span></a></li></ol></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#summary"><span class="toc-number">1.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#const-%E5%92%8C%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-number">2.</span> <span class="toc-text">const 和初始化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AF%B9%E5%B8%B8%E9%87%8F%E7%9A%84%E5%BC%95%E7%94%A8reference-to-const"><span class="toc-number">3.</span> <span class="toc-text">对常量的引用（reference to
+const）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-number">3.1.</span> <span class="toc-text">初始化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8C%87%E5%90%91%E5%B8%B8%E9%87%8F%E7%9A%84%E6%8C%87%E9%92%88pointer-to-const"><span class="toc-number">4.</span> <span class="toc-text">指向常量的指针（pointer to
+const）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96-1"><span class="toc-number">4.1.</span> <span class="toc-text">初始化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#const-%E6%8C%87%E9%92%88%E5%B8%B8%E9%87%8F%E6%8C%87%E9%92%88"><span class="toc-number">5.</span> <span class="toc-text">const 指针（常量指针）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96-2"><span class="toc-number">5.1.</span> <span class="toc-text">初始化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E8%82%A1%E6%96%87%E9%87%8D%E7%81%BE%E5%8C%BA%E4%B9%8B%E5%A6%82%E4%BD%95%E8%AE%B0%E5%BF%86"><span class="toc-number">6.</span> <span class="toc-text">八股文重灾区之如何记忆</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%A1%B6%E5%B1%82%E5%BA%95%E5%B1%82-consttop-levellow-level-const"><span class="toc-number">7.</span> <span class="toc-text">顶层&#x2F;底层
+const（top-level&#x2F;low-level const）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#constexpr"><span class="toc-number">8.</span> <span class="toc-text">constexpr</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#constexpr-%E5%92%8C%E6%8C%87%E9%92%88"><span class="toc-number">8.1.</span> <span class="toc-text">constexpr 和指针</span></a></li></ol></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -885,7 +937,31 @@
         
         
         
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
     
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -980,7 +1056,7 @@
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 15
+        Total : 17
         </div>
         <!-- search  -->
         
@@ -994,6 +1070,18 @@
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
             
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
+        </li>
+    
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
+        </li>
+    
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/17</span>
@@ -1045,7 +1133,7 @@
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/20</span>
-            <a class="archive-post-title" href="/2022/03/20/cpp-2/">C/C++ 八股文之 const</a>
+            <a class="archive-post-title" href="/2022/03/20/cpp-2/">C/C++ 八股文：const</a>
         </li>
     
         
@@ -1095,6 +1183,11 @@
                 cpp
             </span>
         
+            <span class="sidebar-tag-name" data-tags="winsock">
+                <span class="iconfont-archer">&#xe606;</span>
+                winsock
+            </span>
+        
             <span class="sidebar-tag-name" data-tags="xv6">
                 <span class="iconfont-archer">&#xe606;</span>
                 xv6
@@ -1103,11 +1196,6 @@
             <span class="sidebar-tag-name" data-tags="translation">
                 <span class="iconfont-archer">&#xe606;</span>
                 translation
-            </span>
-        
-            <span class="sidebar-tag-name" data-tags="winsock">
-                <span class="iconfont-archer">&#xe606;</span>
-                winsock
             </span>
         
     </div>
