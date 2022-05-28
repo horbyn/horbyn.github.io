@@ -27,7 +27,7 @@
 <meta property="og:description" content="以前只记得结构体对齐，是对齐最长的那个成员，但现在发现并不是这样，看以下两个示例（64位 g++ 9.3.0 编译）————原 blog 记载于博客园">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2022-02-26T15:13:43.000Z">
-<meta property="article:modified_time" content="2022-02-26T15:26:27.529Z">
+<meta property="article:modified_time" content="2022-05-12T02:08:12.006Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="cpp">
 <meta name="twitter:card" content="summary">
@@ -494,43 +494,36 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="引入">引入</h2>
-<p>以前只记得结构体对齐，是对齐最长的那个成员，但现在发现并不是这样，看以下两个示例（64位
-g++ 9.3.0 编译） </br></p>
-<h2 id="示例一">示例一</h2>
+        <h2 id="引入"><a class="header-anchor" href="#引入"></a>引入</h2>
+<p>以前只记得结构体对齐，是对齐最长的那个成员，但现在发现并不是这样，看以下两个示例（64位 g++ 9.3.0 编译）<br>
+</br></p>
+<h2 id="示例一"><a class="header-anchor" href="#示例一"></a>示例一</h2>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">B</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        <span class="type">char</span> b;                 <span class="comment">// 8</span></span><br><span class="line">        <span class="function"><span class="keyword">virtual</span> <span class="type">void</span> <span class="title">fun</span><span class="params">()</span> </span>&#123;&#125;;  <span class="comment">// 8</span></span><br><span class="line">        <span class="type">static</span> <span class="type">int</span> c;           <span class="comment">// 0</span></span><br><span class="line">        <span class="type">static</span> <span class="type">int</span> d;           <span class="comment">// 0</span></span><br><span class="line">        <span class="type">static</span> <span class="type">int</span> f;           <span class="comment">// 0</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">cout&lt;&lt;<span class="built_in">sizeof</span>(B)&lt;&lt;endl; <span class="comment">// 16</span></span><br></pre></td></tr></table></figure>
-<p>值得一提的是静态成员不占空间 这里虚指针 = 8B，<code>char b</code> =
-1B。最宽成员是虚指针，所以<code>char b</code>对齐为 8B，所以总
-16B，可能一开始大家都是这么理解的（但实际上不对，不能这么说，后文会指正）<br />
+<p>值得一提的是静态成员不占空间<br>
+这里虚指针 = 8B，<code>char b</code> = 1B。最宽成员是虚指针，所以<code>char b</code>对齐为 8B，所以总 16B，可能一开始大家都是这么理解的（但实际上不对，不能这么说，后文会指正）<br>
 </br></p>
-<h2 id="示例二">示例二</h2>
+<h2 id="示例二"><a class="header-anchor" href="#示例二"></a>示例二</h2>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">A</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        <span class="type">char</span> a; <span class="comment">// 4</span></span><br><span class="line">        <span class="type">int</span> b;  <span class="comment">// 4</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">class</span> <span class="title class_">C</span></span><br><span class="line">&#123;</span><br><span class="line">    A a;        <span class="comment">// 8</span></span><br><span class="line">    <span class="type">char</span> c;     <span class="comment">// 4???</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">cout&lt;&lt;<span class="built_in">sizeof</span>(C)&lt;&lt;endl; <span class="comment">// 12</span></span><br></pre></td></tr></table></figure>
-<p>类 C 中<code>char c</code>成员实际结果是 4B。 如果按原来的理解，类 A
-= 8B，类 C 继承后最宽成员是 A 类，那<code>char c</code>不应该对齐为 8B
-吗？<br />
+<p>类 C 中<code>char c</code>成员实际结果是 4B。<br>
+如果按原来的理解，类 A = 8B，类 C 继承后最宽成员是 A 类，那<code>char c</code>不应该对齐为 8B 吗？<br>
 </br></p>
-<h2 id="实际情况">实际情况</h2>
-<p>参考 <a
-target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCUgb/view/0TftSJ/">LeetCode某讨论</a></p>
+<h2 id="实际情况"><a class="header-anchor" href="#实际情况"></a>实际情况</h2>
+<p>参考 <a target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCUgb/view/0TftSJ/">LeetCode某讨论</a></p>
 <blockquote>
-<p>假定是gcc，用默认的对齐系数 4 (编译器决定)
-对齐值是对齐系数和结构体各成员长度最大值的较小值
+<p>假定是gcc，用默认的对齐系数 4 (编译器决定)<br>
+对齐值是对齐系数和结构体各成员长度最大值的较小值<br>
 对齐要求各成员起始偏移量是对齐值和它的长度的较小值的倍数</p>
 </blockquote>
 <p>一句话概括就是</p>
 <ul>
 <li><strong>对齐值 = min{对齐系数，最长成员}</strong></li>
-<li>[补]对齐系数用<code>#pragma pack(n)</code>指定，其中 n = 1, 2, 4,
-8..等二次幂；默认情况下，貌似 32-bit 机是 4，64-bit 机是 8</li>
-<li><strong>起始偏移 =
-min{对齐值，成员自身长度}，再取整数倍</strong></li>
-<li>最后整个结构体的大小要补足为<strong>对齐值的倍数</strong><br />
+<li>[补]对齐系数用<code>#pragma pack(n)</code>指定，其中 n = 1, 2, 4, 8…等二次幂；默认情况下，貌似 32-bit 机是 4，64-bit 机是 8</li>
+<li><strong>起始偏移 = min{对齐值，成员自身长度}，再取整数倍</strong></li>
+<li>最后整个结构体的大小要补足为<strong>对齐值的倍数</strong><br>
 </br></li>
 </ul>
-<h2
-id="举个例子还是拿上面这个讨论作例子">举个例子（还是拿上面这个讨论作例子）</h2>
-<p>参考 <a
-target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCUgb/view/0TftSJ/">LeetCode某讨论</a></p>
+<h2 id="举个例子（还是拿上面这个讨论作例子）"><a class="header-anchor" href="#举个例子（还是拿上面这个讨论作例子）"></a>举个例子（还是拿上面这个讨论作例子）</h2>
+<p>参考 <a target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCUgb/view/0TftSJ/">LeetCode某讨论</a></p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">student</span> &#123;</span><br><span class="line">    <span class="type">int</span> m_id;        <span class="comment">// 4</span></span><br><span class="line">    <span class="type">char</span> m_name[<span class="number">10</span>]; <span class="comment">// 10</span></span><br><span class="line">    <span class="type">bool</span> m_sex;      <span class="comment">// 1</span></span><br><span class="line">    <span class="type">int</span> m_age;       <span class="comment">// 4</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
 <p>这里先给出分析结构体长度的一般方法：</p>
 <ul>
@@ -544,48 +537,30 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
 </ul>
 <p>第二步，分析各成员偏移地址：</p>
 <ul>
-<li>成员<code>m_id</code>自身长度 4，对齐值 4，因此 min =
-4。作为第一个成员，偏移地址为 0，而 0 是 4 的倍数，因此偏移 0，占用空间
-0-3</li>
-<li>成员<code>m_name[]</code>自身长度 10，对齐值 4，因此 min =
-4。续上一个成员结尾偏移地址为 4，而 4 是 4 的倍数，因此偏移 0，占用空间
-4-13</li>
-<li>成员<code>m_sex</code>自身长度 1，对齐值 4，因此 min =
-1。续上一个成员结尾偏移地址为 14，而 14 是 1 的倍数，因此偏移
-14，占用空间 14</li>
-<li>成员<code>m_age</code>自身长度 4，对齐值 4，因此 min =
-4。续上一个成员结尾偏移地址为 15，<strong>而 15 不是 4
-的倍数，所以要补位（补至恰好是 min 倍数即可，这里 4 * 3 &lt; 15 而 4 * 4
-&gt; 15 所以补至 16）</strong>，因此偏移 16，占用空间 16-19</li>
+<li>成员<code>m_id</code>自身长度 4，对齐值 4，因此 min = 4。作为第一个成员，偏移地址为 0，而 0 是 4 的倍数，因此偏移 0，占用空间 0-3</li>
+<li>成员<code>m_name[]</code>自身长度 10，对齐值 4，因此 min = 4。续上一个成员结尾偏移地址为 4，而 4 是 4 的倍数，因此偏移 4，占用空间 4-13</li>
+<li>成员<code>m_sex</code>自身长度 1，对齐值 4，因此 min = 1。续上一个成员结尾偏移地址为 14，而 14 是 1 的倍数，因此偏移 14，占用空间 14</li>
+<li>成员<code>m_age</code>自身长度 4，对齐值 4，因此 min = 4。续上一个成员结尾偏移地址为 15，<strong>而 15 不是 4 的倍数，所以要补位（补至恰好是 min 倍数即可，这里 4 * 3 &lt; 15 而 4 * 4 &gt; 15 所以补至 16）</strong>，因此偏移 16，占用空间 16-19</li>
 </ul>
 <p>第三步，分析结构体大小</p>
 <ul>
-<li>目前整个结构体占用空间 0-19 即 20B，20 是对齐值 4
-的倍数，所以不需填充，所以最终大小是 20B<br />
+<li>目前整个结构体占用空间 0-19 即 20B，20 是对齐值 4 的倍数，所以不需填充，所以最终大小是 20B<br>
 </br></li>
 </ul>
-<h2 id="回到示例一">回到示例一</h2>
+<h2 id="回到示例一"><a class="header-anchor" href="#回到示例一"></a>回到示例一</h2>
 <p>再把例子重新放上来吧，以免往上翻</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">B</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        <span class="type">char</span> b;                 <span class="comment">// 8</span></span><br><span class="line">        <span class="function"><span class="keyword">virtual</span> <span class="type">void</span> <span class="title">fun</span><span class="params">()</span> </span>&#123;&#125;;  <span class="comment">// 8</span></span><br><span class="line">        <span class="type">static</span> <span class="type">int</span> c;           <span class="comment">// 0</span></span><br><span class="line">        <span class="type">static</span> <span class="type">int</span> d;           <span class="comment">// 0</span></span><br><span class="line">        <span class="type">static</span> <span class="type">int</span> f;           <span class="comment">// 0</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">cout&lt;&lt;<span class="built_in">sizeof</span>(B)&lt;&lt;endl; <span class="comment">// 16</span></span><br></pre></td></tr></table></figure>
-<p>之前说<code>char b</code>对齐 8B
-是因为对齐最宽的虚指针长度，其实是不对的。我测试了对齐值分别为 4 和 8
-两种情况，测试结果不相同</p>
+<p>之前说<code>char b</code>对齐 8B 是因为对齐最宽的虚指针长度，其实是不对的。我测试了对齐值分别为 4 和 8 两种情况，测试结果不相同</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ======================== v1 =============================</span></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> pack(4)                 <span class="comment">// 指定对齐值 4</span></span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">B</span></span><br><span class="line">&#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">	<span class="type">char</span> b;                 <span class="comment">// 4</span></span><br><span class="line">	<span class="function"><span class="keyword">virtual</span> <span class="type">void</span> <span class="title">fun</span><span class="params">()</span> </span>&#123;&#125;;  <span class="comment">// 8</span></span><br><span class="line">	<span class="type">static</span> <span class="type">int</span> c;           <span class="comment">// 0</span></span><br><span class="line">	<span class="type">static</span> <span class="type">int</span> d;           <span class="comment">// 0</span></span><br><span class="line">	<span class="type">static</span> <span class="type">int</span> f;           <span class="comment">// 0</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">cout&lt;&lt;<span class="built_in">sizeof</span>(B)&lt;&lt;endl; <span class="comment">// 12</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// ================== v2（同示例一） ========================</span></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> pack(8)                 <span class="comment">// 指定对齐值 8，64-bit 貌似默认 8，这也是一开始示例一的默认对齐值</span></span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">B</span></span><br><span class="line">&#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">	<span class="type">char</span> b;                 <span class="comment">// 8</span></span><br><span class="line">	<span class="function"><span class="keyword">virtual</span> <span class="type">void</span> <span class="title">fun</span><span class="params">()</span> </span>&#123;&#125;;  <span class="comment">// 8</span></span><br><span class="line">	<span class="type">static</span> <span class="type">int</span> c;           <span class="comment">// 0</span></span><br><span class="line">	<span class="type">static</span> <span class="type">int</span> d;           <span class="comment">// 0</span></span><br><span class="line">	<span class="type">static</span> <span class="type">int</span> f;           <span class="comment">// 0</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">cout&lt;&lt;<span class="built_in">sizeof</span>(B)&lt;&lt;endl; <span class="comment">// 16</span></span><br></pre></td></tr></table></figure>
-<p>可以发现两种结构体<code>char b</code>对齐 4B 和
-8B，因此可以得出结论<strong>简单地说对齐最长成员</strong>是不对的<br />
+<p>可以发现两种结构体<code>char b</code>对齐 4B 和 8B，因此可以得出结论<strong>简单地说对齐最长成员</strong>是不对的<br>
 </br></p>
-<h2 id="回到示例二">回到示例二</h2>
-<p>这里我也测试了 4 和 8
-两种对齐值的情况，但让人意外的是，测试结果稍微有点超出我的预期。<strong><font color=red>所以我目前还不敢确定自己的看法是否正确，仅作参考，也欢迎指正</font></strong></p>
+<h2 id="回到示例二"><a class="header-anchor" href="#回到示例二"></a>回到示例二</h2>
+<p>这里我也测试了 4 和 8 两种对齐值的情况，但让人意外的是，测试结果稍微有点超出我的预期。<strong><font color=red>所以我目前还不敢确定自己的看法是否正确，仅作参考，也欢迎指正</font></strong></p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ======================== v1 =============================</span></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> pack(4)                 <span class="comment">// 指定对齐值 4</span></span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">A</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        <span class="type">char</span> a; <span class="comment">// 4</span></span><br><span class="line">        <span class="type">int</span> b;  <span class="comment">// 4</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">class</span> <span class="title class_">C</span></span><br><span class="line">&#123;</span><br><span class="line">    A a;        <span class="comment">// 8</span></span><br><span class="line">    <span class="type">char</span> c;     <span class="comment">// 4</span></span><br><span class="line">&#125;;</span><br><span class="line">cout&lt;&lt;<span class="built_in">sizeof</span>(C)&lt;&lt;endl; <span class="comment">// 12</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// ======================== v2 =============================</span></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> pack(8)                 <span class="comment">// 指定对齐值 8</span></span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">A</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        <span class="type">char</span> a; <span class="comment">// 4</span></span><br><span class="line">        <span class="type">int</span> b;  <span class="comment">// 4</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">class</span> <span class="title class_">C</span></span><br><span class="line">&#123;</span><br><span class="line">    A a;        <span class="comment">// 8</span></span><br><span class="line">    <span class="type">char</span> c;     <span class="comment">// 4</span></span><br><span class="line">&#125;;</span><br><span class="line">cout&lt;&lt;<span class="built_in">sizeof</span>(C)&lt;&lt;endl; <span class="comment">// 12</span></span><br></pre></td></tr></table></figure>
 <p>是不是和预期不同？</p>
 <ul>
-<li>第一个版本对齐值 4，min = min{对齐系数(4)，最长成员(8)} =
-4，结构体长度简单累加起来是 12B，12B 是 4
-的倍数，所以不用填充。这没问题，符合我们上面的结论</li>
-<li>但第二个版本对齐值 8，min = min{对齐系数(8)，最长成员(8)} =
-8，结构体长度简单累加起来是 12B。按我们上面的结论 12B 并不是 8
-的倍数，理应填充，但运行结果却没填充，<strong>所以我认为，类对象作为成员计算长度时，并不应该计算整个类的长度，而是把类的成员拆开来看取其中最长的那个</strong></li>
+<li>第一个版本对齐值 4，min = min{对齐系数(4)，最长成员(8)} = 4，结构体长度简单累加起来是 12B，12B 是 4 的倍数，所以不用填充。这没问题，符合我们上面的结论</li>
+<li>但第二个版本对齐值 8，min = min{对齐系数(8)，最长成员(8)} = 8，结构体长度简单累加起来是 12B。按我们上面的结论 12B 并不是 8 的倍数，理应填充，但运行结果却没填充，<strong>所以我认为，类对象作为成员计算长度时，并不应该计算整个类的长度，而是把类的成员拆开来看取其中最长的那个</strong></li>
 </ul>
 
     </article>
@@ -596,7 +571,7 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
             <p>Author：<a href="http://example.com">Horbyn</a>
             <p>Link：<a href="http://example.com/2022/02/26/cpp-1/">http://example.com/2022/02/26/cpp-1/</a>
             <p>Publish date：<a href="http://example.com/2022/02/26/cpp-1/">February 26th 2022, 11:13:43 pm</a>
-            <p>Update date：<a href="http://example.com/2022/02/26/cpp-1/">February 26th 2022, 11:26:27 pm</a>
+            <p>Update date：<a href="http://example.com/2022/02/26/cpp-1/">May 12th 2022, 10:08:12 am</a>
             -->
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
@@ -766,7 +741,7 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E5%85%A5"><span class="toc-number">1.</span> <span class="toc-text">引入</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%A4%BA%E4%BE%8B%E4%B8%80"><span class="toc-number">2.</span> <span class="toc-text">示例一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%A4%BA%E4%BE%8B%E4%BA%8C"><span class="toc-number">3.</span> <span class="toc-text">示例二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%99%85%E6%83%85%E5%86%B5"><span class="toc-number">4.</span> <span class="toc-text">实际情况</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BE%E4%B8%AA%E4%BE%8B%E5%AD%90%E8%BF%98%E6%98%AF%E6%8B%BF%E4%B8%8A%E9%9D%A2%E8%BF%99%E4%B8%AA%E8%AE%A8%E8%AE%BA%E4%BD%9C%E4%BE%8B%E5%AD%90"><span class="toc-number">5.</span> <span class="toc-text">举个例子（还是拿上面这个讨论作例子）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9E%E5%88%B0%E7%A4%BA%E4%BE%8B%E4%B8%80"><span class="toc-number">6.</span> <span class="toc-text">回到示例一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9E%E5%88%B0%E7%A4%BA%E4%BE%8B%E4%BA%8C"><span class="toc-number">7.</span> <span class="toc-text">回到示例二</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E5%85%A5"><span class="toc-number">1.</span> <span class="toc-text">引入</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%A4%BA%E4%BE%8B%E4%B8%80"><span class="toc-number">2.</span> <span class="toc-text">示例一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%A4%BA%E4%BE%8B%E4%BA%8C"><span class="toc-number">3.</span> <span class="toc-text">示例二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%99%85%E6%83%85%E5%86%B5"><span class="toc-number">4.</span> <span class="toc-text">实际情况</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BE%E4%B8%AA%E4%BE%8B%E5%AD%90%EF%BC%88%E8%BF%98%E6%98%AF%E6%8B%BF%E4%B8%8A%E9%9D%A2%E8%BF%99%E4%B8%AA%E8%AE%A8%E8%AE%BA%E4%BD%9C%E4%BE%8B%E5%AD%90%EF%BC%89"><span class="toc-number">5.</span> <span class="toc-text">举个例子（还是拿上面这个讨论作例子）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9E%E5%88%B0%E7%A4%BA%E4%BE%8B%E4%B8%80"><span class="toc-number">6.</span> <span class="toc-text">回到示例一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9E%E5%88%B0%E7%A4%BA%E4%BE%8B%E4%BA%8C"><span class="toc-number">7.</span> <span class="toc-text">回到示例二</span></a></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -865,7 +840,22 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
         
         
         
+        
+        
+        
+        
+        
     
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -974,7 +964,7 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
     
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 17
+        Total : 18
         </div>
         <!-- search  -->
         
@@ -988,6 +978,12 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
             
+        
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/28</span>
+            <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
+        </li>
+    
         
         <li class="archive-post-item">
             <span class="archive-post-date">04/21</span>
@@ -1033,7 +1029,7 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
         
         <li class="archive-post-item">
             <span class="archive-post-date">03/29</span>
-            <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译）</a>
+            <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
         </li>
     
         
@@ -1096,6 +1092,11 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
         
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
+            </span>
+        
             <span class="sidebar-tag-name" data-tags="cpp">
                 <span class="iconfont-archer">&#xe606;</span>
                 cpp
@@ -1109,11 +1110,6 @@ target="_blank" rel="noopener" href="https://leetcode-cn.com/circle/discuss/MlCU
             <span class="sidebar-tag-name" data-tags="xv6">
                 <span class="iconfont-archer">&#xe606;</span>
                 xv6
-            </span>
-        
-            <span class="sidebar-tag-name" data-tags="translation">
-                <span class="iconfont-archer">&#xe606;</span>
-                translation
             </span>
         
     </div>
