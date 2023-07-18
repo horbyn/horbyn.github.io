@@ -587,7 +587,7 @@
 <li>内存映射文件和 VMA：内存映射文件逻辑上和常规文件读写一样，也是需要经过两次拷贝（磁盘文件到内核 block cache，再到用户进程缓冲区），不同的是这种技术是通过 VMA 结构管理的。VMA 结构包含了文件和该文件对应的虚拟地址，可以引入 page-fault 实现按需分配，为 mmap 技术支持比物理内存大得多的文件提供基础支撑</li>
 </ul>
 <br>
-<h3 id="写在最后-v2"><a class="header-anchor" href="#写在最后-v2"></a>写在最后</h3>
+<h3 id="写在最后-v3"><a class="header-anchor" href="#写在最后-v3"></a>写在最后</h3>
 <p>我知道 fall-2021 已经改名，但我还是喜欢称之为 MIT 6.828，不单单因为更经典。更是因为，我手边有个烂尾 x86 kernel，这些年来我一直从入门到放弃，从放弃到入门，bootloader 已经改了五六版，但其他的进度却一直停滞。对于烂尾，我感到很遗憾，我真的十分渴望有朝一日可以真真正正完成，这也是我执着 x86 的原因</p>
 <p>在完成整个系列的过程中，我是先阅读 handout，再来到 <a target="_blank" rel="noopener" href="https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/">对应的 lec</a> 跟着课堂笔记理解，最后才是动手做实验</p>
 <p>困难是有的，由于是国外的课程，所以 lab 是英文描述，阅读理解自然是必须要做的。其实有很多时候我也会因为题目描述是英文而感到迷惑，<strong>我的策略是先翻译题目</strong>（我没有逐字逐句翻译，我只会翻译修饰结构多的句子），<strong>然后从头开始读一遍题意，这一次一并整理思路</strong>（我会把关键的句子用红色荧光笔画出来）。对于后面那几个实验，是优化内核功能的，非常难。有时候我读实验提示就读了好几次，还需要参考网上优化技术的原理，之后才能推出实验逻辑到底是怎样的</p>
@@ -776,7 +776,7 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BC%95%E5%85%A5-v2"><span class="toc-number">1.</span> <span class="toc-text">引入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%B8%80%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">2.</span> <span class="toc-text">第一个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%BA%8C%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">3.</span> <span class="toc-text">第二个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%B8%89%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">4.</span> <span class="toc-text">第三个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E5%9B%9B%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">5.</span> <span class="toc-text">第四个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%BA%94%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">6.</span> <span class="toc-text">第五个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E5%85%AD%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">7.</span> <span class="toc-text">第六个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%B8%83%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">8.</span> <span class="toc-text">第七个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E5%85%AB%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">9.</span> <span class="toc-text">第八个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%B9%9D%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">10.</span> <span class="toc-text">第九个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E5%8D%81%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">11.</span> <span class="toc-text">第十个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v2"><span class="toc-number">12.</span> <span class="toc-text">写在最后</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BC%95%E5%85%A5-v2"><span class="toc-number">1.</span> <span class="toc-text">引入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%B8%80%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">2.</span> <span class="toc-text">第一个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%BA%8C%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">3.</span> <span class="toc-text">第二个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%B8%89%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">4.</span> <span class="toc-text">第三个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E5%9B%9B%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">5.</span> <span class="toc-text">第四个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%BA%94%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">6.</span> <span class="toc-text">第五个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E5%85%AD%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">7.</span> <span class="toc-text">第六个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%B8%83%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">8.</span> <span class="toc-text">第七个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E5%85%AB%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">9.</span> <span class="toc-text">第八个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E4%B9%9D%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">10.</span> <span class="toc-text">第九个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AC%AC%E5%8D%81%E4%B8%AA%E5%AE%9E%E9%AA%8C"><span class="toc-number">11.</span> <span class="toc-text">第十个实验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v3"><span class="toc-number">12.</span> <span class="toc-text">写在最后</span></a></li></ol>
             </div>
         
         <!-- sidebar -->
@@ -1127,14 +1127,14 @@
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
         
-            <span class="sidebar-tag-name" data-tags="translation">
-                <span class="iconfont-archer">&#xe606;</span>
-                translation
-            </span>
-        
             <span class="sidebar-tag-name" data-tags="cpp">
                 <span class="iconfont-archer">&#xe606;</span>
                 cpp
+            </span>
+        
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
             </span>
         
             <span class="sidebar-tag-name" data-tags="winsock">
