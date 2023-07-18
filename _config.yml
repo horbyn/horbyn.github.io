@@ -105,7 +105,7 @@ theme: archer
 deploy:
   type: git
   repo: git@github.com:horbyn/horbyn.github.io.git
-  branch: main
+  branch: hexo
 
 # Markdown
 #### 这个条目是更改了渲染引擎新增的
