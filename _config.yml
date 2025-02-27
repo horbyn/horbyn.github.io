@@ -133,21 +133,21 @@ markdown:
     permalinkClass: header-anchor
     permalinkSymbol: ''
 
-# Mathjax
-#### 这个条目是更改了渲染引擎新增的
-#### pandox 需要安装
-#### 1. https://github.com/jgm/pandoc/releases/download/2.17.1.1/pandoc-2.17.1.1-1-amd64.deb
-#### 2. dpkg -i pandoc-2.17.1.1-1-amd64.deb
-#### 3. npm install hexo-renderer-pandoc --save
-#### 4. npm install
-## npm un hexo-renderer-marked --save
-## npm install hexo-renderer-pandoc --save
-#### [注] 必须要在文件头加上字段 mathjax: true 才有效
-math:
-  # Default (true) will load mathjax / katex script on demand.
-  # That is it only render those page which has `mathjax: true` in Front-matter.
-  # If you set it to false, it will load mathjax / katex srcipt EVERY PAGE.
-  per_page: true
-  mathjax:
-    enable: true
-    version: 3.2.0
+jsonContent:
+  meta: true
+  pages: false
+  posts:
+    title: true
+    date: true
+    path: true
+    text: false
+    raw: false
+    content: false
+    slug: false
+    updated: false
+    comments: false
+    link: false
+    permalink: true
+    excerpt: false
+    categories: true
+    tags: true
