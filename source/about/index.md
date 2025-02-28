@@ -1,5 +1,5 @@
 ---
-title: 功指卫霍
+title: 流浪的行星依然渴望发光发热
 layout: about
 ---
 
@@ -8,6 +8,8 @@ layout: about
 <font face="Helvetica" size=5>Round 1: [Win32-p2p-chatting room](https://horbyn.github.io/2022/03/14/winsock/)</font>
 
 <font face="Helvetica" size=5>Round 2: [MIT 6.828](https://horbyn.github.io/2022/04/21/xv6-11/)</font>
+
+<font face="Helvetica" size=5>Round 3: [x86 kernel](https://horbyn.github.io/2025/01/02/hoo-1/)</font>
 
 <br></br>
 
@@ -20,16 +22,16 @@ layout: about
 
 <font size=5 face="Comic Sans MS">  
 
-- &#x2728; color: purple  
-- &#x1F3C0; sport: basketball  
-- &#x1F3AE; game: Sekiro  
-- &#x1F3E0; girl: emm..  
+- &#x2728; color: Purple  
+- &#x1F3C0; sport: Basketball  
+- &#x1F3AE; game: Black Myth: Wukong  
+- &#x1F3E0; girl: Aha  
 
 </font>
 <br></br>
 
 ## <font face="Trebuchet MS" size=6><b>Excerpt: </b></font> &#x1F4AA;  
 
-<font size=5 face="Comic Sans MS">Hey! This is Horbyn, nice to meet you! My learning interests are centred on low-level and architecture, including hardware and software, although I am now poor at. Fighting against confusions and hardness, My goal to be a great GPer I chase all the time has still a long way to go. I am highly pleased my ideas are tell, then share with you here.</font>
+<font size=5 face="Comic Sans MS">Hey! This is Horbyn, nice to meet you! My learning interests are centred on low-level architectures and networking, although I am now poor at. Fighting against confusions and hardness, My goal is to be a programming star which I chase all the time, but has still a long way to go. I am highly pleased my ideas are told, then shared with you here.</font>
 
 <br></br>

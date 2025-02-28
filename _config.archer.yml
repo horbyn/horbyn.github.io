@@ -4,7 +4,7 @@ avatar: /avatar/link.PNG
 # author name
 author: Horbyn
 # signature
-signature: This will be the greatest GPer guy
+signature: 功指卫霍
 # SNS (you can custom the order)
 social:
   email: horbyn@outlook.com
@@ -62,7 +62,7 @@ profile_links:
 
 # ========== Site ========== #
 # title of the site (good for SEO)
-SEO_title: Horbynz hub
+SEO_title: HorbynzZ
 # keywords for site (good for SEO)
 SEO_keywords:
   - hexo
