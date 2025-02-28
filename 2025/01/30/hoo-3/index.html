@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+    <!-- title -->
+<!-- keywords -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="Horbyn">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="Horbyn">
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    <meta name="description" content="">
+    <meta name="description" content="x86 内核的内存管理机制负责分配和管理系统内存，包括虚拟内存管理和物理内存管理。物理内存管理负责统筹整个系统的内存空间，暴露分配和释放接口供上层使用；虚拟内存管理需要启用页表机制，它为每个进程设置了一个独立的线性空间，确保进程之间的隔离。同时，虚拟内存管理还是内存动态分配的基础">
+<meta property="og:type" content="article">
+<meta property="og:title" content="「从零到一」内存管理">
+<meta property="og:url" content="https://horbyn.github.io/2025/01/30/hoo-3/">
+<meta property="og:site_name">
+<meta property="og:description" content="x86 内核的内存管理机制负责分配和管理系统内存，包括虚拟内存管理和物理内存管理。物理内存管理负责统筹整个系统的内存空间，暴露分配和释放接口供上层使用；虚拟内存管理需要启用页表机制，它为每个进程设置了一个独立的线性空间，确保进程之间的隔离。同时，虚拟内存管理还是内存动态分配的基础">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-01-30T02:37:23.000Z">
+<meta property="article:modified_time" content="2025-02-28T14:59:58.840Z">
+<meta property="article:author" content="Horbyn">
+<meta property="article:tag" content="hoo">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/avatar/link.PNG">
+    <title>「从零到一」内存管理 · HorbynzZ</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .footer-fixed-btn,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(
+            -45deg,
+            #444 0,
+            #444 80px,
+            #333 80px,
+            #333 160px
+        );
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link id="stylesheet-fancybox" rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-base" rel="preload" href="/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-mobile" rel="preload" href="/css/mobile.css" as="style" onload="this.onload=null;this.rel='stylesheet';this.media='screen and (max-width: 960px)'">
+    <link id="stylesheet-theme-dark" rel="preload" href="/css/dark.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    <!-- 百度统计  -->
+    <!-- 谷歌统计  -->
+    <!-- Google tag (gtag.js) -->
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+        <body class="post-body">
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        <div class="header-sidebar-menu">
+            <div style="padding-left: 1px;">&#xe775;</div>
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href="/">Horbynz hub</a>
+        </span>
+    </div>
+    <!-- toggle banner -->
+    <div class="banner">
+        <div class="blog-title header-element">
+            <a href="/">Horbynz hub</a>
+        </div>
+        <div class="post-title header-element">
+            <a href="#" class="post-name">「从零到一」内存管理</a>
+        </div>
+    </div>
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- donate button -->
+
+    <!-- back to top button -->
+    <div class="footer-fixed-btn footer-fixed-btn--hidden back-top">
+        <div>&#xe639;</div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="    height:50vh;
+">
+    <!-- 主页  -->
+    <!-- 404页  -->
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.png)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+                「从零到一」内存管理
+            <!-- 404 -->
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            <!-- 404 -->
+        </p>
+        <!-- 文章页 meta -->
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                    <div class="post-intro-tags" >
+        <a class="post-tag" href="javascript:void(0);" data-tags="hoo">hoo</a>
+</div>
+
+                <!-- 文章字数统计 -->
+                    <div class="post-intro-read">
+                        <span>Word count: <span class="post-count word-count">5.9k</span>Reading time: <span class="post-count reading-time">22 min</span></span>
+                    </div>
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2025/01/30</span>
+                    <!-- busuanzi -->
+                        <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                            <span class="iconfont-archer post-intro-busuanzi">&#xe602;</span>
+                            <span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" alt="loading">
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <h1 id="获取物理内存容量">获取物理内存容量</h1>
+<p>在引导阶段通过 <code>int $0x15, %eax = 0xe820</code> 获取的 ARDS
+结构体数组保存在内存 <code>0x7_a204</code> 处，解析代码如下，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/mem.c#L14">kern/module/mem.c</a>，逻辑很简单，直接在代码处注释了：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ARDS 结构体</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span> base_low_;</span><br><span class="line">    <span class="type">uint32_t</span> base_hig_;</span><br><span class="line">    <span class="type">uint32_t</span> length_low_;</span><br><span class="line">    <span class="type">uint32_t</span> length_hig_;</span><br><span class="line">    <span class="type">uint32_t</span> type_;</span><br><span class="line">&#125; <span class="type">ards_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 内存信息结构体</span></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">mem_info</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span> base_;</span><br><span class="line">    <span class="type">uint32_t</span> length_;</span><br><span class="line">&#125; __mminfo = &#123; <span class="number">0x100000</span>, <span class="number">0</span> &#125;; <span class="comment">// 初始化为从 0x10_0000 开始</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 从内存 0x7_a200 处获取相关信息</span></span><br><span class="line"><span class="type">uint32_t</span> *ards_num = (<span class="type">uint32_t</span> *)<span class="number">0x7a200</span>;</span><br><span class="line"><span class="type">ards_t</span> *ards = (<span class="type">ards_t</span> *)<span class="number">0x7a204</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; *ards_num; ++i) &#123;</span><br><span class="line">	<span class="keyword">if</span> ((ards[i].type_ == <span class="number">1</span>) <span class="comment">// 类型为 1 表示软件可用，其他值表示保留给硬件使用</span></span><br><span class="line">	&amp;&amp; (ards[i].base_low_ == __mminfo.base_ + __mminfo.length_)) &#123;</span><br><span class="line">		<span class="comment">// 仅记录连续的内存区域作为可用内存</span></span><br><span class="line">		__mminfo.length_ += ards[i].length_low_;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="物理内存管理">物理内存管理</h1>
+<p>对于 <code>32-bit</code> 内核来说，物理内存最大支持
+<code>4GB</code>（<code>2^32</code>），<code>hoo</code>
+直接用位图作管理的数据结构。一个物理页对应一个比特位，所以
+<code>4GB</code> 对应的位图结构的大小是 <code>128KB</code></p>
+<p>这 <code>128KB</code>
+大小是静态的，即在代码中定义一个这么大的数组，当需要访问物理内存管理结构时，直接从内核中取得。理由是物理内存管理模块是使用内存的基础，其管理结构必须预先确定，否则当物理内存管理模块自身需要使用管理结构时，去哪里取得呢？</p>
+<h2 id="分配与释放">分配与释放</h2>
+<p>主要就是操作位图，比特位清位表示可以分配的，置位表示不可分配。由于一个比特位对应一个物理页，所以得到空闲的比特位下标后可以像下面这样转化：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 0x0000_0000</span></span><br><span class="line"><span class="comment"> *             0x0000_0001</span></span><br><span class="line"><span class="comment"> *                         0x0000_0002</span></span><br><span class="line"><span class="comment"> *                                           0x000f_fffe</span></span><br><span class="line"><span class="comment"> *                                                       0x000f_ffff</span></span><br><span class="line"><span class="comment"> * ┌───────────┬───────────┬───────────┬─────┬───────────┬───────────┐</span></span><br><span class="line"><span class="comment"> * │           │           │           │ ... │           │           │</span></span><br><span class="line"><span class="comment"> * └───────────┴───────────┴───────────┴─────┴───────────┴───────────┘</span></span><br><span class="line"><span class="comment"> * 0x0000_0000</span></span><br><span class="line"><span class="comment"> *             0x0000_1000</span></span><br><span class="line"><span class="comment"> *                         0x0000_2000</span></span><br><span class="line"><span class="comment"> *                                           0xffff_e000</span></span><br><span class="line"><span class="comment"> *                                                       0xffff_f000</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure>
+<p>上方是位图索引，下方是物理页地址，可以发现一个规律就是将位图索引左移
+<code>12</code> 位就是物理页地址了。需要注意的是，物理内存中
+<code>hoo</code> 不管理最低端的
+<code>1MB</code>，所以最终的物理地址还需要加上
+<code>0x10_0000</code></p>
+<p>因此，分配物理地址就是找出空闲的比特位，然后置位；释放就是找出对应的比特位，清位</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MM_BASE    0x100000    <span class="comment">// 可用内存地址起址</span></span></span><br><span class="line"><span class="type">static</span> <span class="type">bitmap_t</span> __bm_phymm;    <span class="comment">// 物理内存管理模块的位图结构</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 分配物理地址</span></span><br><span class="line"><span class="type">void</span> *</span><br><span class="line"><span class="title function_">phy_alloc_page</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="type">int</span> i = bitmap_scan_empty(&amp;__bm_phymm);</span><br><span class="line">    bitmap_set(&amp;__bm_phymm, i);</span><br><span class="line">    <span class="keyword">return</span> (<span class="type">void</span> *)((i &lt;&lt;= <span class="number">12</span>) + MM_BASE);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 释放物理地址</span></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">phy_release_page</span><span class="params">(<span class="type">void</span> *phy_addr)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (phy_addr == null)    <span class="keyword">return</span>;</span><br><span class="line">    <span class="keyword">if</span> ((<span class="type">uint32_t</span>)phy_addr &lt; MM_BASE)</span><br><span class="line">        panic(<span class="string">&quot;phy_release_page(): cannot release kernel physical memory&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> i = ((<span class="type">uint32_t</span>)phy_addr - MM_BASE) &gt;&gt; <span class="number">12</span>;</span><br><span class="line">    bitmap_clear(&amp;__bm_phymm, i);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>bitmap_t</code> 是一个统一封装的位图结构，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/bitmap.h#L10">kern/utilities/bitmap.h</a></p>
+<ul>
+<li>分配
+<ul>
+<li><code>bitmap_scan_empty()</code> 在给定位图结构里面寻找一个为 0
+的比特位，返回位图数组的索引</li>
+<li><code>bitmap_set()</code> 将给定位图数组的元素置位</li>
+<li>最后将索引左移 12 位并加上 <code>1MB</code> 即可用的物理地址</li>
+</ul></li>
+<li>释放
+<ul>
+<li><code>null</code> 是一个 <code>void *</code> 指针，并不是
+0，否则虚拟地址 0 就不能被使用了。本质上 <code>null</code>
+是一个符号，对于内核，它的定义详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/x86.c#L3">kern/x86.c</a>；对于用户态应用，它的定义详见
+<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/null.c#L2">user/null.c</a></li>
+<li><code>panic()</code> 函数的作用是向显卡写入字符串，然后执行
+<code>hlt</code> 指令，更多细节详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/panic.c#L47">kern/panic.c</a></li>
+<li>释放物理地址的时候，先计算出位图数组的索引，然后调用
+<code>bitmap_clear()</code> 将位图数组指定元素清位</li>
+</ul></li>
+</ul>
+<h1 id="页表机制">页表机制</h1>
+<p>虚拟内存管理的基础设施是页表机制，可以参考其他资源。<code>hoo</code>
+将每个页目录表的最后一项指向页目录表自己，利用这个窍门可以实现通过线性地址访问页目录表和页表，下面来详细说下这个窍门</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67763996d0e0a243d4edc445.png" /></p>
+<p>如图所示是线程的线性空间，每个 PDE 代表了 <code>4MB</code>
+的线性空间，所有 1024 个 PDE 就可以表示整个 <code>4GB</code> 空间</p>
+<p>换句话来说，当线程访问的线性地址是 <code>0x3f_1000</code> 就是在访问
+PDE 0、当访问 <code>0xa0_3000</code> 就是在访问 PDE
+2，通过上面这个图从逻辑上可以很快找到答案。在真实的访存场景下，x86
+MMU（Memory Management
+Unit，内存管理单元）会自动将线性地址转换为物理地址，不需要 OS
+开发者关心</p>
+<p>在启用了分页后，访问每个线性地址总是确定的，即 PDE 是固定的，不同的是
+PDE 的值，这个值就是一个物理地址。可以在不同时刻为 PDE
+填入不同的值，此时便说，同一个线性地址可以映射不同的物理地址</p>
+<p>MMU 的逻辑详见 <a
+target="_blank" rel="noopener" href="https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3a-part-1-manual.pdf">IA32
+手册 volume 3A，4.3 章图片 4-2</a>，如下</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67c14763d0e0a243d407d43b.png" /></p>
+<p>可以视为 3 次计算，第一次计算 PDE，第二次计算
+PTE，第三次计算物理页</p>
+<p>借助这个规则，当 OS 开发者想要访问页目录表时，那就要让第一次计算
+PDE、第二次也是计算 PDE、第三次也是计算
+PDE，则计算完毕就是访问页目录表自身了。所以，当最后一项 PDE
+指向页目录表自身时：</p>
+<ul>
+<li>线性地址最高 10 位给出 <code>0x3ff</code>，则第一次计算会找到 PDE
+1023</li>
+<li>线性地址中间 10 位给出 <code>0x3ff</code>，则第二次计算依然会找到
+PDE 1023</li>
+<li>线性地址最低 12 位就可以指定任意索引了，比如给出 <code>0x1</code>
+时，第三次计算会找到 PDE 1；给出 <code>0x123</code> 时，第三次计算会找到
+PDE 291</li>
+</ul>
+<p>当把上述线性地址组合起来，高 10 位、中间 10 位全部填 1，就是区间
+<code>[0xffff_f000, 0xffff_ffff)</code>，用来访问页目录表本身</p>
+<p>同样的道理，当需要访问页表本身时，需要第一次计算 PDE、第二次计算
+PDE、第三次计算 PTE。其中，第二次需要指定 PDE 索引，所以组合起来就是区间
+<code>[0xffc0_0000, 0xffff_f000)</code></p>
+<p>根据这个规则，定义以下宏用来操作页目录表和页表，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/page/page_stuff.h#L13">kern/paga/page_stuff.h</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> PGDOWN(x, align)    (((uint32_t)(x)) &amp; ~((align) - 1))</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PGUP(x, align)      (PGDOWN(((uint32_t)(x) + (align) - 1), (align)))</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PD_INDEX(x)         (((x)&gt;&gt;22) &amp; 0x3ff)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PT_INDEX(x)         ((((uint32_t)(x))&gt;&gt;12) &amp; 0x3ff)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PG_DIR_VA           0xfffff000</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> GET_PDE(va)         \</span></span><br><span class="line"><span class="meta">    (PG_DIR_VA | (PD_INDEX(PGDOWN((va), PGSIZE)) * sizeof(uint32_t)))</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> GET_PTE(va)         \</span></span><br><span class="line"><span class="meta">    (0xffc00000 | ((PD_INDEX(PGDOWN((va), PGSIZE)) &lt;&lt; 12) \</span></span><br><span class="line"><span class="meta">    | (PT_INDEX(PGDOWN((va), PGSIZE)) * sizeof(uint32_t))))</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>PGDOWN()</code>：线性地址向下取整，即 <code>0xc000_5124</code>
+会输出 <code>0xc000_5000</code>，物理页需要对齐 <code>4KB</code></li>
+<li><code>PGUP()</code>：线性地址向上取整，即 <code>0xc000_5124</code>
+会输出 <code>0xc000_6000</code></li>
+<li><code>PD_INDEX()</code>：线性地址转换为页目录表索引，即
+<code>0xc000_5124</code> 会输出 <code>0xc00</code>，表示 PDE 768</li>
+<li><code>PT_INDEX()</code>：线性地址转换为页表索引，即
+<code>0xc000_5124</code> 会输出 <code>5</code>，表示 PTE 5</li>
+<li><code>GET_PDE()</code>：线性地址转换为对应页目录表的线性地址，原理就是上面的窍门，定义较为繁琐</li>
+<li><code>GET_PTE()</code>：线性地址转换为对应页表的线性地址，原理也是上面的窍门</li>
+</ul>
+<p>借助这些宏定义，可以实现创建映射的接口，具体代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L83">kern/mem/pm.c</a>，以下代码有删减：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">set_mapping</span><span class="params">(<span class="type">void</span> *va, <span class="type">void</span> *pa, <span class="type">pgelem_t</span> flags)</span> &#123;</span><br><span class="line"></span><br><span class="line">    __asm__ (<span class="string">&quot;invlpg (%0)&quot;</span> : : <span class="string">&quot;a&quot;</span> (va));</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 取出 PDE</span></span><br><span class="line">    <span class="type">pgelem_t</span> *pgdir_va = (<span class="type">pgelem_t</span> *)GET_PDE(va);</span><br><span class="line">    <span class="type">const</span> <span class="type">pgelem_t</span> FLAGS = PGFLAG_US | PGFLAG_RW | PGFLAG_PS;</span><br><span class="line">    <span class="type">pgelem_t</span> pde_flags = (*pgdir_va &amp; ~PG_MASK) &amp; FLAGS;</span><br><span class="line">    <span class="keyword">if</span> (pde_flags != FLAGS) &#123;</span><br><span class="line">        <span class="comment">// 缺乏页表</span></span><br><span class="line">        <span class="type">void</span> *pgtbl = phy_alloc_page();</span><br><span class="line">        *pgdir_va = (<span class="type">pgelem_t</span>)pgtbl | FLAGS;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 取出 PTE</span></span><br><span class="line">    <span class="type">pgelem_t</span> *pgtbl_va = (<span class="type">pgelem_t</span> *)GET_PTE(va);</span><br><span class="line">    *pgtbl_va = (<span class="type">pgelem_t</span>)pa | flags;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面代码片段有一条 <code>x86</code> 指令 <code>invlpg</code>，详见 <a
+target="_blank" rel="noopener" href="https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3a-part-1-manual.pdf">《IA32
+Architectures Software Developer's Manual, Volume 3A》，Sections 4.10.4
+关于 TLB 的解释</a>，该指令用于：</p>
+<ul>
+<li>当修改了 PDE 映射时，应该为使用这个 PDE 的线性地址使用
+<code>invlpg</code></li>
+<li>当修改了 PTE 映射时，应该重新赋值 <code>%cr3</code></li>
+<li>如果一个多用途的 paging-structure（比如既用作 PTE 又用作
+PDE）被修改，则需要多次为使用这个表项的线性地址使用
+<code>invlpg</code>（比如先对 PTE 线性地址 <code>invlpg</code> 后对 PDE
+线性地址 <code>invlpg</code>）</li>
+</ul>
+<p>上面代码总体逻辑是：</p>
+<ul>
+<li>首先取消 MMU 的映射缓存，通过 <code>invlpg</code> 指令完成</li>
+<li>然后取出 PDE，通过 <code>GET_PDE()</code>
+宏获得一个线性地址，通过这个线性地址就可以访问到页目录表。访问页目录表对应项，查看
+<a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Paging#Page_Directory">页目录表标识位</a>
+判断是否已写入页表（<code>hoo</code> 写入页表是总是将用户可访问的 US
+标识、可读可写的 RW 标识、存在位 PS
+标识置位）。如果没有页表，则重新分配一个物理页作为页表</li>
+<li>最后取出 PTE，通过 <code>GET_PTE()</code>
+宏获得一个线性地址，通过这个线性地址访问页表，最后将形参指定的物理地址写入页表</li>
+</ul>
+<p><code>hoo</code>
+没有提供取消映射的接口，一是每次创建映射的时候，直接覆盖就可以了；二是取消映射换一个角度来看，只要能保证线程未来不使用这个线性地址，那就不会有问题，相当于这个映射就被取消了。而这一点可以交给后一章要实现的虚拟内存管理模块来保证</p>
+<h1 id="虚拟内存管理">虚拟内存管理</h1>
+<p>虚拟内存也是需要管理的，毕竟在进程的线性空间里，地址也是需要唯一的</p>
+<p>线性空间有两种类型：内核空间和用户空间。内核线性空间只有真正的内核线程（<code>hoo</code>
+进程和线程概念是等同的，因为进程就是单线程进程，后文统一称为线程）<code>hoo</code>
+一个，用户线性空间则适用于其余剩下的所有线程</p>
+<p>线性空间有个前提，高端地址 <code>[3GB, 4GB)</code>
+是共享的，所以无论内核还是用户，实际上都只能使用 <code>[0, 3GB)</code>
+空间</p>
+<p><img
+src="https://pic1.imgdb.cn/item/679c64e7d0e0a243d4f8beda.png" /></p>
+<p>对于内核来说：</p>
+<ul>
+<li>开头 <code>1GB</code>
+不仅自己使用，还会暴露出去（共享给所有进程）</li>
+<li>紧接着的 <code>2GB</code> 也是自己使用，不会暴露出去</li>
+<li>最后的 <code>1GB</code> 不可以使用，这是重复开头的 <code>1GB</code>
+映射，用于共享</li>
+</ul>
+<p>对于用户线程来说：</p>
+<ul>
+<li>开头 <code>3GB</code> 可以自己使用，不会暴露出去</li>
+<li>最后 <code>1GB</code> 不可以使用，这是内核的映射</li>
+</ul>
+<h2 id="管理方式">管理方式</h2>
+<p>总体来说有位图结构和链表结构两种管理方式，前者逻辑和物理内存管理模块一样，后者就是分配了多少内存就用链表结点记录下来</p>
+<p><code>hoo</code>
+的管理结构是两者都有。理由是，申请线性地址时会涉及连续的分配，位图结构没有额外信息可以在释放地址时知道
+"连续"
+的概念，链表则可以在数据域想填充什么数据就填充什么数据。而位图则是用来分配管理结构，因为管理结构也需要使用线性地址，而链表是动态结构，没办法在事前知道需要使用多少结点</p>
+<p>管理结构的分配释放和物理内存管理一样，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L34">kern/mem/vm_kern.c
+分配函数</a> 和 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L49">kern/mem/vm_kern.c
+释放函数</a></p>
+<p>下图是链表结构的简化视图，具体定义详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vspace.h#L19">kern/mem/vspace.h</a>：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/679c7cddd0e0a243d4f8c025.png" /></p>
+<p>这是一个双重链表。单链表负责管理虚拟地址（虚线箭头矩形），每个单链表结点总是有序的，高地址总是放在链头，目的是分配地址时尽可能保证
+<code>O(1)</code>
+复杂度。引入双重链表的理由是，释放可能会破坏单链表有序的结构，比如从有序的链表中间释放一个线性地址，那么必须将链表后面的结点重新组织为另一个链表，详见后文释放一节</p>
+<h2 id="分配">分配</h2>
+<p>分配存在两种情况，分别是在空链表上分配、在非空链表上分配</p>
+<h3 id="单链表为空">单链表为空</h3>
+<p><img
+src="https://pic1.imgdb.cn/item/679c8449d0e0a243d4f8c067.png" /></p>
+<p>考虑虚拟内存管理模块（本章简称为虚拟模块）最开始的时候，某线程请求分配
+<code>8KB</code> 内存。虚拟模块搜索空闲地址时，总是从
+<code>0x0000_0000</code>
+开始，这个时候虚拟模块中的双重链表也为空，所以锁定空闲地址为
+<code>0x0000_0000</code></p>
+<p><code>8KB</code> 即两个物理页，因此结点记录 <code>0x0000_0000</code>
+这个线性地址以及
+<code>2</code>。因此，<strong>单链表为空时，新建一个单链表，新建管理结构</strong></p>
+<p>具体代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L66">kern/mem/vm.c</a>，以下是简化片段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 新建单链表</span></span><br><span class="line"><span class="type">vspace_t</span> *cur = prev;</span><br><span class="line"><span class="keyword">if</span> (list_isempty(&amp;prev-&gt;list_)) &#123;</span><br><span class="line">	cur = vspace_alloc();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 新建单链表结点</span></span><br><span class="line"><span class="type">node_t</span>  *node_free = node_alloc();</span><br><span class="line"><span class="type">vaddr_t</span> *vaddr_free = vaddr_alloc();</span><br><span class="line">vaddr_set(vaddr_free, last_end, amount);</span><br><span class="line">node_set(node_free, vaddr_free, null);</span><br><span class="line">list_insert(&amp;cur-&gt;list_, node_free, <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 单链表加入双重链表</span></span><br><span class="line"><span class="keyword">if</span> (list_isempty(&amp;prev-&gt;list_)) &#123;</span><br><span class="line">    vspace_append(prev, cur);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>prev</code>
+是在遍历双重链表过程中，找到的第一个可分配地址的元素。如果找到的
+<code>prev</code>
+为空（本节描述的情况），则创建一个新的单链表，并且在最后将该新链表加入双重链表中</p>
+<p>中间的逻辑则是创建结点，填充要分配的线性地址（<code>last_end</code>）、要分配多少页（<code>amount</code>），然后加入单链表的链头（<code>list_insert()</code>）</p>
+<h3 id="单链表非空">单链表非空</h3>
+<p>假设还是这个线程，经过一段时间的运行后（若干次分配和释放）请求
+<code>60KB</code> 内存，那么：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/679c8ca2d0e0a243d4f8c120.png" /></p>
+<p>进程依然是从 <code>0x0000_0000</code>
+开始遍历，这里先忽略其中的细节，只关注核心思路，即双重链表记录了已经使用的地址区间是
+<code>[0x0000_0000, 0x0000_2000) ∪ [0x0001_0000, 0x0001_7000)</code>，中间有一段地址区间是可用的，但稍微计算后会发现只有
+<code>56KB</code>，因此最后会将空闲地址锁定在
+<code>0x0001_7000</code>。之后便是一些链表的插入操作，因此，<strong>单链表非空时，插入结点</strong></p>
+<p>具体代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L52">kern/mem/vm.c</a>，以下是关键代码片段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> (worker != null) &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (worker-&gt;next_ != null</span><br><span class="line">        &amp;&amp; (((worker-&gt;next_-&gt;begin_ - last_end) / PGSIZE) &lt; amount)) &#123;</span><br><span class="line">        <span class="comment">// 没有足够的空间</span></span><br><span class="line"></span><br><span class="line">        last_end = worker-&gt;next_-&gt;end_;</span><br><span class="line">        worker = worker-&gt;next_;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 拥有足够的空间</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125; <span class="comment">// end while()</span></span><br></pre></td></tr></table></figure>
+<p><code>worker</code> 是双重链表的工作指针，<code>while()</code>
+是整个双重链表的遍历过程。<code>if()</code>
+条件（本节描述的情况）表示当前的地址区间太少不够分配，则可分配线性地址、工作指针往后移。直至找到足够大的空间，进入
+<code>else()</code> 复用前一节逻辑</p>
+<h2 id="释放">释放</h2>
+<p>释放的情况稍微有点复杂，这是因为分配地址总是从
+<code>0x0000_0000</code>
+开始，且单链表是递减有序排列的，这就要求释放采取一些手段来保证所有单链表依然有序</p>
+<h3 id="释放两端地址">释放两端地址</h3>
+<p>某线程经若干次分配释放后，现在请求释放 <code>0x0000_0000</code>
+这个线性地址</p>
+<p><img
+src="https://pic1.imgdb.cn/item/679c904fd0e0a243d4f8c1a2.png" /></p>
+<p>这里直接释放就行，从整体上看地址区间没有问题。另一种情况比如释放
+<code>0x0000_2000</code>
+也是同样道理。所以，如果<strong>释放地址就是链头第一个，或者链尾最后一个（即释放地址在两端），直接删除</strong></p>
+<p>具体代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L98">kern/mem/vm.c</a>，以下是简化片段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">enum</span> <span class="title">location_e</span> &#123;</span></span><br><span class="line">    LCT_BEGIN = <span class="number">0</span>,</span><br><span class="line">    LCT_MIDDLE,</span><br><span class="line">    LCT_END</span><br><span class="line">&#125; lct;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 查找待释放地址 va 所在的单链表</span></span><br><span class="line"><span class="type">vspace_t</span> *prev_list = null;</span><br><span class="line"><span class="keyword">while</span> (cur_list != null) &#123;</span><br><span class="line">    <span class="keyword">if</span> (cur_list-&gt;begin_ &lt;= (<span class="type">uint32_t</span>)va &amp;&amp; (<span class="type">uint32_t</span>)va &lt; cur_list-&gt;end_)</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    prev_list = cur_list;</span><br><span class="line">    cur_list = cur_list-&gt;next_;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 遍历单链表</span></span><br><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">    node = list_find(&amp;cur_list-&gt;list_, i);</span><br><span class="line">    <span class="keyword">if</span> (node != null) &#123;</span><br><span class="line">        lct = (i == <span class="number">1</span>) ? LCT_BEGIN : ((i == cur_list-&gt;list_.size_) ? LCT_END : LCT_MIDDLE);</span><br><span class="line">        <span class="comment">// 释放单链表两端地址</span></span><br><span class="line">        list_remove(&amp;cur_list-&gt;list_, i);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    ++i;</span><br><span class="line">&#125; <span class="keyword">while</span> (node != null);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 释放物理页</span></span><br><span class="line"><span class="comment">// 释放管理结构</span></span><br></pre></td></tr></table></figure>
+<p>定义一个枚举值用来表示单链表结点的位置：位于单链表的链头
+<code>LCT_BEGIN</code>、中间 <code>LCT_MIDDLE</code> 和链尾
+<code>LCT_END</code></p>
+<p><code>cur_list</code> 是遍历双重链表时的工作结点，第一个
+<code>while()</code> 循环根据待释放地址 <code>va</code>
+来确定需要修改的单链表。当找到这样的单链表后，<code>cur_list</code>
+会指向它</p>
+<p>第二个 <code>do-while()</code>
+循环用来遍历单链表，每枚举一个链表结点，就判断其位置。对于单链表两端的结点，只需要直接移除</p>
+<p>后续的逻辑依次是释放虚拟地址 <code>va</code>
+对应的物理页，这会调用物理内存管理模块的接口来释放；以及释放虚拟模块使用的管理结构，与管理结构相关的分配和释放接口详见
+<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/metadata.h#L8">kern/mem/metadata.{h,c}</a>，逻辑十分直白简单</p>
+<h3 id="释放中间地址">释放中间地址</h3>
+<p>这是另一种释放地址的情况，假设之后线程需要释放 <code>0x7000</code>
+地址，则：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/679c9451d0e0a243d4f8c1fe.png" /></p>
+<p>现在，<strong>释放地址前后有其他结点（即释放地址在中间），则需要为链表后面的所有结点创建一个新的单链表</strong></p>
+<p>关键代码片段如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">    node = list_find(&amp;cur_list-&gt;list_, i);</span><br><span class="line">    <span class="keyword">if</span> (node != null) &#123;</span><br><span class="line">        lct = (i == <span class="number">1</span>) ? LCT_BEGIN : ((i == cur_list-&gt;list_.size_) ? LCT_END : LCT_MIDDLE);</span><br><span class="line">        list_remove(&amp;cur_list-&gt;list_, i);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (lct == LCT_MIDDLE) &#123;</span><br><span class="line">            <span class="comment">// 释放单链表中间地址</span></span><br><span class="line">            new_list = vspace_alloc();</span><br><span class="line">            <span class="keyword">for</span> (<span class="type">uint32_t</span> j = i, k = <span class="number">1</span>; j &lt;= cur_list-&gt;list_.size_;) &#123;</span><br><span class="line">                <span class="type">node_t</span> *n = list_remove(&amp;cur_list-&gt;list_, j);</span><br><span class="line">                list_insert(&amp;new_list-&gt;list_, n, k++);</span><br><span class="line">                prev_vs-&gt;next_ = new_list;</span><br><span class="line">            &#125; <span class="comment">// end for(j)</span></span><br><span class="line">            vspace_append(new_list, cur_list);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ++i;</span><br><span class="line">&#125; <span class="keyword">while</span> (node != null);</span><br></pre></td></tr></table></figure>
+<p>当在单链表遍历过程中发现这是一个中间结点，首先创建一个新的单链表，然后
+<code>for()</code> 循环将后续的结点 "转移" 到新链表 —— 原链表
+<code>list_remove()</code>，新链表
+<code>list_insert()</code>。最后将原链表 <code>vspace_append()</code>
+到新链表后面（为了减少遍历次数，新链表放在前面）</p>
+<h1 id="动态内存分配">动态内存分配</h1>
+<p>虚拟内存分配粒度太大了，每次分配都是一个 <code>4KB</code>
+页，因此引入动态内存分配来作更小粒度的内存分配</p>
+<p><code>hoo</code> 和 <code>C/C++</code>
+程序稍微有点不一样，其线性空间如下：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a1b668d0e0a243d4fbc4cd.png" /></p>
+<p>整个 <code>4GB</code> 空间分为两半，线程自己可用的空间和内核空间各
+<code>2GB</code>。<code>hoo</code>
+为所有线程统一分配栈，所以线程栈不放在线程自己的空间，而是放在内核空间，除此之外和普通
+<code>C/C++</code> 程序线性空间是一致的</p>
+<p>程序二进制数据即代码段、数据段这些，不同程序有不同大小，所以这里二进制数据的边界是浮动的。对于
+<code>hoo</code> 内核，为简化问题，二进制数据边界定为一个页表（实际上
+<code>hoo</code> 纯二进制很小，几十 kb），即 <code>4MB</code>，也即
+<code>hoo</code> 堆空间从 <code>0x40_0000</code> 开始</p>
+<p>无论是前面粒度更大的虚拟内存分配，还是现在粒度更小的动态内存分配，都是从线程自己的堆空间中分配内存</p>
+<p><code>hoo</code> 是参考 <a
+target="_blank" rel="noopener" href="https://elixir.bootlin.com/linux/0.11/source/lib/malloc.c#L117">Linux
+0.11 桶分配机制</a>（其解释可以参考赵炯博士的 <a
+target="_blank" rel="noopener" href="https://mirror.math.princeton.edu/pub/oldlinux/download/clk011.pdf">《Linux
+内核 0.11 详细注释》，pdf 456 页</a>）作出的实现</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a1b46ad0e0a243d4fbc49d.png" /></p>
+<p>每个线程都有一个 "manager"，管理着各自的堆空间。"manager"
+将可用空间组织为桶，每个桶都有其要管理的内存大小，比如 8B
+桶则负责分配和回收 8B 内存空间</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a1bae9d0e0a243d4fbc63e.png" /></p>
+<p>桶下面挂靠着一个或多个链表，每个链表都是一个 <code>4KB</code>
+页，所以不同桶的链表元素的数量是不一样的，8B 桶可以近似看成
+<code>4KB / 8</code> 个元素，16B 桶则近似是 <code>4KB / 16</code></p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a1bc30d0e0a243d4fbc65d.png" /></p>
+<p>每个 <code>4KB</code>
+页的格式从管理信息中的链头开始，连接下一个链表元素，直至
+<code>4KB</code> 页中所有元素都连接到一起</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a1bd75d0e0a243d4fbc69a.png" /></p>
+<p>随着分配释放的进行，有可能一个桶会耗尽。这个时候会从线程堆空间再分配另一个
+<code>4KB</code> 页，并格式化为上述结构</p>
+<p>小结一下动态内存分配机制：</p>
+<ul>
+<li>分配内存可以视为从链表中取出元素</li>
+<li>释放内存可以视为将元素加入链表</li>
+</ul>
+<p><code>hoo</code> 实现了一个格式化链表，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/format_list.h#L10">kern/mem/format_list.h</a>，该定义对应着链表的管理信息：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">format_list</span> &#123;</span></span><br><span class="line">    <span class="type">list_t</span>             list_;     <span class="comment">// 链表</span></span><br><span class="line">    <span class="type">uint32_t</span>           capacity_; <span class="comment">// 链表元素个数</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">format_list</span> *<span class="title">next_</span>;</span>    <span class="comment">// 下一条链表</span></span><br><span class="line">&#125; <span class="type">fmtlist_t</span>;</span><br></pre></td></tr></table></figure>
+<p>这里链表是一个统一的数据结构，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/list.h#L11">kern/utilities/list.h</a>，提供以下接口：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span>   <span class="title function_">list_init</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>, <span class="type">bool</span> cycle)</span>;              <span class="comment">// 初始化</span></span><br><span class="line"><span class="type">node_t</span> *<span class="title function_">list_find</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>, <span class="type">int</span> idx)</span>;                <span class="comment">// 按索引查找</span></span><br><span class="line"><span class="type">void</span>   <span class="title function_">list_insert</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>, <span class="type">node_t</span> *node, <span class="type">int</span> idx)</span>; <span class="comment">// 插入元素到指定索引</span></span><br><span class="line"><span class="type">node_t</span> *<span class="title function_">list_remove</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>, <span class="type">int</span> idx)</span>;              <span class="comment">// 移除指定索引元素</span></span><br><span class="line"><span class="type">bool</span>   <span class="title function_">list_isempty</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>)</span>;                       <span class="comment">// 判空</span></span><br></pre></td></tr></table></figure>
+<p>格式化链表提供分配和释放两个接口：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">fmtlist_alloc</span><span class="params">(<span class="type">fmtlist_t</span> **fmtlist)</span>;</span><br><span class="line"><span class="type">bool</span> <span class="title function_">fmtlist_release</span><span class="params">(<span class="type">fmtlist_t</span> **fmtlist, <span class="type">void</span> *elem)</span>;</span><br></pre></td></tr></table></figure>
+<p>格式化链表的分配，其实是取出链表元素，即
+<code>list_remove()</code>；释放则对应插入链表元素，即
+<code>list_insert()</code></p>
+<p>桶管理者定义详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/bucket.h#L10">kern/mem/bucket.h</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">buckX_manager</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span>             size_;</span><br><span class="line">    <span class="type">fmtlist_t</span>            *chain_;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buckX_manager</span> *<span class="title">next_</span>;</span></span><br><span class="line">&#125; <span class="type">buckx_mngr_t</span>;</span><br></pre></td></tr></table></figure>
+<p>基于上述基础结构，<code>hoo</code> 实现的动态分配详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L13">kern/dyn/dynamic.c</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *</span><br><span class="line"><span class="title function_">dyn_alloc</span><span class="params">(<span class="type">uint32_t</span> size)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (size == <span class="number">0</span>)    <span class="keyword">return</span> null;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// #1</span></span><br><span class="line">    <span class="type">pcb_t</span> *cur_pcb = get_current_pcb();</span><br><span class="line">    <span class="type">buckx_mngr_t</span> *mngr = cur_pcb-&gt;hmngr_;</span><br><span class="line">    <span class="type">pgelem_t</span> flags = PGFLAG_US | PGFLAG_RW | PGFLAG_PS;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// #2</span></span><br><span class="line">    <span class="keyword">while</span> (mngr != null) &#123;</span><br><span class="line">        <span class="keyword">if</span> (mngr-&gt;size_ &gt;= size) &#123;</span><br><span class="line">            <span class="keyword">if</span> (mngr-&gt;chain_ == null) &#123;</span><br><span class="line">                <span class="type">void</span> *pa = phy_alloc_page();          <span class="comment">// 分配物理页</span></span><br><span class="line">                mngr-&gt;chain_ = vir_alloc_pages();     <span class="comment">// 分配线性地址</span></span><br><span class="line">                set_mapping(mngr-&gt;chain_, pa, flags); <span class="comment">// 建立映射</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        mngr = mngr-&gt;next_;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// #3</span></span><br><span class="line">    <span class="keyword">if</span> (mngr == null) &#123;</span><br><span class="line">        <span class="type">uint32_t</span> pages = size &lt;= PGSIZE ? <span class="number">1</span> : (size + PGSIZE - <span class="number">1</span>) / PGSIZE;</span><br><span class="line"></span><br><span class="line">        <span class="type">void</span> *va = vir_alloc_pages();                <span class="comment">// 连续的线性地址的起始</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; pages; ++i) &#123;</span><br><span class="line">            <span class="type">void</span> *pa = phy_alloc_page();             <span class="comment">// 分配物理页</span></span><br><span class="line">            set_mapping(va + i * PGSIZE, pa, flags); <span class="comment">// 建立映射</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> va;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// #4</span></span><br><span class="line">    <span class="keyword">return</span> fmtlist_alloc(&amp;mngr-&gt;chain_);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>注释 1：由于堆空间每个线程都不一样，所以
+<code>get_current_pcb()</code>（暂时当成黑盒）取出线程
+pcb，再取出桶管理者</li>
+<li>注释 2：<code>while()</code>
+循环遍历所有的桶。这里有两种情况，要么动态分配 1024B
+以下的空间，要么动态分配更大的空间。对于前者，初始情况下每个桶的链表是空的，这个时候需要新分配一个
+<code>4KB</code> 页</li>
+<li>注释 3：如果是动态分配 1024B
+以上的空间，则前一步循环遍历完后，桶管理者依然会是空的，这个时候再进行按需分配，分配完成后直接返回该线性地址</li>
+<li>注释 4：如果是动态分配 1024B
+以下的空间，则复用格式化链表的分配接口来分配内存</li>
+</ul>
+<p>动态释放详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L52">kern/dyn/dynamic.c</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">dyn_free</span><span class="params">(<span class="type">void</span> *ptr)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (ptr == null)    <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    <span class="type">pcb_t</span> *cur_pcb = get_current_pcb();</span><br><span class="line">    <span class="type">buckx_mngr_t</span> *mngr = cur_pcb-&gt;hmngr_;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (mngr != null) &#123;</span><br><span class="line">        <span class="comment">// #1</span></span><br><span class="line">        <span class="keyword">if</span> (fmtlist_release(&amp;mngr-&gt;chain_, ptr)) &#123;</span><br><span class="line">            <span class="comment">// #2</span></span><br><span class="line">            <span class="keyword">if</span> (mngr-&gt;chain_-&gt;capacity_ == mngr-&gt;chain_-&gt;list_.size_) &#123;</span><br><span class="line">                vir_release_pages();</span><br><span class="line">                mngr-&gt;chain_ = null;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        mngr = mngr-&gt;next_;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// #3</span></span><br><span class="line">    <span class="keyword">if</span> (mngr == null)    vir_release_pages();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>注释 1：复用格式化链表的释放接口</li>
+<li>注释
+2：如果经上一步释放后，格式化链表全部元素都已释放（管理信息记录的容量和链表当前长度相等），则整个
+<code>4KB</code> 的格式化链表也可以释放</li>
+<li>注释 3：如果要释放的内存地址不在桶的链表中出现，则表示这是大于 1024B
+的内存空间，这种类型的空间都是按一个 <code>4KB</code>
+页来分配的，所以释放的时候也当成一个 <code>4KB</code> 页来释放</li>
+</ul>
+<h1 id="小结">小结</h1>
+<p>对于物理内存管理模块，需要实现两类型接口：</p>
+<ul>
+<li>分配：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L37"><code>void *phy_alloc_page()</code></a></li>
+<li>释放：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L52"><code>void phy_release_page()</code></a></li>
+</ul>
+<p>对于页表机制，需要实现：</p>
+<ul>
+<li>创建映射：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L83"><code>void set_mapping()</code></a></li>
+</ul>
+<p>对于虚拟内存管理模块，也是两类接口：</p>
+<ul>
+<li>分配
+<ul>
+<li>管理结构：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L34"><code>void *vir_alloc_kern()</code></a></li>
+<li>非管理结构：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L42"><code>void *vir_alloc_pages()</code></a></li>
+</ul></li>
+<li>释放
+<ul>
+<li>管理结构：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L49"><code>void vir_release_kern()</code></a></li>
+<li>非管理结构：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L98"><code>void vir_release_pages()</code></a></li>
+</ul></li>
+</ul>
+<p>对于动态内存管理模块，也是两类接口：</p>
+<ul>
+<li>分配：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L13"><code>void *dyn_alloc()</code></a></li>
+<li>释放：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L52"><code>void dyn_free()</code></a></li>
+</ul>
+
+    </article>
+    <!-- license -->
+        <div class="license-wrapper">
+            <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
+            <p>Link：<a href="https://horbyn.github.io/2025/01/30/hoo-3/">https://horbyn.github.io/2025/01/30/hoo-3/</a>
+            <p>Publish date：<a href="https://horbyn.github.io/2025/01/30/hoo-3/">January 30th 2025, 10:37:23 am</a>
+            <p>Update date：<a href="https://horbyn.github.io/2025/01/30/hoo-3/">February 28th 2025, 10:59:58 pm</a>
+            <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
+        </div>
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2025/02/01/hoo-4/" title="「从零到一」中断机制">
+                    <div class="nextTitle">「从零到一」中断机制</div>
+                </a>
+        </li>
+        <li class="previous">
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2025/01/07/hoo-2/" title="「从零到一」内核引导与加载">
+                    <div class="prevTitle">「从零到一」内核引导与加载</div>
+                </a>
+        </li>
+    </ul>
+    <!-- comment -->
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+            
+            
+            
+            <!-- utteranc评论 -->
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+            
+            
+            
+        </div>
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    <!-- Mathjax -->
+</main>
+
+                <!-- profile -->
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+        <div class="social">
+                            <a href="mailto:horbyn@outlook.com" class="iconfont-archer email" title="email" ></a>
+                <a href="https://github.com/horbyn" class="iconfont-archer github" target="_blank" title="github"></a>
+                <span class="iconfont-archer wechat" title="wechat">
+                    <img class="profile-qr" src="/assets/example_qr.jpg" />
+                </span>
+
+        </div>
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    <!-- 不蒜子  -->
+        <div class="busuanzi-container">
+                <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span> :)</span>
+        </div>
+</footer>
+
+        </div>
+        <!-- toc -->
+            <div class="toc-wrapper toc-wrapper-loding" style=    top:50vh;
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E8%8E%B7%E5%8F%96%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E5%AE%B9%E9%87%8F"><span class="toc-number">1.</span> <span class="toc-text">获取物理内存容量</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86"><span class="toc-number">2.</span> <span class="toc-text">物理内存管理</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E9%85%8D%E4%B8%8E%E9%87%8A%E6%94%BE"><span class="toc-number">2.1.</span> <span class="toc-text">分配与释放</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%A1%B5%E8%A1%A8%E6%9C%BA%E5%88%B6"><span class="toc-number">3.</span> <span class="toc-text">页表机制</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86"><span class="toc-number">4.</span> <span class="toc-text">虚拟内存管理</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AE%A1%E7%90%86%E6%96%B9%E5%BC%8F"><span class="toc-number">4.1.</span> <span class="toc-text">管理方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E9%85%8D"><span class="toc-number">4.2.</span> <span class="toc-text">分配</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8D%95%E9%93%BE%E8%A1%A8%E4%B8%BA%E7%A9%BA"><span class="toc-number">4.2.1.</span> <span class="toc-text">单链表为空</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8D%95%E9%93%BE%E8%A1%A8%E9%9D%9E%E7%A9%BA"><span class="toc-number">4.2.2.</span> <span class="toc-text">单链表非空</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%87%8A%E6%94%BE"><span class="toc-number">4.3.</span> <span class="toc-text">释放</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8A%E6%94%BE%E4%B8%A4%E7%AB%AF%E5%9C%B0%E5%9D%80"><span class="toc-number">4.3.1.</span> <span class="toc-text">释放两端地址</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8A%E6%94%BE%E4%B8%AD%E9%97%B4%E5%9C%B0%E5%9D%80"><span class="toc-number">4.3.2.</span> <span class="toc-text">释放中间地址</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%8A%A8%E6%80%81%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D"><span class="toc-number">5.</span> <span class="toc-text">动态内存分配</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-number">6.</span> <span class="toc-text">小结</span></a></li></ol>
+            </div>
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 24
+        </div>
+        <!-- search  -->
+    </div>
+    <div class="post-archive">
+            <div class="archive-year"> 2025 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/10</span>
+            <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/07</span>
+            <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/05</span>
+            <a class="archive-post-title" href="/2025/02/05/hoo-6/">「从零到一」设备驱动</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/04</span>
+            <a class="archive-post-title" href="/2025/02/04/hoo-5/">「从零到一」调度机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/01</span>
+            <a class="archive-post-title" href="/2025/02/01/hoo-4/">「从零到一」中断机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/30</span>
+            <a class="archive-post-title" href="/2025/01/30/hoo-3/">「从零到一」内存管理</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/07</span>
+            <a class="archive-post-title" href="/2025/01/07/hoo-2/">「从零到一」内核引导与加载</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/02</span>
+            <a class="archive-post-title" href="/2025/01/02/hoo-1/">「从零到一」实现一个 x86 的内核</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2023 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/01</span>
+            <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2022 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/28</span>
+            <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/17</span>
+            <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/15</span>
+            <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/11</span>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/05</span>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/04</span>
+            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span>
+            <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/28</span>
+            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/25</span>
+            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
+        </li>
+            </ul>
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
+            </span>
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
+            </span>
+            <span class="sidebar-tag-name" data-tags="winsock">
+                <span class="iconfont-archer">&#xe606;</span>
+                winsock
+            </span>
+            <span class="sidebar-tag-name" data-tags="xv6">
+                <span class="iconfont-archer">&#xe606;</span>
+                xv6
+            </span>
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+        <span class="sidebar-category-name" data-categories="KERNEL">
+            <span class="iconfont-archer">&#xe60a;</span>
+            KERNEL
+        </span>
+        <span class="sidebar-category-name" data-categories="LIVEHOOD">
+            <span class="iconfont-archer">&#xe60a;</span>
+            LIVEHOOD
+        </span>
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "https://horbyn.github.io",
+        root: siteMetaRoot,
+        author: "Horbyn"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+        <!-- main func -->
+        <script src="/scripts/main.js"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.umd.js" onload="window.Fancybox.bind('[data-fancybox]')" defer></script>
+        <!-- algolia -->
+        <!-- busuanzi -->
+            <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+        <!-- async load share.js -->
+            <script src="/scripts/share.js" async></script>
+        <!-- mermaid -->
+    </body>
+</html>

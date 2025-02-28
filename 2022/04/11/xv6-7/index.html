@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+    <!-- title -->
+<!-- keywords -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="Horbyn">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="Horbyn">
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    <meta name="description" content="">
+    <meta name="description" content="这个实验难在需要知道网卡是怎么传输、怎么接收的，实际编程部分对比往年其实已经简化很多了，区分描述符和包缓冲区两个概念是关键的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="⌈xv6-fall2021⌋ lab 7：networking">
+<meta property="og:url" content="https://horbyn.github.io/2022/04/11/xv6-7/">
+<meta property="og:site_name">
+<meta property="og:description" content="这个实验难在需要知道网卡是怎么传输、怎么接收的，实际编程部分对比往年其实已经简化很多了，区分描述符和包缓冲区两个概念是关键的">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-04-11T14:44:10.000Z">
+<meta property="article:modified_time" content="2025-02-27T14:24:07.035Z">
+<meta property="article:author" content="Horbyn">
+<meta property="article:tag" content="xv6">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/avatar/link.PNG">
+    <title>⌈xv6-fall2021⌋ lab 7：networking · HorbynzZ</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .footer-fixed-btn,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(
+            -45deg,
+            #444 0,
+            #444 80px,
+            #333 80px,
+            #333 160px
+        );
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link id="stylesheet-fancybox" rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-base" rel="preload" href="/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-mobile" rel="preload" href="/css/mobile.css" as="style" onload="this.onload=null;this.rel='stylesheet';this.media='screen and (max-width: 960px)'">
+    <link id="stylesheet-theme-dark" rel="preload" href="/css/dark.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    <!-- 百度统计  -->
+    <!-- 谷歌统计  -->
+    <!-- Google tag (gtag.js) -->
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+        <body class="post-body">
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        <div class="header-sidebar-menu">
+            <div style="padding-left: 1px;">&#xe775;</div>
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href="/">Horbynz hub</a>
+        </span>
+    </div>
+    <!-- toggle banner -->
+    <div class="banner">
+        <div class="blog-title header-element">
+            <a href="/">Horbynz hub</a>
+        </div>
+        <div class="post-title header-element">
+            <a href="#" class="post-name">⌈xv6-fall2021⌋ lab 7：networking</a>
+        </div>
+    </div>
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- donate button -->
+
+    <!-- back to top button -->
+    <div class="footer-fixed-btn footer-fixed-btn--hidden back-top">
+        <div>&#xe639;</div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="    height:50vh;
+">
+    <!-- 主页  -->
+    <!-- 404页  -->
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.png)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+                ⌈xv6-fall2021⌋ lab 7：networking
+            <!-- 404 -->
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            <!-- 404 -->
+        </p>
+        <!-- 文章页 meta -->
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                    <div class="post-intro-tags" >
+        <a class="post-tag" href="javascript:void(0);" data-tags="xv6">xv6</a>
+</div>
+
+                <!-- 文章字数统计 -->
+                    <div class="post-intro-read">
+                        <span>Word count: <span class="post-count word-count">5.6k</span>Reading time: <span class="post-count reading-time">23 min</span></span>
+                    </div>
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2022/04/11</span>
+                    <!-- busuanzi -->
+                        <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                            <span class="iconfont-archer post-intro-busuanzi">&#xe602;</span>
+                            <span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" alt="loading">
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <h2 id="about">ABOUT</h2>
+<p>实验地址：<a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/net.html">Lab:
+networking</a></p>
+<p><br></p>
+<h2 id="into">INTO</h2>
+<p>这个实验涉及驱动方面的编程，自然少不了编程手册，为方便起见，我提取了实验推荐阅读的几个
+section 进行了机翻，仅供参考，网盘如下：</p>
+<p><a
+target="_blank" rel="noopener" href="https://pan.baidu.com/s/1uaHWtlBebUs1SUtE4RGndA?pwd=byhb">提取码：byhb</a></p>
+<p>不过说实话，实验的推荐材料虽然确实非常全面，甚至包括 PCI
+总线介绍、寄存器组等等。但对于驱动编程来说，比如这个实验，我只想找到如何传输（发出）包，如何接受包就够了。所以在实验过程中，我在看了
+section 3.2 和 section
+3.3，发现并没有我期望的传输和接受包的程序流程之后，我就没翻下去了。我感觉整个实验对我帮助最大的，是前几年这个实验的前身
+lab networking
+的提示，这可以在网上找到当前的资料，以下资料仅供参考：</p>
+<p><a
+target="_blank" rel="noopener" href="https://blog.csdn.net/a747979985/article/details/100042990">貌似是
+2018 的实验？</a></p>
+<p><br></p>
+<h2 id="背景节选译">背景（节选）（译）</h2>
+<blockquote>
+<p>You'll use a network device called the E1000 to handle network
+communication. To xv6 (and the driver you write), the E1000 looks like a
+real piece of hardware connected to a real Ethernet local area network
+(LAN). In fact, the E1000 your driver will talk to is an emulation
+provided by qemu, connected to a LAN that is also emulated by qemu. On
+this emulated LAN, xv6 (the "guest") has an IP address of 10.0.2.15.
+Qemu also arranges for the computer running qemu to appear on the LAN
+with IP address 10.0.2.2. When xv6 uses the E1000 to send a packet to
+10.0.2.2, qemu delivers the packet to the appropriate application on the
+(real) computer on which you're running qemu (the "host").</p>
+</blockquote>
+<p>"你将要使用 E1000 这个网络设备去处理网络通信。对于
+xv6（以及你写的驱动）来说，E1000
+就像一个真实的硬件一样，可以连接到真正的以太网局域网。事实上，你写的驱动另一端的这个
+E1000 硬件，是由 qemu 模拟出来的，并连接到一个同样由 qemu
+模拟出来的局域网内。在这个模拟的局域网 LAN 上，xv6（作为 guest）拥有 ip
+地址 10.0.2.15。qemu 安排运行 qemu
+的这台计算机（<strong>译者注，即宿主计算机，同下文的
+host</strong>）出现在 LAN 中的地址为 10.0.2.2。当 xv6 使用 E1000
+发送数据包到 10.0.2.2 时，qemu
+会分发这个包到宿主计算机（host）上某个合适的程序"</p>
+<blockquote>
+<p>The Makefile configures QEMU to record all incoming and outgoing
+packets to the file packets.pcap in your lab directory. It may be
+helpful to review these recordings to confirm that xv6 is transmitting
+and receiving the packets you expect. To display the recorded packets:
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tcpdump -XXnr packets.pcap</span><br></pre></td></tr></table></figure></p>
+</blockquote>
+<p>"Makefile 配置
+qemu，使之将所有到达的以及发出的数据包记录在本地实验目录下的
+<code>packets.pcap</code> 文件内。检查这些记录以确认 xv6
+发出和收到的包是否你期待的，可能有助于你的调试。输入上面的命令可以显示记录的包："</p>
+<blockquote>
+<p>We've added some files to the xv6 repository for this lab. The file
+kernel/e1000.c contains initialization code for the E1000 as well as
+empty functions for transmitting and receiving packets, which you'll
+fill in. kernel/e1000_dev.h contains definitions for registers and flag
+bits defined by the E1000 and described in the Intel E1000 <a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/readings/8254x_GBe_SDM.pdf">Software
+Developer's Manual</a>. kernel/net.c and kernel/net.h contain a simple
+network stack that implements the <a
+target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Internet_Protocol">IP</a>, <a
+target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</a>, and
+<a
+target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Address_Resolution_Protocol">ARP</a>
+protocols. These files also contain code for a flexible data structure
+to hold packets, called an mbuf. Finally, kernel/pci.c contains code
+that searches for an E1000 card on the PCI bus when xv6 boots.</p>
+</blockquote>
+<p>"我们已经为这个实验在 xv6 repo
+新增了一些文件。<code>kernel/e1000.c</code> 包含了 E1000
+初始化以及一些用于传输和接受的，需要你补全的空函数。<code>kernel/e1000_dev.h</code>
+包含 E1000 对应的寄存器组和一些标志位的定义，详见 Intel E1000 <a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/readings/8254x_GBe_SDM.pdf">Software
+Developer's Manual</a>。<code>kernel/net.c</code> 和
+<code>kernel/net.h</code> 包含了 xv6 启动时在 PCI 总线上寻找 E1000
+网卡的代码"</p>
+<p><br></p>
+<h2 id="实验要求节选译">实验要求（节选）（译）</h2>
+<blockquote>
+<p>Your job is to complete e1000_transmit() and e1000_recv(), both in
+kernel/e1000.c, so that the driver can transmit and receive packets. You
+are done when make grade says your solution passes all the tests.</p>
+</blockquote>
+<p>"你的工作是完成在 <code>kernel/e1000.c</code> 里面的 e1000_transmit()
+和 e1000_recv()，以便驱动可以传输和接受包。当 <code>make grade</code>
+显示你的解决方案 <em>passes all the tests</em> 时才是完成实验"</p>
+<blockquote>
+<p>The e1000_init() function we provide you in e1000.c configures the
+E1000 to read packets to be transmitted from RAM, and to write received
+packets to RAM.</p>
+</blockquote>
+<p>"实验提供在 <code>e1000.c</code> 里的 e1000_init() 负责配置
+E1000，以从内存中读取将要传输的包、向内存写入已收到的包"</p>
+<blockquote>
+<p>Because bursts of packets might arrive faster than the driver can
+process them, e1000_init() provides the E1000 with multiple buffers into
+which the E1000 can write packets. The E1000 requires these buffers to
+be described by an array of "descriptors" in RAM; each descriptor
+contains an address in RAM where the E1000 can write a received packet.
+struct rx_desc describes the descriptor format. The array of descriptors
+is called the receive ring, or receive queue. It's a circular ring in
+the sense that when the card or driver reaches the end of the array, it
+wraps back to the beginning. e1000_init() allocates mbuf packet buffers
+for the E1000 to DMA into, using mbufalloc(). There is also a transmit
+ring into which the driver places packets it wants the E1000 to send.
+e1000_init() configures the two rings to have size RX_RING_SIZE and
+TX_RING_SIZE.</p>
+</blockquote>
+<p>"由于包的猝发传输可能会快于驱动的包处理速率，所以 e1000_init() 提供给
+E1000 多个包缓冲区（buffer）以备包写入。E1000 用 '描述符'
+数组来描述内存里的这些缓冲区，每个描述符包含一个 E1000
+可以写入包的内存地址。描述符对应的结构体是
+<code>struct rx_desc</code>。这个描述符数组被称为<em>接收环</em>、或<em>接收队列</em>，它是一个圆环，从而保证网卡或驱动使用数组最后一个元素时，之后能环绕回去环的开头。e1000_init()
+用 mbufalloc() 将 E1000 的包缓冲区（mbuf 数组）分配到
+DMA（<strong>译者注：包到达这个数组相当于直接到达内存</strong>）。驱动用来存放
+E1000 将要发送的包的传输环也是同样道理。e1000_init()
+配置这两个环的大小为 RX_RING_SIZE 和 TX_RING_SIZE"</p>
+<blockquote>
+<p>When the network stack in net.c needs to send a packet, it calls
+e1000_transmit() with an mbuf that holds the packet to be sent. Your
+transmit code must place a pointer to the packet data in a descriptor in
+the TX (transmit) ring. struct tx_desc describes the descriptor format.
+You will need to ensure that each mbuf is eventually freed, but only
+after the E1000 has finished transmitting the packet (the E1000 sets the
+E1000_TXD_STAT_DD bit in the descriptor to indicate this).</p>
+</blockquote>
+<p>"当 <code>net.c</code> 中的网络栈需要发送数据包时，首先调用
+e1000_transmit()，并传入一个保存要发送的包的包缓冲区（mbuf）参数。你要补全的传输函数的代码必须设置一个指针，指向
+TX 环（传输环）的描述符的包缓冲区。结构体 <code>struct tx_desc</code>
+描述了这个环的描述符的格式。你需要确保只有在 E1000 完成传输包之后（E1000
+会自动设置 E1000_TXD_STAT_DD 状态位指出），才最终释放了每一个包缓冲区
+mbuf"</p>
+<blockquote>
+<p>When the E1000 receives each packet from the ethernet, it first DMAs
+the packet to the mbuf pointed to by the next RX (receive) ring
+descriptor, and then generates an interrupt. Your e1000_recv() code must
+scan the RX ring and deliver each new packet's mbuf to the network stack
+(in net.c) by calling net_rx(). You will then need to allocate a new
+mbuf and place it into the descriptor, so that when the E1000 reaches
+that point in the RX ring again it finds a fresh buffer into which to
+DMA a new packet.</p>
+</blockquote>
+<p>"当 E1000 从因特网接收到每一个数据包时，首先会通过下一个 RX
+环的描述符指出的包缓冲区 mbuf 的地址，直接 DMA
+整个包到这个包缓冲区，然后再发出中断。你要补全的 e1000_recv()
+代码必须遍历整个 RX 环，并通过 net_rx()
+将每一个新到达的包对应的包缓冲区，分发给网络栈（在 <code>net.c</code>
+里定义）。你之后需要为这个已分发包的描述符，分配一个新地址，并将对应的指针赋值给这个描述符，以便下一次
+E1000 在此到达这里的时候可以继续 DMA 数据包到新的包缓冲区"</p>
+<blockquote>
+<p>To test your driver, run make server in one window, and in another
+window run make qemu and then run nettests in xv6. The first test in
+nettests tries to send a UDP packet to the host operating system,
+addressed to the program that make server runs.</p>
+</blockquote>
+<p>"测试驱动的方法是，先打开一个窗口运行
+<code>make server</code>，再打开另一个窗口运行 <code>make qemu</code>
+以及在 xv6 中执行 <em>nettests</em>。第一个测试会尝试发送一个 UDP
+包给宿主计算机 host，并寻址到运行着 <code>make server</code>
+的这个程序。"</p>
+<blockquote>
+<p>After you've completed the lab, the E1000 driver will send the
+packet, qemu will deliver it to your host computer, make server will see
+it, it will send a response packet, and the E1000 driver and then
+nettests will see the response packet. Before the host sends the reply,
+however, it sends an "ARP" request packet to xv6 to find out its 48-bit
+Ethernet address, and expects xv6 to respond with an ARP reply.
+kernel/net.c will take care of this once you have finished your work on
+the E1000 driver. If all goes well, nettests will print testing ping:
+OK, and make server will print a message from xv6!.</p>
+</blockquote>
+<p>"在完成这个实验之后，E1000 驱动会发出数据包，qemu 就会分发到宿主电脑
+host，<code>make server</code>
+这个程序就能收到，之后该程序会发出响应包，那么 E1000 驱动以及 nettests
+就会收到响应。但是，在宿主电脑 host 真正发出响应包之前，它会先发出 'ARP'
+请求包到 xv6 上以寻找它自身的 48 位以太网物理地址，并期待 xv6 的 ARP
+响应包。一旦你在 E1000 驱动上完成任务，<code>kernel/net.c</code>
+会检查这个步骤。如果执行顺利，nettests 会打印
+<code>testing ping: OK</code>，然后 <code>make server</code> 程序会打印
+<code>a message from xv6</code>"</p>
+<p><br></p>
+<h2 id="实验提示节选译">实验提示（节选）（译）</h2>
+<blockquote>
+<p>Some hints for implementing e1000_transmit:</p>
+<ul>
+<li>First ask the E1000 for the TX ring index at which it's expecting
+the next packet, by reading the E1000_TDT control register.<br />
+</li>
+<li>Then check if the the ring is overflowing. If E1000_TXD_STAT_DD is
+not set in the descriptor indexed by E1000_TDT, the E1000 hasn't
+finished the corresponding previous transmission request, so return an
+error.<br />
+</li>
+<li>Otherwise, use mbuffree() to free the last mbuf that was transmitted
+from that descriptor (if there was one).<br />
+</li>
+<li>Then fill in the descriptor. m-&gt;head points to the packet's
+content in memory, and m-&gt;len is the packet length. Set the necessary
+cmd flags (look at Section 3.3 in the E1000 manual) and stash away a
+pointer to the mbuf for later freeing.<br />
+</li>
+<li>Finally, update the ring position by adding one to E1000_TDT modulo
+TX_RING_SIZE.<br />
+</li>
+<li>If e1000_transmit() added the mbuf successfully to the ring, return
+0. On failure (e.g., there is no descriptor available to transmit the
+mbuf), return -1 so that the caller knows to free the mbuf.</li>
+</ul>
+</blockquote>
+<p>"实现 e1000_transmit() 的提示：</p>
+<ul>
+<li>首先通过读 E1000_TDT 控制寄存器向 E1000 询问它期待的下一个数据包的
+TX 环索引<br />
+</li>
+<li>然后检查环是否溢出。如果 E1000_TDT 这个索引的描述符的
+E1000_TXD_STAT_DD 未置位，那么 E1000
+就不会结束前一次的传输，索引应该返回 error<br />
+</li>
+<li>否则，调用 mbuffree() 释放上一次传输的包缓冲区
+mbuf（如果有的话）</li>
+<li>然后填充描述符。m-&gt;head 指出内存中包的地址，m-&gt;len
+是包的长度。设置必要的 cmd 标志，并保存指向包缓冲 mbuf
+的指针以供下次调用的释放</li>
+<li>最后，通过将 E1000_TDT 加一模除 TX_RING_SIZE 以更新环的位置</li>
+<li>如果 e1000_transmit() 成功向环增加了包缓冲 mbuf 就返回
+0；否则算失败（如没有可用于传输包缓冲 mbuf 的描述符），此时返回 -1 方便
+caller 可以知晓情况以释放包缓冲 mbuf"</li>
+</ul>
+<blockquote>
+<p>Some hints for implementing e1000_recv:</p>
+<ul>
+<li>First ask the E1000 for the ring index at which the next waiting
+received packet (if any) is located, by fetching the E1000_RDT control
+register and adding one modulo RX_RING_SIZE.<br />
+</li>
+<li>Then check if a new packet is available by checking for the
+E1000_RXD_STAT_DD bit in the status portion of the descriptor. If not,
+stop.<br />
+</li>
+<li>Otherwise, update the mbuf's m-&gt;len to the length reported in the
+descriptor. Deliver the mbuf to the network stack using net_rx().<br />
+</li>
+<li>Then allocate a new mbuf using mbufalloc() to replace the one just
+given to net_rx(). Program its data pointer (m-&gt;head) into the
+descriptor. Clear the descriptor's status bits to zero.<br />
+</li>
+<li>Finally, update the E1000_RDT register to be the index of the last
+ring descriptor processed.<br />
+</li>
+<li>e1000_init() initializes the RX ring with mbufs, and you'll want to
+look at how it does that and perhaps borrow code.<br />
+</li>
+<li>At some point the total number of packets that have ever arrived
+will exceed the ring size (16); make sure your code can handle
+that.</li>
+</ul>
+</blockquote>
+<p>"实现 e1000_recv() 的提示：</p>
+<ul>
+<li>通过取 E1000_RDT 控制寄存器并加一模除 RX_RING_SIZE，向 E1000
+询问下一个等待接收的数据包所在的环描述符的索引</li>
+<li>然后通过检查描述符里 E1000_RXD_STAT_DD
+状态位判断新接收的包是否可用，如果不可用那就停止</li>
+<li>否则，更新包缓冲 mbuf 的 m-&gt;len 为描述符记录的长度。使用 net_rx()
+将包缓冲 mbuf 送入网络栈</li>
+<li>然后使用 mbufalloc() 分配一个新的 mbuf 代替刚才 net_rx()
+送入网络栈的那个</li>
+<li>最后将 E1000_RDT 更新为最后一个环描述符索引</li>
+<li>e1000_init() 用 mbufs 初始化 RX
+环，你可以看看怎样实现的，甚至可以借阅</li>
+<li>有时候到达 E1000
+的包的数量会超过接收环的大小（16），确保你的代码可以处理这种情况"</li>
+</ul>
+<blockquote>
+<p>You'll need locks to cope with the possibility that xv6 might use the
+E1000 from more than one process, or might be using the E1000 in a
+kernel thread when an interrupt arrives.</p>
+</blockquote>
+<p>"xv6 可能会在超过一个进程上面使用
+E1000，或者当中断到达时在内核线程上使用 E1000。你需要锁住共享数据"</p>
+<p><br></p>
+<h2 id="实验思路">实验思路</h2>
+<p>首先从 "背景" 这个 section 中，可以得知以下内容：</p>
+<ul>
+<li>E1000
+是网卡驱动与之沟通的对象，我们的实验任务是实现它的驱动。不过这个硬件是
+xv6 模拟的，包括局域网（LAN）也是</li>
+<li>在 LAN 内，xv6（题干称为 guest）的地址是 10.0.2.15；宿主电脑（运行
+qemu 的电脑，题干称为 host）地址是 10.0.2.2</li>
+<li>E1000 往
+10.0.2.2（host）发包，实际会被宿主电脑上某应用（不一定是分发给
+qemu）收到</li>
+<li><code>e1000.c</code> 以及 <code>e1000.h</code>：用以初始化
+E1000，内含待补充的传输和接收包的函数</li>
+<li><code>net.c</code> 以及 <code>net.h</code>：用以实现网络栈</li>
+<li><code>pci.c</code>：用以在 boot 阶段在 PCI 总线上寻找 E1000
+网卡</li>
+</ul>
+<p>之后从 "实验要求" 这个 section 中，可以得知：</p>
+<ul>
+<li><code>e1000.c/e1000_init()</code>：用以配置 E1000，其开头两个 for()
+循环用以配置传输方和接收方的描述符数组以及包缓冲区</li>
+<li>对于传输来说，实际上是从内存读取要传输的包
+<ul>
+<li>驱动负责将数据送入 tx_ring</li>
+<li>递增 E1000_TDT</li>
+<li>网卡会自动将描述符上的数据发出，这我们不用关心</li>
+</ul></li>
+<li>对于接收来说，实际上是向内存写入已收到的包
+<ul>
+<li>网卡会自动将收到的包通过 DMA 的方式送入
+rx_ring，这我们也不用关心</li>
+<li>驱动负责读 rx_ring 的数据</li>
+</ul></li>
+</ul>
+<p>那么之后的 "实验提示" section 就给出了具体步骤：</p>
+<ul>
+<li>传输：
+<ul>
+<li>获取 tx_ring 索引，这是当前可用的描述符</li>
+<li>检查环溢出，并释放上一次传输完的包缓冲
+mbuf（<strong>注：此处说的环溢出，意思是位于内核缓冲区的 rx_ring
+描述符数组接收包速率太快，而网卡从 rx_ring
+描述符数组中读取包的速率又太慢，导致 rx_ring
+描述符数组已被填充满，那么用户进程下一个提供的待发送的包就无法送入
+rx_ring。不过实际上不需要考虑这种情况，后文会详细讨论这件事</strong>）</li>
+<li>填充当前这个描述符，如长度、cmd 字段等等</li>
+<li>更新 tx_ring 环的位置，即更新 E1000_TDT 寄存器</li>
+</ul></li>
+<li>接收：
+<ul>
+<li>获取 rx_ring
+索引，这是当前需要检查的描述符，不过要注意需要先加一并模除</li>
+<li>检查这个索引所表示的描述符是否可用（即是否真的接收到包了），这通过描述符上某个状态位可以获悉</li>
+<li>更新包缓冲 mbuf 的属性，比如长度之类的，之后就将更新后的 mbuf
+送入网络栈</li>
+<li>为刚才送入网络栈的包缓冲重新分配一个 mbuf</li>
+<li>更新 rx_ring 环的位置，即更新 E1000_RDT 寄存器</li>
+</ul></li>
+</ul>
+<p>可能你会疑惑 "描述符 descriptor" 和 "包缓冲 mbuf"
+有什么区别？如下：</p>
+<ul>
+<li>描述符：这是从硬件视角来看的，可以读 <a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/readings/8254x_GBe_SDM.pdf">section
+3.2.6 接收描述符队列结构，第一段</a>
+获取原文，总之现在只需要知道描述符是硬件维护的，硬件获取包或者发出包，都是从描述符上取数据。所以驱动的任务是给出这样一个符合硬件要求的描述符</li>
+<li>包缓冲区：这是从驱动视角来看的，可以读 <a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/readings/8254x_GBe_SDM.pdf">section
+2.8 缓冲区和描述符结构，第一段</a>
+获取原文，总之现在只需知道软件负责分配发送和接收 package
+的缓冲区，并形成包含指向这些缓冲区的指针和状态的描述符。一句话，用户进程提交数据只知道内存地址（或者说只能访问内存），驱动负责将这些数据交给硬件</li>
+</ul>
+<p>为了方面理解，我画出了我所理解的两个模型，如有不同意见欢迎讨论：</p>
+<p><img
+src="https://pic.imgdb.cn/item/62513576239250f7c5090bcc.jpg" /></p>
+<p>上图所示是传输模型，即 e1000_transmit() 的逻辑：驱动不断往 rx_ring
+尾指针处送入数据，硬件不断往
+头指针处取走。还记得上面说的环溢出吗？参见下图：</p>
+<p><img
+src="https://pic.imgdb.cn/item/62513726239250f7c50ca219.jpg" /></p>
+<p>上文我说过在这个 lab 中不会发生，原因在于 transmiter 第二点提示：</p>
+<blockquote>
+<p>If E1000_TXD_STAT_DD is not set in the descriptor indexed by
+E1000_TDT, the E1000 hasn't finished the corresponding previous
+transmission request, so return an error.</p>
+</blockquote>
+<p>这点提示是用尾指针来检查
+E1000_TXD_STAT_DD，而这个状态位用来标识网卡是否已经取走描述符对应的包缓冲了，但实际上硬件应该是检查头指针的。这说明了什么？说明头尾指针是重叠的，即考虑这样一个场景：初始化时头尾指针均指向
+index0，但网卡太慢，而驱动又处理得太快，并且由于数组是循环队列，那么当尾指针一直后移，index
+从 0 变成 1、2、3...15，最后又变回 0，此时头尾指针就重叠，也即传输环
+tx_ring 满。在这个提示中，要求我们返回
+error，所以就规避了环溢出的情况</p>
+<p><img
+src="https://pic.imgdb.cn/item/62513576239250f7c5090bd1.jpg" /></p>
+<p>相应地，上图所示是接收模型，即 e1000_recv()
+的逻辑：硬件不断将收到的包存入描述符对应的包缓冲，之后驱动负责取出。但这里有个值得一提的地方是，如果你也考虑性能，那么最好在一次中断里将环中所有的数据读出，所以该怎么处理这里的逻辑呢？你可以先想想。当然，不考虑性能就算了，怎么出效果就怎么来</p>
+<p>这里有一个比较坑的地方，receiver 最后一点提示给出：</p>
+<blockquote>
+<p>At some point the total number of packets that have ever arrived will
+exceed the ring size (16); make sure your code can handle that.</p>
+</blockquote>
+<p>有时候到达的包的数量会超出环的大小（16），需要采取一些手段预防</p>
+<p>我刚开始观察到 <code>struct mbuf</code> 这个结构体有一个字段是
+next，并且接收环的描述符里也有一个状态位为
+E1000_RXD_STAT_EOP，标识着同一个包里最后一个分块（应该是这样理解？），那么我就很自然地想要利用这两个字段。结果我卡在
+receiver 这里，很多包重复收发了很多次（<code>make server</code> 重复发出
+<em>a message from xv6</em>、<code>packets.pcap</code>
+重复打印相同输出）。所以，结果就是，和这两个字段一点都不相关，其实最终完成后，我才发现真的很简单，原来是我想复杂了</p>
+<p>可能它这个提示的意思，仅仅是让我们注意一个中断尽可能多地接收所有包而已。目前未知我觉得还是不太能理解这句提示意思，虽然我
+pass 了实验。当然，一切都交给你自己探索了</p>
+<h2 id="solution">Solution</h2>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/net.h</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">net_rx</span><span class="params">(<span class="keyword">struct</span> mbuf *)</span></span>;<span class="comment">// 需要声明这个函数，不然 receiver 无法找到进入网络栈的函数签名</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/e1000.c</span></span><br><span class="line"><span class="comment">// 从内存读取要传输的包</span></span><br><span class="line"><span class="comment">// 形参 mbuf 是包含要发送的包的 mbuf</span></span><br><span class="line"><span class="function"><span class="type">int</span></span></span><br><span class="line"><span class="function"><span class="title">e1000_transmit</span><span class="params">(<span class="keyword">struct</span> mbuf *m)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// Your code here.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// the mbuf contains an ethernet frame; program it into</span></span><br><span class="line">    <span class="comment">// the TX descriptor ring so that the e1000 sends it. Stash</span></span><br><span class="line">    <span class="comment">// a pointer so that it can be freed after sending.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// mbuf 包含了一个以太网帧，编程使 mbuf 送入 tx 描述符环</span></span><br><span class="line">    <span class="comment">// 而使 E1000 可以发送出去</span></span><br><span class="line">    <span class="comment">// 储存一个指针以便发送完后释放它</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">acquire</span>(&amp;e1000_lock);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 获取 tx 环索引</span></span><br><span class="line">    <span class="comment">// 这是 E1000 期待的待发送数据包所在的描述符索引</span></span><br><span class="line">    uint32 idx = regs[E1000_TDT]; </span><br><span class="line"></span><br><span class="line">    <span class="comment">// 检查环溢出，并释放上一次传输完的 mbuf</span></span><br><span class="line">    <span class="keyword">if</span> ((tx_ring[idx].status &amp; E1000_TXD_STAT_DD) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">release</span>(&amp;e1000_lock);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (tx_mbufs[idx])</span><br><span class="line">        <span class="built_in">mbuffree</span>(tx_mbufs[idx]);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 填充描述符</span></span><br><span class="line">    tx_ring[idx].addr = (uint64)m-&gt;head;</span><br><span class="line">    tx_ring[idx].length = m-&gt;len;</span><br><span class="line">    tx_ring[idx].cmd = E1000_TXD_CMD_RS</span><br><span class="line">                            | E1000_TXD_CMD_EOP;</span><br><span class="line">    tx_mbufs[idx] = m;<span class="comment">// stash away the pointer to the mbuf</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 更新环位置</span></span><br><span class="line">    regs[E1000_TDT] = (regs[E1000_TDT] + <span class="number">1</span>) % TX_RING_SIZE;</span><br><span class="line">    <span class="built_in">release</span>(&amp;e1000_lock);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 向内存写入收到的包</span></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">e1000_recv</span><span class="params">(<span class="type">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// Your code here.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// Check for packets that have arrived from the e1000</span></span><br><span class="line">    <span class="comment">// Create and deliver an mbuf for each packet (using net_rx()).</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// 检查已经到达 E1000 的包</span></span><br><span class="line">    <span class="comment">// 使用 net_rx() 为每个包送入 E1000</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">        <span class="built_in">acquire</span>(&amp;e1000_lock);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 获取 RX 索引</span></span><br><span class="line">        <span class="comment">// 如果当前描述符还未有数据到达，需要后移即加一模除</span></span><br><span class="line">        <span class="comment">// 因为一开始这个描述符肯定为空，那么随着 E1000 不断接收</span></span><br><span class="line">        <span class="comment">// 数据包————即写入数据，头指针会赶上尾指针</span></span><br><span class="line">        <span class="comment">// 而当尾指针等于头指针时，硬件视为队列空————即已经没有</span></span><br><span class="line">        <span class="comment">// 地方再接收数据包了</span></span><br><span class="line">        <span class="comment">// 如果读到当前描述符空却不后移，那么每次循环都会读到空，</span></span><br><span class="line">        <span class="comment">// 那么 E1000 就再也无法接收数据包</span></span><br><span class="line">        uint32 idx = (regs[E1000_RDT] + <span class="number">1</span>) % RX_RING_SIZE;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 判断包是否可用，即 E100 是否真的写入数据包了</span></span><br><span class="line">        <span class="keyword">if</span> ((rx_ring[idx].status &amp; E1000_RXD_STAT_DD) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">release</span>(&amp;e1000_lock);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 更新包缓冲区（mbuf），即填充 mbuf 结构体，并推送网络栈</span></span><br><span class="line">        rx_mbufs[idx]-&gt;len = rx_ring[idx].length;</span><br><span class="line">        <span class="built_in">release</span>(&amp;e1000_lock);</span><br><span class="line">        <span class="built_in">net_rx</span>(rx_mbufs[idx]);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 为刚才的 mbuf 新分配空间</span></span><br><span class="line">        rx_mbufs[idx] = <span class="built_in">mbufalloc</span>(<span class="number">0</span>);</span><br><span class="line">        rx_ring[idx].addr = (uint64)rx_mbufs[idx]-&gt;head;</span><br><span class="line">        rx_ring[idx].status = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 更新尾指针，更新为最后处理的环描述符的索引</span></span><br><span class="line">        regs[E1000_RDT] = idx;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h2 id="写在最后">写在最后</h2>
+<p>看吧，实际编程真的非常简单。不过看回 6.828 时期的这个
+lab，那就非常难了，因为初始化是需要你完成，网络栈也需要你完成，再加上
+transmiter 和 receiver 这两个，想挑战的可以试下</p>
+<p>最终耗时 12h42m</p>
+
+    </article>
+    <!-- license -->
+        <div class="license-wrapper">
+            <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
+            <p>Link：<a href="https://horbyn.github.io/2022/04/11/xv6-7/">https://horbyn.github.io/2022/04/11/xv6-7/</a>
+            <p>Publish date：<a href="https://horbyn.github.io/2022/04/11/xv6-7/">April 11th 2022, 10:44:10 pm</a>
+            <p>Update date：<a href="https://horbyn.github.io/2022/04/11/xv6-7/">February 27th 2025, 10:24:07 pm</a>
+            <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
+        </div>
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2022/04/15/xv6-8/" title="⌈xv6-fall2021⌋ lab 8：locks">
+                    <div class="nextTitle">⌈xv6-fall2021⌋ lab 8：locks</div>
+                </a>
+        </li>
+        <li class="previous">
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2022/04/05/xv6-6/" title="⌈xv6-fall2021⌋ lab 6：Multithreading">
+                    <div class="prevTitle">⌈xv6-fall2021⌋ lab 6：Multithreading</div>
+                </a>
+        </li>
+    </ul>
+    <!-- comment -->
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+            
+            
+            
+            <!-- utteranc评论 -->
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+            
+            
+            
+        </div>
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    <!-- Mathjax -->
+</main>
+
+                <!-- profile -->
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+        <div class="social">
+                            <a href="mailto:horbyn@outlook.com" class="iconfont-archer email" title="email" ></a>
+                <a href="https://github.com/horbyn" class="iconfont-archer github" target="_blank" title="github"></a>
+                <span class="iconfont-archer wechat" title="wechat">
+                    <img class="profile-qr" src="/assets/example_qr.jpg" />
+                </span>
+
+        </div>
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    <!-- 不蒜子  -->
+        <div class="busuanzi-container">
+                <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span> :)</span>
+        </div>
+</footer>
+
+        </div>
+        <!-- toc -->
+            <div class="toc-wrapper toc-wrapper-loding" style=    top:50vh;
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#about"><span class="toc-number">1.</span> <span class="toc-text">ABOUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#into"><span class="toc-number">2.</span> <span class="toc-text">INTO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%83%8C%E6%99%AF%E8%8A%82%E9%80%89%E8%AF%91"><span class="toc-number">3.</span> <span class="toc-text">背景（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%E8%8A%82%E9%80%89%E8%AF%91"><span class="toc-number">4.</span> <span class="toc-text">实验要求（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA%E8%8A%82%E9%80%89%E8%AF%91"><span class="toc-number">5.</span> <span class="toc-text">实验提示（节选）（译）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%80%9D%E8%B7%AF"><span class="toc-number">6.</span> <span class="toc-text">实验思路</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#solution"><span class="toc-number">7.</span> <span class="toc-text">Solution</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">8.</span> <span class="toc-text">写在最后</span></a></li></ol>
+            </div>
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 24
+        </div>
+        <!-- search  -->
+    </div>
+    <div class="post-archive">
+            <div class="archive-year"> 2025 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/10</span>
+            <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/07</span>
+            <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/05</span>
+            <a class="archive-post-title" href="/2025/02/05/hoo-6/">「从零到一」设备驱动</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/04</span>
+            <a class="archive-post-title" href="/2025/02/04/hoo-5/">「从零到一」调度机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/01</span>
+            <a class="archive-post-title" href="/2025/02/01/hoo-4/">「从零到一」中断机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/30</span>
+            <a class="archive-post-title" href="/2025/01/30/hoo-3/">「从零到一」内存管理</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/07</span>
+            <a class="archive-post-title" href="/2025/01/07/hoo-2/">「从零到一」内核引导与加载</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/02</span>
+            <a class="archive-post-title" href="/2025/01/02/hoo-1/">「从零到一」实现一个 x86 的内核</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2023 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/01</span>
+            <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2022 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/28</span>
+            <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/17</span>
+            <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/15</span>
+            <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/11</span>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/05</span>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/04</span>
+            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span>
+            <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/28</span>
+            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/25</span>
+            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
+        </li>
+            </ul>
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
+            </span>
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
+            </span>
+            <span class="sidebar-tag-name" data-tags="winsock">
+                <span class="iconfont-archer">&#xe606;</span>
+                winsock
+            </span>
+            <span class="sidebar-tag-name" data-tags="xv6">
+                <span class="iconfont-archer">&#xe606;</span>
+                xv6
+            </span>
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+        <span class="sidebar-category-name" data-categories="KERNEL">
+            <span class="iconfont-archer">&#xe60a;</span>
+            KERNEL
+        </span>
+        <span class="sidebar-category-name" data-categories="LIVEHOOD">
+            <span class="iconfont-archer">&#xe60a;</span>
+            LIVEHOOD
+        </span>
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "https://horbyn.github.io",
+        root: siteMetaRoot,
+        author: "Horbyn"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+        <!-- main func -->
+        <script src="/scripts/main.js"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.umd.js" onload="window.Fancybox.bind('[data-fancybox]')" defer></script>
+        <!-- algolia -->
+        <!-- busuanzi -->
+            <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+        <!-- async load share.js -->
+            <script src="/scripts/share.js" async></script>
+        <!-- mermaid -->
+    </body>
+</html>

@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+    <!-- title -->
+<!-- keywords -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="Horbyn">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="Horbyn">
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    <meta name="description" content="">
+    <meta name="description" content="整个 x86 内核故事的序幕，引导与加载被称为 bootloader，用于初始化内核执行环境、加载内核到内存并将控制权交给内核">
+<meta property="og:type" content="article">
+<meta property="og:title" content="「从零到一」内核引导与加载">
+<meta property="og:url" content="https://horbyn.github.io/2025/01/07/hoo-2/">
+<meta property="og:site_name">
+<meta property="og:description" content="整个 x86 内核故事的序幕，引导与加载被称为 bootloader，用于初始化内核执行环境、加载内核到内存并将控制权交给内核">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-01-07T05:13:41.000Z">
+<meta property="article:modified_time" content="2025-02-28T15:00:01.627Z">
+<meta property="article:author" content="Horbyn">
+<meta property="article:tag" content="hoo">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/avatar/link.PNG">
+    <title>「从零到一」内核引导与加载 · HorbynzZ</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .footer-fixed-btn,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(
+            -45deg,
+            #444 0,
+            #444 80px,
+            #333 80px,
+            #333 160px
+        );
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link id="stylesheet-fancybox" rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-base" rel="preload" href="/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-mobile" rel="preload" href="/css/mobile.css" as="style" onload="this.onload=null;this.rel='stylesheet';this.media='screen and (max-width: 960px)'">
+    <link id="stylesheet-theme-dark" rel="preload" href="/css/dark.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    <!-- 百度统计  -->
+    <!-- 谷歌统计  -->
+    <!-- Google tag (gtag.js) -->
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+        <body class="post-body">
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        <div class="header-sidebar-menu">
+            <div style="padding-left: 1px;">&#xe775;</div>
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href="/">Horbynz hub</a>
+        </span>
+    </div>
+    <!-- toggle banner -->
+    <div class="banner">
+        <div class="blog-title header-element">
+            <a href="/">Horbynz hub</a>
+        </div>
+        <div class="post-title header-element">
+            <a href="#" class="post-name">「从零到一」内核引导与加载</a>
+        </div>
+    </div>
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- donate button -->
+
+    <!-- back to top button -->
+    <div class="footer-fixed-btn footer-fixed-btn--hidden back-top">
+        <div>&#xe639;</div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="    height:50vh;
+">
+    <!-- 主页  -->
+    <!-- 404页  -->
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.png)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+                「从零到一」内核引导与加载
+            <!-- 404 -->
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            <!-- 404 -->
+        </p>
+        <!-- 文章页 meta -->
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                    <div class="post-intro-tags" >
+        <a class="post-tag" href="javascript:void(0);" data-tags="hoo">hoo</a>
+</div>
+
+                <!-- 文章字数统计 -->
+                    <div class="post-intro-read">
+                        <span>Word count: <span class="post-count word-count">3.3k</span>Reading time: <span class="post-count reading-time">12 min</span></span>
+                    </div>
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2025/01/07</span>
+                    <!-- busuanzi -->
+                        <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                            <span class="iconfont-archer post-intro-busuanzi">&#xe602;</span>
+                            <span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" alt="loading">
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <h1 id="引导这个阶段会发生什么">引导这个阶段会发生什么</h1>
+<p>x86 的故事开始于 <code>0x7c00</code>，即 <code>%cs</code> 和
+<code>%ip</code>
+两个寄存器的组合指向了这个地址，从这里执行第一条指令。因此，OS
+开发者就要想办法在内存 <code>0x7c00</code>
+处安排上自己的软件。最简单的做法是将自己软件的纯二进制文件写入到磁盘的 0
+面 0 道 1 扇区，这个扇区被称为 MBR，BIOS 会负责将这个位置的扇区读入内存
+<code>0x7c00</code>，这就是引导阶段发生的事情</p>
+<h1 id="引导阶段">引导阶段</h1>
+<p>传统上，不会直接把内核放在 MBR，也即内核不会一开始就送上
+<code>0x7c00</code>。因为：</p>
+<ul>
+<li>MBR 的空间太小，一般只有 <code>512</code>
+字节，不足够实现太多复杂功能</li>
+<li>即使 MBR 空间足够，但 x86
+内核由于兼容性需要切换保护模式，切换需要一些额外工作（可以称为初始化工作），这些工作需要在真正进入内核之前完成</li>
+</ul>
+<p>因此，在内核真正运行在内存之前，会先运行另一个程序 ——
+<code>bootloader</code>。实际上这里有两个步骤，第一步引导（<code>boot</code>），第二步加载（<code>loader</code>），前者负责加载
+MBR；后者负责把内核从磁盘加载到内存中，以及设置内核运行的环境</p>
+<p>大致上，引导和加载需要完成以下事情：</p>
+<ul>
+<li>借助 <code>BIOS</code> 获取内存信息</li>
+<li>借助 <code>BIOS</code> 从磁盘中将内核读取到内存</li>
+<li>设置 <code>gdt</code></li>
+<li>开启分页机制</li>
+<li>跳入保护模式</li>
+</ul>
+<p>在进入保护模式之前（实模式阶段），只能使用可怜的 <code>1MB</code>
+寻址空间，这个阶段由于需要读取到硬件信息（从 <code>BIOS</code>
+中获取信息），以供后续进入内核使用。所以这个阶段需要规划一个内存布局，规定硬件信息应该写入哪个内存地址</p>
+<p>在规划之前先来看看实模式的 <code>1MB</code> 布局：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 0      0x500            0x80000   0xa0000        0xc0000          0x100000</span></span><br><span class="line"><span class="comment"> * ├──────┼────────────────┼─────────┼──────────────┼────────────────┤</span></span><br><span class="line"><span class="comment"> * │IVT   │                │EBIOS    │VIDEO MEMORY  │ROM &amp; MAPPING   │</span></span><br><span class="line"><span class="comment"> * ├──────┼────────────────┼─────────┼──────────────┼────────────────┤</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure>
+<p>其中 IVT 是 BIOS 安装的，一是保护模式内核不需要使用
+BIOS，二是中断例程内核自己会实现，所以这块空间在引导阶段结束就可以覆盖。再往后从
+<code>0x8_0000</code>
+开始都是硬件保留的，这里也不动它，所以内核可以覆盖的就是前面
+<code>0x8_0000</code> 的空间</p>
+<p><code>hoo</code> 的规划如下：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67763757d0e0a243d4edc38f.png" /></p>
+<p>整体来看，内核占用 <code>[0, 0x7_8000)</code> 内存空间，内核栈占用
+<code>[0x7_a000, 0x8_0000)</code>。其中，内核的 <code>0x7_7fc</code>
+地址处放置了一条 <code>DIED</code> 指令（其实就是
+<code>jmp .</code>），在引导阶段跳入内核之前设置，当内核返回的时候，这条指令会从栈中弹出，防止内核返回时去到未知的地方。其次，<code>hoo</code>
+在引导阶段产生或获取到的所有数据都放在内核栈增长的方向，后面结束引导阶段就可以随便覆盖掉了</p>
+<h1 id="具体实现">具体实现</h1>
+<p>完整代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/master/boot/bootsect.S">boot/bootsect.S</a></p>
+<p><img
+src="https://pic1.imgdb.cn/item/67740b61d0e0a243d4ed3e79.png" /></p>
+<p>这里参考 <code>Linux 0.11</code> 的思路，内核未来放在内存
+<code>0</code> 地址往上，所以位于 <code>0x7c00</code> 的 MBR
+自然需要先挪位置到高地址。挪到高地址后，调用 BIOS 读磁盘功能，将内核读到
+<code>0x1000</code>，这是因为此时不能覆盖 BIOS 的 IVT。当完全使用完 BIOS
+功能后，再将内核移动到 <code>0</code> 地址处，最后跳入内核</p>
+<p>需要注意的是，在进入保护模式之前，x86 机器字长都是
+<code>16-bit</code> 的，意味着保护模式之前使用的栈、或者执行一些既可以用
+<code>%eax</code>，又可以用 <code>%ax</code>
+的指令（如乘法指令），长度是
+<code>16-bit</code>。但是使用寄存器没有这个限制，实模式下是可以使用
+<code>32-bit</code> 寄存器的（比如 <code>mov</code> 一个数据到
+<code>%eax</code>）</p>
+<h2 id="mbr-移动到高地址">MBR 移动到高地址</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">    .set SEG_MBR,       0x7240</span><br><span class="line">    cld                     # 地址递增</span><br><span class="line">    xorw %ax,           %ax</span><br><span class="line">    movw %ax,           %ds</span><br><span class="line">    movw $0x7c00,       %si</span><br><span class="line">    movw $SEG_MBR,      %ax</span><br><span class="line">    movw %ax,           %es</span><br><span class="line">    movw $0x7c00,       %di</span><br><span class="line">    movw $1&lt;&lt;7,         %cx</span><br><span class="line">    rep movsd               # 0:0x7c00 -&gt; 0x7240:0x7c00</span><br><span class="line"></span><br><span class="line">    jmp $SEG_MBR,       $still</span><br><span class="line">still:</span><br></pre></td></tr></table></figure>
+<p>移动使用 <code>rep movsd</code> 指令进行，<code>ds:si</code>
+指向源地址，<code>es:di</code> 指向目标地址，<code>cx</code>
+指向移动的次数。这里将 <code>0x7c00</code> 处的 <code>512</code>
+字节（一个扇区）移动到
+<code>0x7_a000</code>，所以目的地址的段寄存器拆成了
+<code>0x7240</code>。最后执行长跳转刷新 <code>%cs</code> 和
+<code>%ip</code></p>
+<h2 id="获取内存容量">获取内存容量</h2>
+<p>直接借助 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15,_EAX_=_0xE820">BIOS
+的功能</a>，<code>int $0x15, %eax = 0xe820</code> 来获取内存容量</p>
+<p>这个功能会返回一个数组，数组元素是一个 20 字节的结构体（ARDS
+结构体），如前面内存布局所示，将会保存到内存 <code>0x7_a204</code>
+处；另外还会把数组大小保存到内存 <code>0x7_a200</code> 处</p>
+<h2
+id="读取磁盘的内核并移动到内存地址-0">读取磁盘的内核，并移动到内存地址
+0</h2>
+<p>读取磁盘也是直接借助 BIOS
+功能，<code>int $0x13, %ah = 2</code>。当读取完成后，也是执行
+<code>rep movsd</code> 来移动数据</p>
+<p>该 BIOS 功能中，<code>%es:%bx</code>
+是目的地址。需要注意的一点是，<code>%bx</code> 是 <code>16-bit</code>
+的，最大值 <code>0xffff</code> 即
+<code>64KB</code>，当读取的磁盘扇区累计超过 <code>64KB</code>
+时，就需要增加 <code>%es</code> 的值</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">    # 常规情况下每次增加一个扇区</span><br><span class="line">    addw $0x200,        %bx</span><br><span class="line">    # 但是当增加之后 %bx 回滚为 0</span><br><span class="line">    cmpw $0,            %bx</span><br><span class="line">    jnz  4f</span><br><span class="line">    # 就需要为 %es 增加 64KB</span><br><span class="line">    movw %es,           %bx</span><br><span class="line">    addw $0x1000,       %bx</span><br><span class="line">    movw %bx,           %es</span><br><span class="line">    xorw %bx,           %bx</span><br><span class="line">4:</span><br><span class="line">    jmp  continue_read</span><br></pre></td></tr></table></figure>
+<h2 id="进入保护模式">进入保护模式</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">    cli</span><br><span class="line">    movw %cs,           %ax</span><br><span class="line">    movw %ax,           %ds</span><br><span class="line">    inb  $0x92,         %al     # open A20</span><br><span class="line">    orb  $2,            %al</span><br><span class="line">    outb %al,           $0x92</span><br><span class="line"></span><br><span class="line">    lgdt gdt_48</span><br><span class="line"></span><br><span class="line">    movl %cr0,          %eax    # enable p.m.</span><br><span class="line">    orl  $1,            %eax</span><br><span class="line">    movl %eax,          %cr0</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">boot_gdt:</span><br><span class="line">	.quad 0x0000000000000000</span><br><span class="line">	.quad 0x00cf9a000000ffff # exe, no-readable, no-conform</span><br><span class="line">	.quad 0x00cf92000000ffff # no-exe, no-writable, down</span><br><span class="line">gdt_48:</span><br><span class="line">	.word .-boot_gdt</span><br><span class="line">	.long SEG_MBR&lt;&lt;4 + 0x7c00 + (boot_gdt - _start)</span><br></pre></td></tr></table></figure>
+<p>具体来说分三步：</p>
+<ul>
+<li>启用 <code>A20</code> 地址线</li>
+<li>加载 <code>GDT</code></li>
+<li>设置 <code>CR0</code> 的 <code>PE</code> 位</li>
+</ul>
+<p><code>GDB</code> 的格式参考 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Global_Descriptor_Table">OSDev
+GDT</a>，<code>hoo</code> 将引导阶段和内核阶段使用的 <code>GDT</code>
+分开维护了。在这个阶段，<code>GDT</code>
+是写死的，代码段和数据段各自临时使用一个 <code>GDT</code>
+来进入保护模式而已</p>
+<p><code>lgdt</code> 指令的操作数是一个 <code>48-bit</code>
+的内存地址，前 <code>16-bit</code> 通过将当前地址减去
+<code>boot_gdt</code> 标号，得到的是 <code>GDT</code> 的长度。后
+<code>32-bit</code> 表示的是内存中放置 <code>GDT</code> 的地址，由于
+<code>MBR</code> 一开始就移动到了高地址
+<code>0x7_a000</code>，所以这边的计算是围绕高地址进行的，<code>_start</code>
+标号放在 <code>MBR</code> 最开头，最终表达式得到的是高地址的
+<code>GDT</code></p>
+<h2 id="启用分页机制">启用分页机制</h2>
+<p>一个页目录表可以表示
+<code>4GB</code>，所以整个内核线性空间使用一个页目录表就够了。一个页表可以表示
+<code>4MB</code>，所以整个内核线性空间需要使用 1024 个页表</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67763996d0e0a243d4edc445.png" /></p>
+<p>上面是内核进程的线性空间，每个 <code>PDE</code> 各指示
+<code>4MB</code> 并依次递增，但实际上最后一个 <code>PDE</code>
+不会使用，这使得内核（其实所有进程也是这个设计思路）的线性空间会损失最高的
+<code>[0xffc0_0000, 0xffff_ffff]</code> 这 <code>4MB</code>
+空间。但最后一个 <code>PDE</code>
+通过指向页目录表自身，使得内核（每个进程）通过虚拟地址访问自己的页目录表成为可能。比如，进程通过访问
+<code>0xffff_f000</code> 可以访问页目录表的
+<code>PDE #0</code>；通过访问 <code>0xffc0_0000</code>
+可以访问第一个页表的 <code>PTE #0</code></p>
+<p><code>hoo</code> 的规划是将页目录表放置在
+<code>0x7_8000</code>，第一个页表放置在 <code>0x7_9000</code></p>
+<p><img
+src="https://pic1.imgdb.cn/item/677953c4d0e0a243d4ef0582.png" /></p>
+<p>上面给出是页目录表和第一个页表的具体数值：</p>
+<p>引导阶段页目录表会使用三个 <code>PDE</code>：</p>
+<ul>
+<li><code>PDE #0</code>：指向第一个页表，表示
+<code>[0x0, 0x40_0000)</code>，主要是为了包含最开始实模式的线性空间</li>
+<li><code>PDE #512</code>：也是指向第一个页表，但因为使用了更高地址的
+<code>PDE</code>，表示
+<code>[0x8000_0000, 0x8040_0000)</code>，所以可以通过这部分线性地址访问实模式的线性空间
+—— 也即内核。<code>hoo</code> 的规划中，会把
+<code>[0x8000_0000, 0xffff_ffff]</code>
+这部分高地址映射到内核，这使得所有进程都可以共享内核 ——
+换句话说，普通进程能够使用的只有低地址
+<code>[0, 0x8000_0000)</code></li>
+<li><code>PDE #1023</code>：指向页目录，一个后门用于通过线性地址访问页目录表</li>
+</ul>
+<p>第一个页表初始化是为了做实模式 <code>1MB</code>
+的映射，这部分映射可以通过顺序映射的方式完成 ——
+即上面给出的方式。这里只包含了实模式的 <code>1MB</code>，但直接做整个
+<code>4MB</code> 映射也是没问题</p>
+<p>下面是赋值页目录表的代码，准确的说是赋值三个 PDE：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">    .set SEG_PDTABLE,     0x7800</span><br><span class="line">    .set SEG_PGTABLE,     0x7900</span><br><span class="line">    .set KERN_MAPPING,    0x80000000</span><br><span class="line">    .set PDE_HIGH_OFF,    (KERN_MAPPING &gt;&gt; 20)</span><br><span class="line">    .set PDE_LAST_OFF,    (0xffc - PDE_HIGH_OFF)</span><br><span class="line"></span><br><span class="line">    movl $SEG_PGTABLE&lt;&lt;4, %eax</span><br><span class="line">    orl  $7,              %eax</span><br><span class="line">    movl pdtable_addr,    %ebx</span><br><span class="line">    movl %eax,            (%ebx)</span><br><span class="line">    addl $PDE_HIGH_OFF,   %ebx</span><br><span class="line">    movl %eax,            (%ebx)</span><br><span class="line">    movl $SEG_PDTABLE&lt;&lt;4, %eax</span><br><span class="line">    orl  $7,              %eax</span><br><span class="line">    addl $PDE_LAST_OFF,   %ebx</span><br><span class="line">    movl %eax,            (%ebx)</span><br><span class="line"></span><br><span class="line">pdtable_addr:</span><br><span class="line">    # .long 移动 MBR 到高地址后，%ds 会改变，访问页目录表的内存地址要重新计算</span><br></pre></td></tr></table></figure>
+<p><code>%eax</code> 保存 PDE 的值，<code>%ebx</code> 保存 PDE
+的内存地址。<code>PDE#0</code> 通过标号 <code>pdtable_addr</code>
+计算，在此基础上加上 <code>PDE_HIGH_OFF</code> 就是
+<code>PDE#512</code>，再加上 <code>PDE_LAST_OFF</code> 就是
+<code>PDE#1023</code></p>
+<p>下面是赋值第一个页表的代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">    movl $0x100,        %ecx</span><br><span class="line">    movl $0,            %eax</span><br><span class="line">    movl pgtable_addr,  %ebx</span><br><span class="line">pgtable:</span><br><span class="line">    movl %eax,          %edx</span><br><span class="line">    orl  $7,            %edx</span><br><span class="line">    movl %edx,          (%ebx)</span><br><span class="line">    addl $0x1000,       %eax</span><br><span class="line">    addl $4,            %ebx</span><br><span class="line">    loop pgtable</span><br><span class="line"></span><br><span class="line">pgtable_addr:</span><br><span class="line">    # .long 移动 MBR 到高地址后，%ds 会改变，访问第一个页表的内存地址要重新计算</span><br></pre></td></tr></table></figure>
+<p>借助 x86 <code>loop</code> 指令，循环次数 <code>%ecx</code> 设置为
+256，每次循环通过 <code>%eax</code> 和 <code>%edx</code> 计算出 PTE
+的值，然后写入第一个页表所在的内存地址。这个内存地址通过
+<code>movl pgtable_addr, %ebx</code> 得到，<code>AT&amp;T</code>
+语法将标号移动到寄存器是指将标号处定义的数值移动到寄存器；另一种相似的语法是
+<code>movl $symbol, %ebx</code>，多了 <code>$</code>
+表示将标号处的内存地址移动到寄存器，是两种不一样的语法</p>
+<h2 id="跳入保护模式">跳入保护模式</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">.set SEG_PDTABLE,     0x7800</span><br><span class="line"></span><br><span class="line">movl $SEG_PDTABLE&lt;&lt;4, %eax</span><br><span class="line">movl %eax,            %cr3</span><br><span class="line">movl %cr0,            %eax</span><br><span class="line">orl  $0x80000000,     %eax</span><br><span class="line">movl %eax,            %cr0</span><br><span class="line"></span><br><span class="line">ljmp $0x08,           $0</span><br></pre></td></tr></table></figure>
+<p>跳入保护模式是很简单的一件事，将控制寄存器 <code>%cr3</code>
+赋值页目录表地址，将 <code>%cr0</code> 开启 <code>PE</code>（Protected
+Mode Enable）标识位就够了。最后执行长跳转刷新段寄存器，刷新 CPU
+流水线，并将执行流重定向到内存 0 地址处。在这个地方，MBR
+前面的逻辑已经把内核放在这里了。换句话说，跳转到内存地址
+0，即是跳入了内核</p>
+<h1 id="内核入口">内核入口</h1>
+<p>完整代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/master/kern/entry.c">kern/entry.c</a></p>
+<p>内核入口这部分代码编译得到的二进制会通过链接脚本 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kernel.ld#L9">kernel.ld</a>
+放在整个内核二进制的最前面，也即最后会被加载到内存 0 处</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">. = 0x80000000;</span><br><span class="line">.text : AT(ADDR(.text) - 0x80000000) /*1*/ &#123; </span><br><span class="line">    kern/entry.o(.text)              /*2*/</span><br><span class="line">    *(.text)                         /*3*/</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>关于链接脚本更详细的内容这里略过，上面代码片段的几处注释解释如下：</p>
+<ul>
+<li>链接脚本分为 VMA（Virtual Memory Address）和 LMA（Load Memory
+Address），前者是二进制文件编译、链接之后得到的地址；后者是最终加载到内存的地址</li>
+<li>注释 1 处是规定 <code>.text</code> 段的 VMA 为
+<code>0x8000_0000</code>（通过 <code>. = 0x80000000;</code> 设定），LMA
+为 0（通过 <code>AT(0)</code> 设定，其中的 0 是通过
+<code>ADDR(.text) - 0x80000000</code> 计算得到的）</li>
+<li>注释 2 处是将 <code>kern/entry.o</code> 二进制文件放在
+<code>.text</code> 段第一位</li>
+<li>注释 3 处是将剩余的 <code>.text</code> 节放在 <code>.text</code>
+段后面（段 Segments 和节 Sections 的区别略）</li>
+</ul>
+<p>在 <code>entry()</code> 最开始，有一段内联汇编代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"># 1. 重置上下文</span><br><span class="line">movw $0x10,    %ax</span><br><span class="line">movw %ax,      %ds</span><br><span class="line">movw %ax,      %es</span><br><span class="line">movw %ax,      %fs</span><br><span class="line">movw %ax,      %gs</span><br><span class="line">movw %ax,      %ss</span><br><span class="line">movl $0x80000, %esp</span><br><span class="line"></span><br><span class="line"># 2. 伪造调用约定</span><br><span class="line">pushl $0x77ffc</span><br><span class="line">pushl $0</span><br><span class="line">movl %esp,     %ebp</span><br><span class="line"></span><br><span class="line"># 3. 跳入高地址</span><br><span class="line">pushl $go</span><br><span class="line">ret</span><br><span class="line">go:</span><br></pre></td></tr></table></figure>
+<p>解释如下：</p>
+<ol type="1">
+<li>重置上下文。此处 <code>hoo</code>
+刚从引导阶段的临时上下文进入内核，重新设置一个上下文环境。其实主要是重置栈，因为对于
+C 语言来说，设置了栈就可以使用了</li>
+<li>伪造调用约定。由前面内存布局可以知道，内存 <code>0x7_7ffc</code>
+放置了一条 <code>jmp .</code>
+指令，所以第一个指令就是把指令地址入栈。第二个指令是入栈
+0，第三个指令是将 <code>%ebp</code> 赋值为与 <code>%esp</code>
+一样。这三条指令就对应于 x86
+调用约定的（1）入栈返回地址；（2）入栈上一个栈帧的
+<code>%ebp</code>；（3）调用 <code>call</code>
+指令切换指令流（当然这里没有）；（4）切换执行流后将当前栈帧的栈底重置</li>
+<li>跳入高地址。在引导阶段最后一条指令 <code>ljmp $0x08, $0</code>
+执行后，<code>%eip</code> 会变成
+0。但是逻辑上，执行流在内核的时候，应该是高地址。对于
+<code>entry.c</code>
+源文件来说，链接脚本可以保证其对应的二进制的符号都是
+<code>0x8000_0000</code> 以上，自然标号 go 也会是高地址。x86
+有两条可以改变 <code>%eip</code> 的指令：<code>call</code> 和
+<code>ret</code>，都是从栈顶取出数值，前者会改变 <code>%cs</code> 和
+<code>%eip</code>，后者只会改变 <code>%eip</code></li>
+</ol>
+<p>后面的代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">entry</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    kern_init();</span><br><span class="line">    kern_exec();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>会进行内核的初始化，然后进行内核自己的事件循环</p>
+
+    </article>
+    <!-- license -->
+        <div class="license-wrapper">
+            <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
+            <p>Link：<a href="https://horbyn.github.io/2025/01/07/hoo-2/">https://horbyn.github.io/2025/01/07/hoo-2/</a>
+            <p>Publish date：<a href="https://horbyn.github.io/2025/01/07/hoo-2/">January 7th 2025, 1:13:41 pm</a>
+            <p>Update date：<a href="https://horbyn.github.io/2025/01/07/hoo-2/">February 28th 2025, 11:00:01 pm</a>
+            <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
+        </div>
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2025/01/30/hoo-3/" title="「从零到一」内存管理">
+                    <div class="nextTitle">「从零到一」内存管理</div>
+                </a>
+        </li>
+        <li class="previous">
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2025/01/02/hoo-1/" title="「从零到一」实现一个 x86 的内核">
+                    <div class="prevTitle">「从零到一」实现一个 x86 的内核</div>
+                </a>
+        </li>
+    </ul>
+    <!-- comment -->
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+            
+            
+            
+            <!-- utteranc评论 -->
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+            
+            
+            
+        </div>
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    <!-- Mathjax -->
+</main>
+
+                <!-- profile -->
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+        <div class="social">
+                            <a href="mailto:horbyn@outlook.com" class="iconfont-archer email" title="email" ></a>
+                <a href="https://github.com/horbyn" class="iconfont-archer github" target="_blank" title="github"></a>
+                <span class="iconfont-archer wechat" title="wechat">
+                    <img class="profile-qr" src="/assets/example_qr.jpg" />
+                </span>
+
+        </div>
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    <!-- 不蒜子  -->
+        <div class="busuanzi-container">
+                <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span> :)</span>
+        </div>
+</footer>
+
+        </div>
+        <!-- toc -->
+            <div class="toc-wrapper toc-wrapper-loding" style=    top:50vh;
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%BC%95%E5%AF%BC%E8%BF%99%E4%B8%AA%E9%98%B6%E6%AE%B5%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88"><span class="toc-number">1.</span> <span class="toc-text">引导这个阶段会发生什么</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%BC%95%E5%AF%BC%E9%98%B6%E6%AE%B5"><span class="toc-number">2.</span> <span class="toc-text">引导阶段</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"><span class="toc-number">3.</span> <span class="toc-text">具体实现</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#mbr-%E7%A7%BB%E5%8A%A8%E5%88%B0%E9%AB%98%E5%9C%B0%E5%9D%80"><span class="toc-number">3.1.</span> <span class="toc-text">MBR 移动到高地址</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%8E%B7%E5%8F%96%E5%86%85%E5%AD%98%E5%AE%B9%E9%87%8F"><span class="toc-number">3.2.</span> <span class="toc-text">获取内存容量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BB%E5%8F%96%E7%A3%81%E7%9B%98%E7%9A%84%E5%86%85%E6%A0%B8%E5%B9%B6%E7%A7%BB%E5%8A%A8%E5%88%B0%E5%86%85%E5%AD%98%E5%9C%B0%E5%9D%80-0"><span class="toc-number">3.3.</span> <span class="toc-text">读取磁盘的内核，并移动到内存地址
+0</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%9B%E5%85%A5%E4%BF%9D%E6%8A%A4%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.4.</span> <span class="toc-text">进入保护模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%90%AF%E7%94%A8%E5%88%86%E9%A1%B5%E6%9C%BA%E5%88%B6"><span class="toc-number">3.5.</span> <span class="toc-text">启用分页机制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%B3%E5%85%A5%E4%BF%9D%E6%8A%A4%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.6.</span> <span class="toc-text">跳入保护模式</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%86%85%E6%A0%B8%E5%85%A5%E5%8F%A3"><span class="toc-number">4.</span> <span class="toc-text">内核入口</span></a></li></ol>
+            </div>
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 24
+        </div>
+        <!-- search  -->
+    </div>
+    <div class="post-archive">
+            <div class="archive-year"> 2025 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/10</span>
+            <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/07</span>
+            <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/05</span>
+            <a class="archive-post-title" href="/2025/02/05/hoo-6/">「从零到一」设备驱动</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/04</span>
+            <a class="archive-post-title" href="/2025/02/04/hoo-5/">「从零到一」调度机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/01</span>
+            <a class="archive-post-title" href="/2025/02/01/hoo-4/">「从零到一」中断机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/30</span>
+            <a class="archive-post-title" href="/2025/01/30/hoo-3/">「从零到一」内存管理</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/07</span>
+            <a class="archive-post-title" href="/2025/01/07/hoo-2/">「从零到一」内核引导与加载</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/02</span>
+            <a class="archive-post-title" href="/2025/01/02/hoo-1/">「从零到一」实现一个 x86 的内核</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2023 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/01</span>
+            <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2022 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/28</span>
+            <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/17</span>
+            <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/15</span>
+            <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/11</span>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/05</span>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/04</span>
+            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span>
+            <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/28</span>
+            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/25</span>
+            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
+        </li>
+            </ul>
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
+            </span>
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
+            </span>
+            <span class="sidebar-tag-name" data-tags="winsock">
+                <span class="iconfont-archer">&#xe606;</span>
+                winsock
+            </span>
+            <span class="sidebar-tag-name" data-tags="xv6">
+                <span class="iconfont-archer">&#xe606;</span>
+                xv6
+            </span>
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+        <span class="sidebar-category-name" data-categories="KERNEL">
+            <span class="iconfont-archer">&#xe60a;</span>
+            KERNEL
+        </span>
+        <span class="sidebar-category-name" data-categories="LIVEHOOD">
+            <span class="iconfont-archer">&#xe60a;</span>
+            LIVEHOOD
+        </span>
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "https://horbyn.github.io",
+        root: siteMetaRoot,
+        author: "Horbyn"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+        <!-- main func -->
+        <script src="/scripts/main.js"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.umd.js" onload="window.Fancybox.bind('[data-fancybox]')" defer></script>
+        <!-- algolia -->
+        <!-- busuanzi -->
+            <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+        <!-- async load share.js -->
+            <script src="/scripts/share.js" async></script>
+        <!-- mermaid -->
+    </body>
+</html>

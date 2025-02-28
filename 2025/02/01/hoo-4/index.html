@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+    <!-- title -->
+<!-- keywords -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="Horbyn">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="Horbyn">
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    <meta name="description" content="">
+    <meta name="description" content="x86 内核中断机制由硬件部分 PIC 与软件部分中断向量表（IDT）的组织组成。前者用来作出中断信号的决策，后者负责解释中断信息。IDT 包含 256 个条目，0-31 号向量保留给处理器异常（如页故障、除零错误）等，32-255 用于外设中断">
+<meta property="og:type" content="article">
+<meta property="og:title" content="「从零到一」中断机制">
+<meta property="og:url" content="https://horbyn.github.io/2025/02/01/hoo-4/">
+<meta property="og:site_name">
+<meta property="og:description" content="x86 内核中断机制由硬件部分 PIC 与软件部分中断向量表（IDT）的组织组成。前者用来作出中断信号的决策，后者负责解释中断信息。IDT 包含 256 个条目，0-31 号向量保留给处理器异常（如页故障、除零错误）等，32-255 用于外设中断">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-02-01T02:40:17.000Z">
+<meta property="article:modified_time" content="2025-02-28T14:52:22.666Z">
+<meta property="article:author" content="Horbyn">
+<meta property="article:tag" content="hoo">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/avatar/link.PNG">
+    <title>「从零到一」中断机制 · HorbynzZ</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .footer-fixed-btn,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(
+            -45deg,
+            #444 0,
+            #444 80px,
+            #333 80px,
+            #333 160px
+        );
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link id="stylesheet-fancybox" rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-base" rel="preload" href="/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-mobile" rel="preload" href="/css/mobile.css" as="style" onload="this.onload=null;this.rel='stylesheet';this.media='screen and (max-width: 960px)'">
+    <link id="stylesheet-theme-dark" rel="preload" href="/css/dark.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    <!-- 百度统计  -->
+    <!-- 谷歌统计  -->
+    <!-- Google tag (gtag.js) -->
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+        <body class="post-body">
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        <div class="header-sidebar-menu">
+            <div style="padding-left: 1px;">&#xe775;</div>
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href="/">Horbynz hub</a>
+        </span>
+    </div>
+    <!-- toggle banner -->
+    <div class="banner">
+        <div class="blog-title header-element">
+            <a href="/">Horbynz hub</a>
+        </div>
+        <div class="post-title header-element">
+            <a href="#" class="post-name">「从零到一」中断机制</a>
+        </div>
+    </div>
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- donate button -->
+
+    <!-- back to top button -->
+    <div class="footer-fixed-btn footer-fixed-btn--hidden back-top">
+        <div>&#xe639;</div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="    height:50vh;
+">
+    <!-- 主页  -->
+    <!-- 404页  -->
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.png)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+                「从零到一」中断机制
+            <!-- 404 -->
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            <!-- 404 -->
+        </p>
+        <!-- 文章页 meta -->
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                    <div class="post-intro-tags" >
+        <a class="post-tag" href="javascript:void(0);" data-tags="hoo">hoo</a>
+</div>
+
+                <!-- 文章字数统计 -->
+                    <div class="post-intro-read">
+                        <span>Word count: <span class="post-count word-count">2.8k</span>Reading time: <span class="post-count reading-time">11 min</span></span>
+                    </div>
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2025/02/01</span>
+                    <!-- busuanzi -->
+                        <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                            <span class="iconfont-archer post-intro-busuanzi">&#xe602;</span>
+                            <span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" alt="loading">
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <h1 id="中断机制">中断机制</h1>
+<ul>
+<li>处理器会在固定的指令周期内检测是否有中断号，之后用这个中断号索引，在
+<a target="_blank" rel="noopener" href="https://wiki.osdev.org/Interrupt_Descriptor_Table">IDT</a>
+中找到对应的中断描述符 —— 里面保存着 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Interrupt_Service_Routines">中断例程
+ISR</a> 的段选择子</li>
+<li>处理器用该段选择子从 GDT 中取得对应的段描述符 —— 里面保存了 ISR
+的段基址等属性信息，然后进行特权级检查
+<em>（由处理器负责，不用担心）</em></li>
+<li>通过特权级后，处理器会保护现场（利用内核栈来保护），然后跳转至
+ISR</li>
+<li>ISR 执行完毕后通过 <code>iret</code> / <code>iretd</code>
+指令恢复原线程执行流</li>
+</ul>
+<p>内核的任务是实现 ISR，在 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Interrupt_Descriptor_Table#IDTR">IDTR</a>
+上填入一个 IDT 的地址，IDT 的组织（本质上是个数组）也是由内核来负责</p>
+<p>另一个值得一提的是中断压栈，借用 <a
+target="_blank" rel="noopener" href="https://book.douban.com/subject/26745156/">《操作系统真象还原，郑钢，7.4.2
+章节》</a> 的示意图：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/679d9250d0e0a243d4f960a1.png" /></p>
+<p>上述两个示意图只会发生一个。当中断信号到达处理器，则处理器自动将上面这些寄存器环境压栈。一个线程至多拥有两个栈（<code>hoo</code>
+只涉及两个 <a
+target="_blank" rel="noopener" href="http://wiki.osdev.org/Security#Rings">特权级</a>，<code>ring0</code>
+对应内核态，<code>ring3</code> 对应用户态），左图的场景是中断前
+<code>ring3</code>，中断后陷入
+<code>ring0</code>；右图场景是中断前后均为 <code>ring0</code></p>
+<p>举一个具体的例子，当用户在 <code>shell</code>
+输入一个字符，即在键盘按下了一个键。则处理器会收到一个中断信号，中断之前执行流是
+<code>shell</code> 进程，即 <code>ring3</code>，中断时陷入内核态
+ISR，需要切换为
+<code>ring0</code>。此时属于左图的场景，<code>shell</code> 进程使用的
+<code>ring3</code> 栈是不会被带入到 ISR 的执行时的，陷入内核态时会从 <a
+target="_blank" rel="noopener" href="http://wiki.osdev.org/Task_State_Segment#Protected_Mode">TSS</a>
+中取出 <code>ring0</code> 栈，最后处理器会自动将上述寄存器环境保存到
+<code>ring0</code> 栈</p>
+<p>至于右图的场景，比如执行内核任务时，时间片耗尽。中断前是内核态，中断时跳转
+ISR 依然是内核态。之前使用的栈就是 <code>ring0</code> 栈，则跳转 ISR
+后依然使用原来的栈，不涉及栈的切换，处理器依然会压栈寄存器环境，只是不会压栈旧
+<code>%ss</code> 和 <code>%esp</code></p>
+<p>上述寄存器环境有一个信息叫做 <a
+target="_blank" rel="noopener" href="http://wiki.osdev.org/Exceptions">"错误码"</a>，它是一些有关该中断信号的额外信息，比如缺页异常处理器会压栈错误码，这个时候的错误码是
+<a target="_blank" rel="noopener" href="http://wiki.osdev.org/Exceptions#Error_code">PDE / PTE
+标识位的组合</a>，<code>hoo</code> 通过这个错误码实现了 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/routine.c#L69">缺页异常的
+COW</a></p>
+<h2 id="实现">实现</h2>
+<p><img
+src="https://pic1.imgdb.cn/item/679d9e9bd0e0a243d4f96aac.png" /></p>
+<p>如图所示，<code>hoo</code> 将 IDT
+数组元素视为一个函数地址，这个函数地址就是 ISR 入口。执行流到达 ISR
+入口后，结合中断向量会计算得到 ISR 数组的索引，最后跳入 ISR 数组。ISR
+数组元素也是一个函数地址</p>
+<p>第一步处理器访问 IDT 数组，具体代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/isr.S#L277">kern/intr/isr.S</a>，以下是关键代码片段：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"># 宏定义</span><br><span class="line">.macro ISRNOERR id</span><br><span class="line">isr_part1_\id:</span><br><span class="line">    pushl $0</span><br><span class="line">    pushl $\id</span><br><span class="line">    jmp   isr_part2</span><br><span class="line">.endm</span><br><span class="line"></span><br><span class="line">.macro ISRERR id</span><br><span class="line">isr_part1_\id:</span><br><span class="line">    pushl $\id</span><br><span class="line">    jmp   isr_part2</span><br><span class="line">.endm</span><br><span class="line"></span><br><span class="line"># IDT 数组元素</span><br><span class="line">ISRNOERR 0</span><br><span class="line">ISRNOERR 1</span><br><span class="line"># ...</span><br><span class="line"></span><br><span class="line"># IDT 数组</span><br><span class="line">isr_part1:</span><br><span class="line">    .long isr_part1_0,  isr_part1_1,  isr_part1_2</span><br><span class="line">    # ...</span><br></pre></td></tr></table></figure>
+<p>借助 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Opcode_syntax#Important_Details">x86
+AT&amp;T 风格汇编宏定义</a>，为 IDT
+数组定义函数，这是因为有些中断处理器会入栈错误码，另一些没有错误码的中断就需要手动入栈一个
+0 来保持栈格式的统一，方便后面保护现场、恢复现场的操作</p>
+<p>第二步定义 ISR 入口，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/trampoline.S#L8">kern/intr/trampoline.S</a>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"># ISR 入口</span><br><span class="line">isr_part2:</span><br><span class="line">    # 保护上下文</span><br><span class="line">    pushl %ds</span><br><span class="line">    pushl %es</span><br><span class="line">    pushl %fs</span><br><span class="line">    pushl %gs</span><br><span class="line">    pushal</span><br><span class="line"></span><br><span class="line">    # 跳转 ISR</span><br><span class="line">    movl $(2 * 8), %eax</span><br><span class="line">    movl %eax,     %ds</span><br><span class="line">    movl %eax,     %es</span><br><span class="line">    movl 48(%esp), %eax</span><br><span class="line">    call *__isr(, %eax, 4)</span><br><span class="line"></span><br><span class="line">    # 恢复上下文</span><br><span class="line">    popal</span><br><span class="line">    popl %gs</span><br><span class="line">    popl %fs</span><br><span class="line">    popl %es</span><br><span class="line">    popl %ds</span><br><span class="line">    addl $8, %esp</span><br><span class="line">    iret</span><br></pre></td></tr></table></figure>
+<p>逻辑分三段，保护和恢复上下文比较直白，主要看跳转 ISR 的逻辑：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">movl $(2 * 8), %eax</span><br><span class="line">movl %eax,     %ds</span><br><span class="line">movl %eax,     %es</span><br></pre></td></tr></table></figure>
+<p>第一个指令是取下标为 2 的 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/GDT_Tutorial">gdt</a>，<code>hoo</code>
+设置的 gdt 的设置详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/conf.c#L11">kern/module/conf.c</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// #0 空表</span></span><br><span class="line"><span class="comment">// #1 内核代码段</span></span><br><span class="line"><span class="comment">// #2 内核数据段</span></span><br><span class="line"><span class="comment">// #3 用户代码段</span></span><br><span class="line"><span class="comment">// #4 用户数据段</span></span><br><span class="line"><span class="comment">// #5 TSS 段</span></span><br></pre></td></tr></table></figure>
+<p>所以这里是将内核数据段加载到段寄存器 <code>%ds</code> 和
+<code>%es</code></p>
+<p>另外的指令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">movl 48(%esp), %eax</span><br><span class="line">call *__isr(, %eax, 4)</span><br></pre></td></tr></table></figure>
+<p>看指令是从栈上面取出偏移 48 字节的栈元素，再经过进一步计算得到 ISR
+数组的索引，最后跳入该 ISR 元素指向的地址。下面是这个 48
+字节的由来：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/679f270ad0e0a243d4f98cfb.png" /></p>
+<ul>
+<li>最开始的时候，处理器刚接收到中断信号，会自动压栈橙色部分的寄存器环境</li>
+<li>之后处理器通过 IDTR 找到 IDT 数组，再找到 IDT
+元素，即访问到前面汇编宏定义的内容，压栈黄色部分（橙色和黄色部分
+<code>hoo</code> 定义为处理器中断栈，见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/intr_stack.h#L30">kern/intr/intr_stack.h</a>）</li>
+<li>后续执行流便进入 ISR 入口，压栈绿色部分的寄存器环境（绿色部分
+<code>hoo</code> 定义为内核中断栈，见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/intr_stack.h#L11">kern/intr/intr_stack.h</a>），最后栈顶停留在图示位置。因此栈顶偏移
+48 字节即越过了整个绿色部分，访问到黄色部分的 <em>中断向量号</em>。而
+ISR 数组的定义见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/do_intr.c#L9">kern/module/do_intr.c</a>，是一个函数指针数组，对于
+<code>32-bit</code> 系统，一个指针字是 4 字节，因此中断向量号乘上 4 就是
+ISR 数组索引</li>
+</ul>
+<p>整个中断执行流至此完毕，具体的 ISR
+会放在「内置命令」一文，现在只提供一个默认的 ISR 赋值给所有的 ISR
+数组元素，默认 ISR 定义详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/routine.c#L51">kern/intr/routine.c</a>，主要是输出
+ISR 名称、输出上下文环境、执行 <code>hlt</code> 命令停机。赋值逻辑详见
+<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/do_intr.c#L16">kern/module/do_intr.c</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> IDT_ENTRIES_NUM     256</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 特权级枚举值</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">enum</span> <span class="title">privilege_level</span> &#123;</span></span><br><span class="line">    PL_KERN = <span class="number">0</span>,</span><br><span class="line">    PL_USER = <span class="number">3</span></span><br><span class="line">&#125; <span class="type">privilege_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 门描述符类型枚举值</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">enum</span> <span class="title">gate_descriptor</span> &#123;</span></span><br><span class="line">    INTER_GATE = <span class="number">0x0e</span>,</span><br><span class="line">    TRAP_GATE = <span class="number">0x0f</span></span><br><span class="line">&#125; <span class="type">gatedesc_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 函数别名</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="title function_">void</span> <span class="params">(*<span class="type">isr_t</span>)</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 赋值 ISR 数组</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; IDT_ENTRIES_NUM; ++i)</span><br><span class="line">	set_isr_entry(&amp;__isr[i], (<span class="type">isr_t</span>)isr_default);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 赋值 IDT 数组</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; IDT_ENTRIES_NUM; ++i)</span><br><span class="line">	set_idt_entry(&amp;__idt[i], PL_KERN, INTER_GATE, (<span class="type">uint32_t</span>)isr_part1[i]);</span><br></pre></td></tr></table></figure>
+<p><code>hoo</code> 提供了两个接口 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/intr.c#L34"><code>set_isr_entry()</code></a>
+和 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/intr.c#L14"><code>set_idt_entry()</code></a>
+用来设置 ISR 数组和 IDT 数组，前者直接就是给 ISR 数组赋值；后者由于 IDT
+表项有 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Interrupt_Descriptor_Table#Gate_Descriptor">格式</a>，所以需要额外提供
+<code>PL_KERN</code>、<code>INTER_GATE</code> 等属性，但本质也是给 IDT
+数组赋值</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">idtr_t</span> __idtr;</span><br><span class="line"></span><br><span class="line">__idtr.limit_ = <span class="keyword">sizeof</span>(__idt) - <span class="number">1</span>;</span><br><span class="line">__idtr.base_ = (<span class="type">uint32_t</span>)__idt;</span><br><span class="line"><span class="type">idtr_t</span> idtr_value;</span><br><span class="line">__asm__  <span class="title function_">volatile</span> <span class="params">(<span class="string">&quot;lidt %k1\n\t&quot;</span></span></span><br><span class="line"><span class="params">	               <span class="string">&quot;sidt %0&quot;</span> : <span class="string">&quot;=m&quot;</span>(idtr_value) : <span class="string">&quot;m&quot;</span>(__idtr))</span>;</span><br></pre></td></tr></table></figure>
+<p>最后执行 <code>lidt</code> 将内存中的 <code>__idtr</code>
+结构体加载到 IDTR，完成</p>
+<h1 id="常见-isr">常见 ISR</h1>
+<h2 id="缺页异常">缺页异常</h2>
+<p><a target="_blank" rel="noopener" href="https://wiki.osdev.org/Exceptions#Page_Fault">缺页异常</a>
+是现代操作系统中很常见的一个异常类型</p>
+<p>很多场景都会触发缺页异常，这里主要考虑当访问不在内存的 PDE 或 PTE
+的场景，此时 <code>%cr2</code>
+会保存缺页的线性地址，同时中断错误码会保存 paging-structure
+表项的属性位，这些属性位用来标识触发缺页的场景</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a2eb5bd0e0a243d4fbe24f.png" /></p>
+<p>比如，当错误码是 1 时，对应着 PTE 或 PDE 的表项，可以发现
+<code>bit-0</code> 都是 <code>P</code> 属性位，此时对应的场景是访问
+paging-structure
+时发现不在内存，可以借此实现换入换出机制（swapping）；当错误码是 2
+时，对应着 <code>R/W</code>
+属性位，此时对应的场景是当前线程对目标页没有写入权限，可以借此实现 <a
+target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Copy-on-write">写时复制，COW（Copy
+on Write）</a></p>
+<p><code>hoo</code> 没有实现换入换出，而实现了 C.O.W。C.O.W
+的场景是，子进程通过 <code>fork()</code>
+系统调用克隆了父进程，此时子进程所有页表也都是指向和父进程一样的物理页的。不同的是子进程共享的物理页不设置
+<code>R/W</code> 属性位，当子进程写入物理页时，才进行 C.O.W</p>
+<p>关于写操作触发 page fault 还有两个概念需要补充，详见 <a
+target="_blank" rel="noopener" href="https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3a-part-1-manual.pdf">《IA32
+Architectures Software Developer's Manual, Volume 3A》，Sections 4.6.1
+访问地址的规则</a>：</p>
+<ul>
+<li>访问模式
+<ul>
+<li>supervisor-mode access：发起访问的 CPL &lt;
+3，即内核态线程访问一个线性地址</li>
+<li>user-mode access：发起访问的 CPL =
+3，即用户态线程访问一个线性地址</li>
+</ul></li>
+<li>线性地址模式
+<ul>
+<li>supervisor-mode address：<code>U/S</code> 属性位至少在一个
+paging-structure entry 上（PTE 或 PDE）是 0</li>
+<li>user-mode address：<code>U/S</code> 属性位在所有 paging-structure
+entry 上都是 1</li>
+</ul></li>
+</ul>
+<p>写入一个线性地址会让处理器抛出 page fault 的情景是：用户态线程访问
+user-mode 线性地址，即 CPL 为 3 的线程访问 paging-structure entry 都是 1
+的线性地址</p>
+<p>具体实现详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/routine.c#L69">kern/intr/routine.c</a>，下面代码片段有删减：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> PGFLAG_PS  1</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PGFLAG_RW  2</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PGFLAG_US  4</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// C.O.W</span></span><br><span class="line"><span class="keyword">if</span> ((err &amp; PGFLAG_RW) == PGFLAG_RW) &#123;</span><br><span class="line">	<span class="type">pcb_t</span> *pcb = get_current_pcb();</span><br><span class="line">	<span class="type">pgelem_t</span> flags = PGFLAG_US | PGFLAG_RW | PGFLAG_PS;</span><br><span class="line"></span><br><span class="line">	<span class="type">void</span> *linear_addr_pa = phy_alloc_page();</span><br><span class="line">	<span class="type">void</span> *temp_va = vir_alloc_pages();</span><br><span class="line">	set_mapping(temp_va, linear_addr_pa, flags);</span><br><span class="line">	memmove(temp_va, linear_addr, PGSIZE);</span><br><span class="line">	vir_release_pages();</span><br><span class="line"></span><br><span class="line">	<span class="type">pgelem_t</span> *pte = (<span class="type">pgelem_t</span> *)GET_PTE(linear_addr);</span><br><span class="line">	(*pte) = (<span class="type">pgelem_t</span>)linear_addr_pa | flags;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>这里 <code>err</code> 变量是中断错误码，一个 32 位无符号整型值，从
+<code>ring0</code>
+栈中取出（从栈中偏移多少字节取出这里不关心）。然后去判断属性位是否设置了
+<code>R/W</code>
+位，是说明需要为当前线程分配一个新页，将缺失页上面的数据拷贝过去</li>
+<li>分配新页的流程是，分配新的物理页，从自己的堆空间中分配新的线性地址，建立映射。然后将缺失页的线性地址上的数据，拷贝到新分配的线性地址。最后，释放这个新线性地址回去堆空间，因为当前线程最后依然会使用缺失页的线性地址</li>
+<li>最后将新分配的物理地址写入页表对应 PTE</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置 %cr0.WP</span></span><br><span class="line">__asm__ (<span class="string">&quot;movl %%cr0,  %%eax\r\n&quot;</span></span><br><span class="line">	<span class="string">&quot;orl $0x00010000,  %%eax\r\n&quot;</span></span><br><span class="line">	<span class="string">&quot;movl %%eax,       %%cr0&quot;</span> ::);</span><br></pre></td></tr></table></figure>
+<p>还有一点要注意的是，<code>R/W</code> 属性会受到 <code>%cr0</code>
+的影响，详见 <a
+target="_blank" rel="noopener" href="https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3a-part-1-manual.pdf">《IA32
+Architectures Software Developer's Manual, Volume 3A》，Sections 2.5
+控制寄存器组</a>，以下是一些精简的说明：</p>
+<ul>
+<li>CR0.WP（Write Protect）：
+<ul>
+<li>置位：阻止内核态线程写入一个只读的物理页</li>
+<li>清位：允许上述情况</li>
+</ul></li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">page_fault</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">void</span> *linear_addr = <span class="number">0</span>;</span><br><span class="line">    __asm__ (<span class="string">&quot;movl %%cr2, %0&quot;</span>: <span class="string">&quot;=a&quot;</span>(linear_addr) ::);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 从 ring0 栈偏移 60 字节处取出错误码（为什么是 60 字节，取决于每个内核</span></span><br><span class="line">    <span class="comment">//     定义的中断栈是怎样的，hoo 的实现是偏移 60 字节处保存的错误码）</span></span><br><span class="line">    <span class="type">uint32_t</span> err = <span class="number">0</span>;</span><br><span class="line">    __asm__ (<span class="string">&quot;movl 60(%%ebp), %0&quot;</span>: <span class="string">&quot;=a&quot;</span>(err) ::);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// COW</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ISR14_PAGEFAULT 14</span></span><br><span class="line">set_isr_entry(&amp;__isr[ISR14_PAGEFAULT], (<span class="type">isr_t</span>)page_fault);</span><br></pre></td></tr></table></figure>
+<p>最后将 C.O.W 放到缺页异常 ISR 逻辑里面，并通过
+<code>set_isr_entry()</code> 接口注册 ISR</p>
+<h2 id="时间片中断">时间片中断</h2>
+<p>时间片中断会涉及「调度机制」一章实现的 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L161">调度器</a>，可以先把它当成黑盒，详见
+<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/routine.c#L103">kern/intr/routine.c</a>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 时间片中断</span></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">timer</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    scheduler();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ISR32_TIMER 32</span></span><br><span class="line">set_isr_entry(&amp;__isr[ISR32_TIMER], (<span class="type">isr_t</span>)timer);</span><br></pre></td></tr></table></figure>
+<p>最后通过 <code>set_isr_entry()</code> 接口注册 ISR</p>
+<h2 id="系统调用">系统调用</h2>
+<p>由于发起系统调用的整个执行流有一些前置内容，所以具体内容放到「内置命令」一文，这里先把系统调用的函数接口视为一个黑盒</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="type">void</span> <span class="title function_">syscall</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ISR128_SYSCALL 128</span></span><br><span class="line">set_isr_entry(&amp;__isr[ISR128_SYSCALL], (<span class="type">isr_t</span>)syscall);</span><br></pre></td></tr></table></figure>
+<p>最后通过 <code>set_isr_entry()</code> 接口注册 ISR</p>
+
+    </article>
+    <!-- license -->
+        <div class="license-wrapper">
+            <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
+            <p>Link：<a href="https://horbyn.github.io/2025/02/01/hoo-4/">https://horbyn.github.io/2025/02/01/hoo-4/</a>
+            <p>Publish date：<a href="https://horbyn.github.io/2025/02/01/hoo-4/">February 1st 2025, 10:40:17 am</a>
+            <p>Update date：<a href="https://horbyn.github.io/2025/02/01/hoo-4/">February 28th 2025, 10:52:22 pm</a>
+            <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
+        </div>
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2025/02/04/hoo-5/" title="「从零到一」调度机制">
+                    <div class="nextTitle">「从零到一」调度机制</div>
+                </a>
+        </li>
+        <li class="previous">
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2025/01/30/hoo-3/" title="「从零到一」内存管理">
+                    <div class="prevTitle">「从零到一」内存管理</div>
+                </a>
+        </li>
+    </ul>
+    <!-- comment -->
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+            
+            
+            
+            <!-- utteranc评论 -->
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+            
+            
+            
+        </div>
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    <!-- Mathjax -->
+</main>
+
+                <!-- profile -->
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+        <div class="social">
+                            <a href="mailto:horbyn@outlook.com" class="iconfont-archer email" title="email" ></a>
+                <a href="https://github.com/horbyn" class="iconfont-archer github" target="_blank" title="github"></a>
+                <span class="iconfont-archer wechat" title="wechat">
+                    <img class="profile-qr" src="/assets/example_qr.jpg" />
+                </span>
+
+        </div>
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    <!-- 不蒜子  -->
+        <div class="busuanzi-container">
+                <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span> :)</span>
+        </div>
+</footer>
+
+        </div>
+        <!-- toc -->
+            <div class="toc-wrapper toc-wrapper-loding" style=    top:50vh;
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%AD%E6%96%AD%E6%9C%BA%E5%88%B6"><span class="toc-number">1.</span> <span class="toc-text">中断机制</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0"><span class="toc-number">1.1.</span> <span class="toc-text">实现</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%B8%B8%E8%A7%81-isr"><span class="toc-number">2.</span> <span class="toc-text">常见 ISR</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BC%BA%E9%A1%B5%E5%BC%82%E5%B8%B8"><span class="toc-number">2.1.</span> <span class="toc-text">缺页异常</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%97%B6%E9%97%B4%E7%89%87%E4%B8%AD%E6%96%AD"><span class="toc-number">2.2.</span> <span class="toc-text">时间片中断</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8"><span class="toc-number">2.3.</span> <span class="toc-text">系统调用</span></a></li></ol></li></ol>
+            </div>
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 24
+        </div>
+        <!-- search  -->
+    </div>
+    <div class="post-archive">
+            <div class="archive-year"> 2025 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/10</span>
+            <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/07</span>
+            <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/05</span>
+            <a class="archive-post-title" href="/2025/02/05/hoo-6/">「从零到一」设备驱动</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/04</span>
+            <a class="archive-post-title" href="/2025/02/04/hoo-5/">「从零到一」调度机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/01</span>
+            <a class="archive-post-title" href="/2025/02/01/hoo-4/">「从零到一」中断机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/30</span>
+            <a class="archive-post-title" href="/2025/01/30/hoo-3/">「从零到一」内存管理</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/07</span>
+            <a class="archive-post-title" href="/2025/01/07/hoo-2/">「从零到一」内核引导与加载</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/02</span>
+            <a class="archive-post-title" href="/2025/01/02/hoo-1/">「从零到一」实现一个 x86 的内核</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2023 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/01</span>
+            <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2022 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/28</span>
+            <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/17</span>
+            <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/15</span>
+            <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/11</span>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/05</span>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/04</span>
+            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span>
+            <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/28</span>
+            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/25</span>
+            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
+        </li>
+            </ul>
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
+            </span>
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
+            </span>
+            <span class="sidebar-tag-name" data-tags="winsock">
+                <span class="iconfont-archer">&#xe606;</span>
+                winsock
+            </span>
+            <span class="sidebar-tag-name" data-tags="xv6">
+                <span class="iconfont-archer">&#xe606;</span>
+                xv6
+            </span>
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+        <span class="sidebar-category-name" data-categories="KERNEL">
+            <span class="iconfont-archer">&#xe60a;</span>
+            KERNEL
+        </span>
+        <span class="sidebar-category-name" data-categories="LIVEHOOD">
+            <span class="iconfont-archer">&#xe60a;</span>
+            LIVEHOOD
+        </span>
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "https://horbyn.github.io",
+        root: siteMetaRoot,
+        author: "Horbyn"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+        <!-- main func -->
+        <script src="/scripts/main.js"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.umd.js" onload="window.Fancybox.bind('[data-fancybox]')" defer></script>
+        <!-- algolia -->
+        <!-- busuanzi -->
+            <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+        <!-- async load share.js -->
+            <script src="/scripts/share.js" async></script>
+        <!-- mermaid -->
+    </body>
+</html>

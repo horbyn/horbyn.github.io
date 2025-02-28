@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+    <!-- title -->
+<!-- keywords -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="author" content="Horbyn">
+    <meta name="renderer" content="webkit">
+    <meta name="copyright" content="Horbyn">
+        <meta name="keywords" content="hexo,hexo-theme,hexo-blog">
+    <meta name="description" content="">
+    <meta name="description" content="本次 lab 理论基础是 risc-v 页表机制，着重关注物理地址的翻译过程，涉及 walk() 和 freewalk() 两个函数的理解">
+<meta property="og:type" content="article">
+<meta property="og:title" content="⌈xv6-fall2021⌋ lab 3：Page tables">
+<meta property="og:url" content="https://horbyn.github.io/2022/03/25/xv6-3/">
+<meta property="og:site_name">
+<meta property="og:description" content="本次 lab 理论基础是 risc-v 页表机制，着重关注物理地址的翻译过程，涉及 walk() 和 freewalk() 两个函数的理解">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-03-25T14:57:18.000Z">
+<meta property="article:modified_time" content="2025-02-27T14:24:07.024Z">
+<meta property="article:author" content="Horbyn">
+<meta property="article:tag" content="xv6">
+<meta name="twitter:card" content="summary">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="icon" href="/avatar/link.PNG">
+    <title>⌈xv6-fall2021⌋ lab 3：Page tables · HorbynzZ</title>
+    <!-- /*! loadCSS. [c]2017 Filament Group, Inc. MIT License */
+/* This file is meant as a standalone workflow for
+- testing support for link[rel=preload]
+- enabling async CSS loading in browsers that do not support rel=preload
+- applying rel preload css once loaded, whether supported or not.
+*/ -->
+<script>
+    (function (w) {
+        'use strict'
+        // rel=preload support test
+        if (!w.loadCSS) {
+            w.loadCSS = function () {}
+        }
+        // define on the loadCSS obj
+        var rp = (loadCSS.relpreload = {})
+        // rel=preload feature support test
+        // runs once and returns a function for compat purposes
+        rp.support = (function () {
+            var ret
+            try {
+                ret = w.document.createElement('link').relList.supports('preload')
+            } catch (e) {
+                ret = false
+            }
+            return function () {
+                return ret
+            }
+        })()
+
+        // if preload isn't supported, get an asynchronous load by using a non-matching media attribute
+        // then change that media back to its intended value on load
+        rp.bindMediaToggle = function (link) {
+            // remember existing media attr for ultimate state, or default to 'all'
+            var finalMedia = link.media || 'all'
+
+            function enableStylesheet() {
+                link.media = finalMedia
+            }
+
+            // bind load handlers to enable media
+            if (link.addEventListener) {
+                link.addEventListener('load', enableStylesheet)
+            } else if (link.attachEvent) {
+                link.attachEvent('onload', enableStylesheet)
+            }
+
+            // Set rel and non-applicable media type to start an async request
+            // note: timeout allows this to happen async to let rendering continue in IE
+            setTimeout(function () {
+                link.rel = 'stylesheet'
+                link.media = 'only x'
+            })
+            // also enable media after 3 seconds,
+            // which will catch very old browsers (android 2.x, old firefox) that don't support onload on link
+            setTimeout(enableStylesheet, 3000)
+        }
+
+        // loop through link elements in DOM
+        rp.poly = function () {
+            // double check this to prevent external calls from running
+            if (rp.support()) {
+                return
+            }
+            var links = w.document.getElementsByTagName('link')
+            for (var i = 0; i < links.length; i++) {
+                var link = links[i]
+                // qualify links to those with rel=preload and as=style attrs
+                if (
+                    link.rel === 'preload' &&
+                    link.getAttribute('as') === 'style' &&
+                    !link.getAttribute('data-loadcss')
+                ) {
+                    // prevent rerunning on link
+                    link.setAttribute('data-loadcss', true)
+                    // bind listeners to toggle media back
+                    rp.bindMediaToggle(link)
+                }
+            }
+        }
+
+        // if unsupported, run the polyfill
+        if (!rp.support()) {
+            // run once at least
+            rp.poly()
+
+            // rerun poly on an interval until onload
+            var run = w.setInterval(rp.poly, 500)
+            if (w.addEventListener) {
+                w.addEventListener('load', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            } else if (w.attachEvent) {
+                w.attachEvent('onload', function () {
+                    rp.poly()
+                    w.clearInterval(run)
+                })
+            }
+        }
+
+        // commonjs
+        if (typeof exports !== 'undefined') {
+            exports.loadCSS = loadCSS
+        } else {
+            w.loadCSS = loadCSS
+        }
+    })(typeof global !== 'undefined' ? global : this)
+</script>
+
+    <style type="text/css">
+    @font-face {
+        font-family: 'Oswald-Regular';
+        src: url("/font/Oswald-Regular.ttf");
+    }
+
+    body {
+        margin: 0;
+    }
+
+    header,
+    footer,
+    .footer-fixed-btn,
+    .sidebar,
+    .container,
+    .site-intro-meta,
+    .toc-wrapper {
+        display: none;
+    }
+
+    .site-intro {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        /* height: 50vh; */
+        overflow: hidden;
+    }
+
+    .site-intro-placeholder {
+        position: absolute;
+        z-index: -2;
+        top: 0;
+        left: 0;
+        width: calc(100% + 300px);
+        height: 100%;
+        background: repeating-linear-gradient(
+            -45deg,
+            #444 0,
+            #444 80px,
+            #333 80px,
+            #333 160px
+        );
+        background-position: center center;
+        transform: translate3d(-226px, 0, 0);
+        animation: gradient-move 2.5s ease-out 0s infinite;
+    }
+
+    @keyframes gradient-move {
+        0% {
+            transform: translate3d(-226px, 0, 0);
+        }
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+
+    <link id="stylesheet-fancybox" rel="preload" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-base" rel="preload" href="/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link id="stylesheet-mobile" rel="preload" href="/css/mobile.css" as="style" onload="this.onload=null;this.rel='stylesheet';this.media='screen and (max-width: 960px)'">
+    <link id="stylesheet-theme-dark" rel="preload" href="/css/dark.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" as="script">
+    <link rel="preload" href="/scripts/main.js" as="script">
+    <link rel="preload" href="/font/Oswald-Regular.ttf" as="font" crossorigin>
+    <link rel="preload" href="https://at.alicdn.com/t/font_327081_1dta1rlogw17zaor.woff" as="font" crossorigin>
+    <!-- algolia -->
+    <!-- 百度统计  -->
+    <!-- 谷歌统计  -->
+    <!-- Google tag (gtag.js) -->
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof window.$ == undefined) {
+            console.warn('jquery load from jsdelivr failed, will load local script')
+            document.write('<script src="/lib/jquery.min.js" />')
+        }
+    </script>
+        <body class="post-body">
+        <!-- header -->
+        <header class="header header-mobile">
+    <!-- top read progress line -->
+    <div class="header-element">
+        <div class="read-progress"></div>
+    </div>
+    <!-- sidebar menu button -->
+    <div class="header-element">
+        <div class="header-sidebar-menu">
+            <div style="padding-left: 1px;">&#xe775;</div>
+        </div>
+    </div>
+    <!-- header actions -->
+    <div class="header-actions">
+        <!-- theme mode switch button -->
+        <span class="header-theme-btn header-element">
+            <i class="fas fa-adjust"></i>
+        </span>
+        <!-- back to home page text -->
+        <span class="home-link header-element">
+            <a href="/">Horbynz hub</a>
+        </span>
+    </div>
+    <!-- toggle banner -->
+    <div class="banner">
+        <div class="blog-title header-element">
+            <a href="/">Horbynz hub</a>
+        </div>
+        <div class="post-title header-element">
+            <a href="#" class="post-name">⌈xv6-fall2021⌋ lab 3：Page tables</a>
+        </div>
+    </div>
+</header>
+
+        <!-- fixed footer -->
+        <footer class="footer-fixed">
+    <!-- donate button -->
+
+    <!-- back to top button -->
+    <div class="footer-fixed-btn footer-fixed-btn--hidden back-top">
+        <div>&#xe639;</div>
+    </div>
+</footer>
+
+        <!-- wrapper -->
+        <div class="wrapper">
+            <div class="site-intro" style="    height:50vh;
+">
+    <!-- 主页  -->
+    <!-- 404页  -->
+    <div class="site-intro-placeholder"></div>
+    <div class="site-intro-img" style="background-image: url(/intro/post-bg.png)"></div>
+    <div class="site-intro-meta">
+        <!-- 标题  -->
+        <h1 class="intro-title">
+            <!-- 主页  -->
+                ⌈xv6-fall2021⌋ lab 3：Page tables
+            <!-- 404 -->
+        </h1>
+        <!-- 副标题 -->
+        <p class="intro-subtitle">
+            <!-- 主页副标题  -->
+            <!-- 404 -->
+        </p>
+        <!-- 文章页 meta -->
+            <div class="post-intros">
+                <!-- 文章页标签  -->
+                    <div class="post-intro-tags" >
+        <a class="post-tag" href="javascript:void(0);" data-tags="xv6">xv6</a>
+</div>
+
+                <!-- 文章字数统计 -->
+                    <div class="post-intro-read">
+                        <span>Word count: <span class="post-count word-count">3.4k</span>Reading time: <span class="post-count reading-time">15 min</span></span>
+                    </div>
+                <div class="post-intro-meta">
+                    <!-- 撰写日期 -->
+                    <span class="iconfont-archer post-intro-calander">&#xe676;</span>
+                    <span class="post-intro-time">2022/03/25</span>
+                    <!-- busuanzi -->
+                        <span id="busuanzi_container_page_pv" class="busuanzi-pv">
+                            <span class="iconfont-archer post-intro-busuanzi">&#xe602;</span>
+                            <span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    <!-- 文章分享 -->
+                    <span class="share-wrapper">
+                        <span class="iconfont-archer share-icon">&#xe71d;</span>
+                        <span class="share-text">Share</span>
+                        <ul class="share-list">
+                            <li class="iconfont-archer share-qr" data-type="qr">&#xe75b;
+                                <div class="share-qrcode"></div>
+                            </li>
+                            <li class="iconfont-archer" data-type="weibo">&#xe619;</li>
+                            <li class="iconfont-archer" data-type="qzone">&#xe62e;</li>
+                            <li class="iconfont-archer" data-type="twitter">&#xe634;</li>
+                            <li class="iconfont-archer" data-type="facebook">&#xe67a;</li>
+                        </ul>
+                    </span>
+                </div>
+            </div>
+    </div>
+</div>
+
+            <script>
+  // get user agent
+  function getBrowserVersions() {
+    var u = window.navigator.userAgent
+    return {
+      userAgent: u,
+      trident: u.indexOf('Trident') > -1, //IE内核
+      presto: u.indexOf('Presto') > -1, //opera内核
+      webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+      gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+      ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+      android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+      iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者安卓QQ浏览器
+      iPad: u.indexOf('iPad') > -1, //是否为iPad
+      webApp: u.indexOf('Safari') == -1, //是否为web应用程序，没有头部与底部
+      weixin: u.indexOf('MicroMessenger') == -1, //是否为微信浏览器
+      uc: u.indexOf('UCBrowser') > -1, //是否为android下的UC浏览器
+    }
+  }
+  var browser = {
+    versions: getBrowserVersions(),
+  }
+  console.log('userAgent: ' + browser.versions.userAgent)
+
+  // callback
+  function fontLoaded() {
+    console.log('font loaded')
+    if (document.getElementsByClassName('site-intro-meta')) {
+      document
+        .getElementsByClassName('intro-title')[0]
+        .classList.add('intro-fade-in')
+      document
+        .getElementsByClassName('intro-subtitle')[0]
+        .classList.add('intro-fade-in')
+      var postIntros = document.getElementsByClassName('post-intros')[0]
+      if (postIntros) {
+        postIntros.classList.add('post-fade-in')
+      }
+    }
+  }
+
+  // UC不支持跨域，所以直接显示
+  function asyncCb() {
+    if (browser.versions.uc) {
+      console.log('UCBrowser')
+      fontLoaded()
+    } else {
+      WebFont.load({
+        custom: {
+          families: ['Oswald-Regular'],
+        },
+        loading: function () {
+          // 所有字体开始加载
+          // console.log('font loading');
+        },
+        active: function () {
+          // 所有字体已渲染
+          fontLoaded()
+        },
+        inactive: function () {
+          // 字体预加载失败，无效字体或浏览器不支持加载
+          console.log('inactive: timeout')
+          fontLoaded()
+        },
+        timeout: 5000, // Set the timeout to two seconds
+      })
+    }
+  }
+
+  function asyncErr() {
+    console.warn('script load from CDN failed, will load local script')
+  }
+
+  // load webfont-loader async, and add callback function
+  function async(u, cb, err) {
+    var d = document,
+      t = 'script',
+      o = d.createElement(t),
+      s = d.getElementsByTagName(t)[0]
+    o.src = u
+    if (cb) {
+      o.addEventListener(
+        'load',
+        function (e) {
+          cb(null, e)
+        },
+        false
+      )
+    }
+    if (err) {
+      o.addEventListener(
+        'error',
+        function (e) {
+          err(null, e)
+        },
+        false
+      )
+    }
+    s.parentNode.insertBefore(o, s)
+  }
+
+  var asyncLoadWithFallBack = function (arr, success, reject) {
+    var currReject = function () {
+      reject()
+      arr.shift()
+      if (arr.length) async(arr[0], success, currReject)
+    }
+
+    async(arr[0], success, currReject)
+  }
+
+  asyncLoadWithFallBack(
+    [
+      'https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.min.js',
+      'https://cdn.bootcss.com/webfont/1.6.28/webfontloader.js',
+      "/lib/webfontloader.min.js",
+    ],
+    asyncCb,
+    asyncErr
+  )
+</script>
+
+            <img class="loading" src="/assets/loading.svg" style="display: block; margin: 6rem auto 0 auto; width: 6rem; height: 6rem;" alt="loading">
+            <div class="container container-unloaded">
+                <main class="main post-page">
+    <article class="article-entry">
+        <h2 id="lab">LAB</h2>
+<p>传送门：<a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/pgtbl.html">Lab: page
+tables</a></p>
+<p><br></p>
+<h2 id="speed-up-system-calls-easy">Speed up system calls (EASY)</h2>
+<h3 id="要求">要求</h3>
+<blockquote>
+<p>When each process is created, map one read-only page at USYSCALL (a
+VA defined in memlayout.h). At the start of this page, store a struct
+usyscall (also defined in memlayout.h), and initialize it to store the
+PID of the current process. For this lab, ugetpid() has been provided on
+the userspace side and will automatically use the USYSCALL mapping. You
+will receive full credit for this part of the lab if the ugetpid test
+case passes when running pgtbltest.</p>
+</blockquote>
+<p>"每当有进程创建后，就在 USYSCALL 处映射一个只读页（USYSCALL 是
+<code>memlayout.h</code> 定义的一个宏）。该只读页的开始处，存储一个
+<code>usyscall</code> 的结构体（同样也是定义在
+<code>memlayout.h</code>），还需要存储当前进程的 PID
+以完成初始化。对于这个 lab，用户态下提供的 <code>ugetpid()</code>
+会自动使用 USYSCALL 映射。如果你在运行 pgtbltest 脚本时，
+<code>ugetpid()</code> 通过则你会得到全部分数"</p>
+<p>整理一下要求，其实就是在用户进程空间中新增一项（本文暂且称为缓存项，因为看题意加速就是通过缓存实现的）
+USYSCALL，该缓存项映射到某个只读页，而在只读页上记录
+<code>usyscall</code> 结构体。下面给出新增缓存项前后的用户空间：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 原用户空间     -&gt; 新增缓存项后的用户空间</span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * ┌──────────┐     ┌──────────┐</span></span><br><span class="line"><span class="comment"> * │trampoline│     │trampoline│</span></span><br><span class="line"><span class="comment"> * ├──────────┤     ├──────────┤</span></span><br><span class="line"><span class="comment"> * │trapframe │     │trapframe │</span></span><br><span class="line"><span class="comment"> * ├──────────┤     ├──────────┤</span></span><br><span class="line"><span class="comment"> * │          │     │USYSCALL  │</span></span><br><span class="line"><span class="comment"> * │heap      │     ├──────────┤</span></span><br><span class="line"><span class="comment"> * │          │     │heap      │</span></span><br><span class="line"><span class="comment"> * ├──────────┤     ├──────────┤</span></span><br><span class="line"><span class="comment"> * │stack     │     │stack     │</span></span><br><span class="line"><span class="comment"> * ├──────────┤     ├──────────┤</span></span><br><span class="line"><span class="comment"> * │data &amp; bss│     │data &amp; bss│</span></span><br><span class="line"><span class="comment"> * ├──────────┤     ├──────────┤</span></span><br><span class="line"><span class="comment"> * │text      │     │text      │</span></span><br><span class="line"><span class="comment"> * └──────────┘     └──────────┘</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="提示">提示</h3>
+<blockquote>
+<p>You can perform the mapping in proc_pagetable() in kernel/proc.c.</p>
+</blockquote>
+<p>"在 <code>kernel/proc.c</code> 的 <code>proc_pagetable()</code>
+里执行映射"</p>
+<p>这里 "执行映射" 其实就是安装映射的意思，就是创建一个从 USYSCALL
+到实际缓存项只读页的映射，这里其实参考
+<code>kernel/proc.c/proc_pagetable()</code>
+里面其他映射的安装就知道怎么做了</p>
+<blockquote>
+<p>Choose permission bits that allow userspace to only read the
+page.</p>
+</blockquote>
+<p>"选择允许用户程序访问只读页的权限位"</p>
+<p>这里是 PTE_U 和 PTE_R，用户空间可访问以及只读</p>
+<blockquote>
+<p>Don't forget to allocate and initialize the page in allocproc().</p>
+</blockquote>
+<p>"在 allocproc() 分配一页并且初始化"</p>
+<blockquote>
+<p>Make sure to free the page in freeproc().</p>
+</blockquote>
+<p>"确保在 freeproc() 释放该页"</p>
+<p><br></p>
+<h3 id="summary">Summary</h3>
+<p>整个 assignment 看起来要求不高，唯一困难的是可能你需要认真阅读
+<code>proc_pagetable()</code>，<code>allocproc()</code> 和
+<code>freeproc()</code> 这三个函数：</p>
+<ul>
+<li><code>proc_pagetable()</code>：这个函数就是创建一个页表，页表只初始化
+trampoline 和 trapframe 两个 PTE</li>
+<li><code>allocproc()</code>：这个函数就是从进程数组里找到空闲的进程，然后对该进程初始化（其实就是填充
+<code>proc</code> 结构体）</li>
+<li><code>freeproc()</code>：这个函数作用是释放给定进程</li>
+</ul>
+<p>现在，只需要在这三个函数内完成 "提示"
+所要求的内容即可，不过有几个细节的地方要注意：</p>
+<ul>
+<li>像 USYSCALL 和 <code>struct usyscall</code>
+这些内容官方都是用条件编译（<code>#ifdef LAB_PGTBL</code>）括起来的，所以谨慎起见，这个
+assignment
+里添加的内容也这么括起来比较好（或者把官方的条件编译删掉，这样以后切换去其他
+branch 应该也不会报错）</li>
+<li><code>allocproc()</code> 按提示是 "分配并初始化 USYSCALL 页"，然后
+<code>proc_pagetable()</code> 按提示是
+"安装映射"。但是这里有两个棘手的问题，第一个是新创建的页面需要在两个函数内传递，这需要考虑引入一个全局变量之类的东西保存；第二个是在只读页开头处需要保存
+<code>struct usyscall</code>
+结构体，但问题是这个只读页我们只能得到物理地址（uint64 *
+类型），如何将一个其他类型的变量保存于某个指针处，我现在所能想到的只有
+<code>memmove()</code>
+之类的内存函数，可能处理起来比较繁琐。所以这里我参考其他大神的思路决定作出些简化，那就是，直接在
+<code>struct proc</code> 结构体新增一个成员变量保存
+<code>struct usyscall</code> 结构体而不保存只读页物理地址了，这样读写
+<code>struct usyscall</code> 结构体变量会变成非常方便</li>
+</ul>
+<p><br></p>
+<h3 id="solution">Solution</h3>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/proc.h</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">proc</span> &#123;</span><br><span class="line">    ...</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> LAB_PGTBL</span></span><br><span class="line">    <span class="comment">// 新增一个成员变量保存 struct usyscall 结构体</span></span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">usyscall</span> *share;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/proc.c</span></span><br><span class="line"><span class="comment">// 要修改的第一个函数</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">struct</span> <span class="title class_">proc</span>*</span><br><span class="line"><span class="built_in">allocproc</span>(<span class="type">void</span>) &#123;</span><br><span class="line">    ...</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> LAB_PGTBL</span></span><br><span class="line">    <span class="comment">// 创建一个 &quot;只读页&quot;，事实上没有创建页，这里只是简化的实现</span></span><br><span class="line">    <span class="keyword">if</span>((p-&gt;share = (<span class="keyword">struct</span> usyscall *)<span class="built_in">kalloc</span>()) == <span class="number">0</span>)&#123;</span><br><span class="line">        <span class="built_in">freeproc</span>(p);</span><br><span class="line">        <span class="built_in">release</span>(&amp;p-&gt;lock);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    p-&gt;share-&gt;pid = p-&gt;pid;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 要修改的第二个函数</span></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">freeproc</span><span class="params">(<span class="keyword">struct</span> proc *p)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> LAB_PGTBL</span></span><br><span class="line">    <span class="keyword">if</span> (p-&gt;share)</span><br><span class="line">        <span class="built_in">kfree</span>((<span class="type">void</span> *)p-&gt;share);</span><br><span class="line">    p-&gt;share = <span class="number">0</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 要修改的第三个函数</span></span><br><span class="line"><span class="function"><span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">proc_freepagetable</span><span class="params">(<span class="type">pagetable_t</span> pagetable, uint64 sz)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> LAB_PGTBL</span></span><br><span class="line">    <span class="built_in">uvmunmap</span>(pagetable, USYSCALL, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 要修改的第四个函数</span></span><br><span class="line"><span class="function"><span class="type">pagetable_t</span></span></span><br><span class="line"><span class="function"><span class="title">proc_pagetable</span><span class="params">(<span class="keyword">struct</span> proc *p)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> LAB_PGTBL</span></span><br><span class="line">    <span class="comment">// 添加从 USYSCALL 到 struct proc 的成员变量 share 的映射</span></span><br><span class="line">    <span class="keyword">if</span>(<span class="built_in">mappages</span>(pagetable, USYSCALL, PGSIZE,</span><br><span class="line">                (uint64)(p-&gt;share), PTE_R | PTE_U) &lt; <span class="number">0</span>)&#123;</span><br><span class="line">        <span class="built_in">uvmunmap</span>(pagetable, USYSCALL, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="built_in">uvmunmap</span>(pagetable, TRAMPOLINE, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="built_in">uvmfree</span>(pagetable, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h2 id="print-a-page-table-easy">Print a page table (EASY)</h2>
+<h3 id="要求-1">要求</h3>
+<blockquote>
+<p>Define a function called vmprint(). It should take a pagetable_t
+argument, and print that pagetable in the format described below. Insert
+if(p-&gt;pid==1) vmprint(p-&gt;pagetable) in exec.c just before the
+return argc, to print the first process's page table. You receive full
+credit for this part of the lab if you pass the pte printout test of
+make grade.</p>
+</blockquote>
+<p>"定义一个叫做 <code>vmprint()</code> 的函数。它带一个
+<code>pagetable_t</code>
+类型的参数，并且用下面给出的格式打印这个页表参数。在
+<code>kernel/exec.c</code> 的 <code>return argc;</code> 前面插入
+<code>if(p-&gt;pid == 1) vmprint(p-&gt;pagetable)</code>
+以打印第一个进程的页表。如果你在 <code>make grade</code> 的 'pte
+printout' 测试中通过，你会得到这一节的满分"</p>
+<p>以下是页表的打印格式，同时也是你刚启动 xv6 后 shell
+上面要输出的内容（物理地址可以不同，但 PTE
+索引和虚拟地址需要保持一致才算对）：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">page table 0x0000000087f6e000</span><br><span class="line"> ..0: pte 0x0000000021fda801 pa 0x0000000087f6a000</span><br><span class="line"> .. ..0: pte 0x0000000021fda401 pa 0x0000000087f69000</span><br><span class="line"> .. .. ..0: pte 0x0000000021fdac1f pa 0x0000000087f6b000</span><br><span class="line"> .. .. ..1: pte 0x0000000021fda00f pa 0x0000000087f68000</span><br><span class="line"> .. .. ..2: pte 0x0000000021fd9c1f pa 0x0000000087f67000</span><br><span class="line"> ..255: pte 0x0000000021fdb401 pa 0x0000000087f6d000</span><br><span class="line"> .. ..511: pte 0x0000000021fdb001 pa 0x0000000087f6c000</span><br><span class="line"> .. .. ..509: pte 0x0000000021fdd813 pa 0x0000000087f76000</span><br><span class="line"> .. .. ..510: pte 0x0000000021fddc07 pa 0x0000000087f77000</span><br><span class="line"> .. .. ..511: pte 0x0000000020001c0b pa 0x0000000080007000</span><br></pre></td></tr></table></figure>
+<p>第一行是形参</p>
+<p>随后每一行对应一个 PTE，每个 PTE 由三部分组成：</p>
+<ul>
+<li>第一部分是诸如 ".. ..511:"
+之类的缩进格式，这是三层页表的层次树，"511" 表示当前 PTE
+是它所在页表的下标 511 号条目</li>
+<li>第二部分是 "pte ..."，这是对应 PTE 条目里面的内容</li>
+<li>第三部分是 "pa ..."，这是 PTE 对应的物理地址</li>
+</ul>
+<p>这个例子说明了最高级页表只有下标 0 和 255 两项 PTE 存在（即 PTE_V
+置位），下标 0 PTE 的下级页表只有 PTE 为下标 0 的一项，再下级页表只有
+0、1、2 三项 PTE 存在；对于最高级页表 255 号索引也是同理</p>
+<p><br></p>
+<h3 id="提示-1">提示</h3>
+<blockquote>
+<p>The function freewalk may be inspirational.</p>
+</blockquote>
+<p>"函数 <code>freewalk()</code> 是非常有用的"</p>
+<p>这里不是说打印页表需要调用 <code>freewalk()</code>
+进行释放，而是这个函数递归遍历每一层页表这个思想非常有参考意义</p>
+<p>此处给出页表机制原理（注意页表地址和虚拟地址不同，页表地址是下图红框处，虚拟地址是下图蓝框处）：</p>
+<p><span id="pic"><img
+src="https://pic.imgdb.cn/item/62614209239250f7c57835b2.png" /></span></p>
+<p>再结合代码来理解：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span></span></span><br><span class="line"><span class="function"><span class="title">freewalk</span><span class="params">(<span class="type">pagetable_t</span> pagetable)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">for</span>(<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">512</span>; i++)&#123;</span><br><span class="line">        <span class="type">pte_t</span> pte = pagetable[i];</span><br><span class="line">        <span class="keyword">if</span>((pte &amp; PTE_V) &amp;&amp; (pte &amp; (PTE_R|PTE_W|PTE_X)) == <span class="number">0</span>)&#123;</span><br><span class="line">            <span class="comment">// 若当前 PTE 标志位全零，那就是一级或二级页表的页表项</span></span><br><span class="line"></span><br><span class="line">            uint64 child = <span class="built_in">PTE2PA</span>(pte);<span class="comment">// 提取 PTE 里面的物理地址</span></span><br><span class="line">            <span class="built_in">freewalk</span>((<span class="type">pagetable_t</span>)child);</span><br><span class="line">            pagetable[i] = <span class="number">0</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span>(pte &amp; PTE_V) &#123;</span><br><span class="line">            <span class="comment">// 反之若当前 PTE 标志位但凡有一个是非零，那就说明到达第三级页表了</span></span><br><span class="line">            <span class="built_in">panic</span>(<span class="string">&quot;freewalk: leaf&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">kfree</span>((<span class="type">void</span>*)pagetable);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里我加了注释，可能你会疑惑，为什么通过标志位是否全零可以判断到达了最后一级页表呢？这和
+<code>walk()</code> <code>PA2PTE()</code>、<code>PTE2PA()</code>
+这些宏函数有关。由于这些宏函数实际上是通过左移右移使一个 64 位的数据迎合
+sv39 的页表机制，而这个移位是补零的（因为这是一个
+<code>uint64</code>）———— 最终会使标志位变成全零</p>
+<p>但这里只要知道这种思想就行了，实际上我没有这样实现，我用了更简单的计数器的方法来实现当前是第几层</p>
+<h3 id="solution-1">Solution</h3>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/exec.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> LAB_PGTBL</span></span><br><span class="line">    <span class="keyword">if</span> (p-&gt;pid == <span class="number">1</span>)</span><br><span class="line">        <span class="built_in">vmprint</span>(p-&gt;pagetable);</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// kernel/defs.h</span></span><br><span class="line"><span class="comment">// vm.c 注释处</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> LAB_PGTBL</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">vmprint</span><span class="params">(<span class="type">pagetable_t</span>)</span></span>;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// kernel/vm.c</span></span><br><span class="line"><span class="function"><span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">subvmprint</span><span class="params">(<span class="type">pagetable_t</span> pagetable, <span class="type">int</span> dot)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (dot &gt; <span class="number">3</span>)    <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span>(<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">512</span>; i++) &#123;</span><br><span class="line">        <span class="type">pte_t</span> pte = pagetable[i];</span><br><span class="line">        <span class="keyword">if</span>(pte &amp; PTE_V) &#123;</span><br><span class="line">            <span class="comment">// 打点</span></span><br><span class="line">            <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; dot; ++j) &#123;</span><br><span class="line">                <span class="keyword">if</span> (j != <span class="number">0</span>)    <span class="built_in">printf</span>(<span class="string">&quot; &quot;</span>);</span><br><span class="line">                <span class="built_in">printf</span>(<span class="string">&quot;..&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 打印索引</span></span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;%d: &quot;</span>, i);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 打印 pte</span></span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;pte %p &quot;</span>, pte);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 打印 pa</span></span><br><span class="line">            uint64 child = <span class="built_in">PTE2PA</span>(pte);<span class="comment">// 提取 PTE 里面的物理地址</span></span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;pa %p\n&quot;</span>, child);</span><br><span class="line">            <span class="built_in">subvmprint</span>((<span class="type">pagetable_t</span>)child, dot + <span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">vmprint</span><span class="params">(<span class="type">pagetable_t</span> pagetable)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;page table %p\n&quot;</span>, pagetable);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">subvmprint</span>(pagetable, <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h2 id="detecting-which-pages-have-been-accessed-hard">Detecting which
+pages have been accessed (HARD)</h2>
+<h3 id="要求-2">要求</h3>
+<blockquote>
+<p>Your job is to implement pgaccess(), a system call that reports which
+pages have been accessed. The system call takes three arguments. First,
+it takes the starting virtual address of the first user page to check.
+Second, it takes the number of pages to check. Finally, it takes a user
+address to a buffer to store the results into a bitmask (a datastructure
+that uses one bit per page and where the first page corresponds to the
+least significant bit). You will receive full credit for this part of
+the lab if the pgaccess test case passes when running pgtbltest.</p>
+</blockquote>
+<p>"你的任务是实现
+<code>pgaccess()</code>，一个能报告访问过哪一页的系统调用。这个系统调用接受三个参数：第一个是要检查的用户页的第一页；第二个是要检查的页数量；第三个是存放结果的地址，这个地址其实是一个位掩码的数据结构，每个待检查页对应一位，第一页对应于最低有效位。当你运行
+pgtbltest 脚本时，如果你能通过 pgaccess 测试，你就会得到这个 assignment
+的满分"</p>
+<p>这里困难是读懂存放位掩码的这个数据结构的设置要求，我们可以观察
+<code>user/pgtbltest.c/pgaccess_test()</code> 的调用代码 ————
+<code>pgaccess(buf, 32, &amp;abits)</code>
+第三个参数就是位掩码，通过定义 <code>unsigned int abits</code>
+可以发现其实是个无符号整型，这让我想起了第二个 <a
+href="https://horbyn.github.io/2022/03/16/xv6-2/#system-call-tracing-moderate">lab
+syscalls：System call tracing</a>
+的掩码，其实就是同样的思想，在此不再赘述</p>
+<p><br></p>
+<h3 id="提示-2">提示</h3>
+<blockquote>
+<p>walk() in kernel/vm.c is very useful for finding the right PTEs.</p>
+</blockquote>
+<p>"在 <code>kernel/vm.c</code> 里的 <code>walk()</code> 对于寻找 PTE
+将是非常有参考价值"</p>
+<p>我直接把 <code>walk()</code> 代码拷过来了：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">pte_t</span> *</span></span><br><span class="line"><span class="function"><span class="title">walk</span><span class="params">(<span class="type">pagetable_t</span> pagetable, uint64 va, <span class="type">int</span> alloc)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(va &gt;= MAXVA)</span><br><span class="line">        <span class="built_in">panic</span>(<span class="string">&quot;walk&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span>(<span class="type">int</span> level = <span class="number">2</span>; level &gt; <span class="number">0</span>; level--) &#123;</span><br><span class="line">        <span class="type">pte_t</span> *pte = &amp;pagetable[<span class="built_in">PX</span>(level, va)];</span><br><span class="line">        <span class="keyword">if</span>(*pte &amp; PTE_V) &#123;</span><br><span class="line">            <span class="comment">// 将当前 PTE 转换的物理地址，用作下一级页表的虚拟地址，重复流程</span></span><br><span class="line">            pagetable = (<span class="type">pagetable_t</span>)<span class="built_in">PTE2PA</span>(*pte);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span>(!alloc || (pagetable = (<span class="type">pde_t</span>*)<span class="built_in">kalloc</span>()) == <span class="number">0</span>)</span><br><span class="line">                <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">            <span class="built_in">memset</span>(pagetable, <span class="number">0</span>, PGSIZE);</span><br><span class="line">            *pte = <span class="built_in">PA2PTE</span>(pagetable) | PTE_V;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> &amp;pagetable[<span class="built_in">PX</span>(<span class="number">0</span>, va)];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里我们直接忽略 <code>else()</code> 分支，因为这是
+<code>walk()</code> 的其他方面要求。而 <em>Hardware minics</em>
+的逻辑直接看 <code>if()</code> 就够了</p>
+<p>在 <a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf">xv6-handout-riscv-fall
+2021, p36, section 3.3, paragraph 5</a> 有这样的一句话：</p>
+<blockquote>
+<p>For example, as walk descends levels of the page table, it pulls the
+(physical) address of the next-level-down page table from a PTE
+(kernel/vm.c:89), and then uses that address as a virtual address to
+fetch the PTE at the next level down (kernel/vm.c:87).</p>
+</blockquote>
+<p>"当 <code>walk()</code> 递减页表的层数时，它从 PTE
+中取出下一级页表的（物理）地址，然后使用这个地址作为获取下一层 PTE
+的虚拟地址"</p>
+<p>所以 <code>walk()</code> 的 <code>if()</code>
+分支是将物理地址赋值为页表地址，这个页表地址继续迭代寻址下一层</p>
+<p>下一个提示，</p>
+<blockquote>
+<p>You'll need to define PTE_A, the access bit, in kernel/riscv.h.
+Consult the RISC-V manual to determine its value.</p>
+</blockquote>
+<p>"你需要在 <code>kernel/riscv.h</code> 定义访问位
+PTE_A，这里的设置需要参考 riscv 手册"</p>
+<p>可以参考 <a href="#pic">上面页表机制那张图</a>，得到 PTE_A 是 bit-6
+这个位，因此可以这么设置：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> PTE_A (1L &lt;&lt; 6)</span></span><br></pre></td></tr></table></figure>
+<p>这里顺便一提，标志位实际的设置是硬件负责的，比如我们编程时往某个页面写入数据或读取之类的，硬件会帮我们置位访问位</p>
+<p>前面 "要求" 处有句话是这么说的：</p>
+<blockquote>
+<p>The RISC-V hardware page walker marks these bits in the PTE whenever
+it resolves a TLB miss.</p>
+</blockquote>
+<p>"riscv 页表机制的硬件每当解决一个 TLB 丢失后，就会在 PTE
+标识这些位（访问位）"</p>
+<p>再下一个提示，</p>
+<blockquote>
+<p>Be sure to clear PTE_A after checking if it is set. Otherwise, it
+won't be possible to determine if the page was accessed since the last
+time pgaccess() was called (i.e., the bit will be set forever).</p>
+</blockquote>
+<p>"如果 PTE 是置位的，那你需要在检查完 PTE
+访问位之后进行清位。否则，当最后一次调用 <code>pgaccess()</code>
+后这个页仍会是 '已访问' 状态（也即是这个标志位会永远置位）"</p>
+<p>这告诉我们清位操作是我们负责的</p>
+<p><br></p>
+<h3 id="solution-2">Solution</h3>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">ifdef</span> LAB_PGTBL</span></span><br><span class="line"><span class="function"><span class="type">int</span></span></span><br><span class="line"><span class="function"><span class="title">sys_pgaccess</span><span class="params">(<span class="type">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    uint64 va;</span><br><span class="line">    <span class="type">int</span> n;</span><br><span class="line">    uint64 result;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> bitmask = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 获取三个参数</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">argaddr</span>(<span class="number">0</span>, &amp;va) &lt; <span class="number">0</span>)    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">argint</span>(<span class="number">1</span>, &amp;n) &lt; <span class="number">0</span>)    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">argaddr</span>(<span class="number">2</span>, &amp;result) &lt; <span class="number">0</span>)    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 检查参数有没有超过范围</span></span><br><span class="line">    <span class="keyword">if</span> (va &gt;= MAXVA)    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    <span class="keyword">if</span> (va + PGSIZE * n &gt;= MAXVA)    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; n; ++i, va += PGSIZE) &#123;</span><br><span class="line">        <span class="comment">// 获取 va 对应的 pte</span></span><br><span class="line">        <span class="type">pagetable_t</span> pagetable = <span class="built_in">myproc</span>()-&gt;pagetable;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> level = <span class="number">2</span>; level &gt; <span class="number">0</span>; level--) &#123;</span><br><span class="line">            <span class="type">pte_t</span> *pte = &amp;pagetable[<span class="built_in">PX</span>(level, va)];</span><br><span class="line">            <span class="keyword">if</span> (*pte &amp; PTE_V) &#123;</span><br><span class="line">                pagetable = (<span class="type">pagetable_t</span>)<span class="built_in">PTE2PA</span>(*pte);</span><br><span class="line">            &#125; <span class="keyword">else</span>    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">pte_t</span> *pte = &amp;pagetable[<span class="built_in">PX</span>(<span class="number">0</span>, va)];</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 检查 pte 上的 flag</span></span><br><span class="line">        <span class="type">unsigned</span> <span class="type">int</span> mask = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (*pte &amp; PTE_A) &#123;</span><br><span class="line">            <span class="comment">// bitmask 置位</span></span><br><span class="line">            mask = <span class="number">1L</span> &lt;&lt; i;</span><br><span class="line">            <span class="comment">// pte 上的 PTE_A 清位（异或可以实现取反）</span></span><br><span class="line">            *pte ^= PTE_A;</span><br><span class="line">        &#125;</span><br><span class="line">        bitmask |= mask;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 将 bitmask 送回用户空间</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">copyout</span>(<span class="built_in">myproc</span>()-&gt;pagetable, result, (<span class="type">char</span> *)&amp;bitmask, <span class="built_in">sizeof</span>(<span class="type">unsigned</span> <span class="type">int</span>)) &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h2 id="写在最后">写在最后</h2>
+<p>耗时 15h6m</p>
+
+    </article>
+    <!-- license -->
+        <div class="license-wrapper">
+            <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
+            <p>Link：<a href="https://horbyn.github.io/2022/03/25/xv6-3/">https://horbyn.github.io/2022/03/25/xv6-3/</a>
+            <p>Publish date：<a href="https://horbyn.github.io/2022/03/25/xv6-3/">March 25th 2022, 10:57:18 pm</a>
+            <p>Update date：<a href="https://horbyn.github.io/2022/03/25/xv6-3/">February 27th 2025, 10:24:07 pm</a>
+            <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
+        </div>
+    <!-- paginator -->
+    <ul class="post-paginator">
+        <li class="next">
+                <div class="nextSlogan">Next Post</div>
+                <a href="/2022/03/29/trans-1/" title="RISC-V 调用约定（译文）">
+                    <div class="nextTitle">RISC-V 调用约定（译文）</div>
+                </a>
+        </li>
+        <li class="previous">
+                <div class="prevSlogan">Previous Post</div>
+                <a href="/2022/03/16/xv6-2/" title="⌈xv6-fall2021⌋ lab 2：System calls">
+                    <div class="prevTitle">⌈xv6-fall2021⌋ lab 2：System calls</div>
+                </a>
+        </li>
+    </ul>
+    <!-- comment -->
+        <div class="post-comment">
+            <!-- 来必力 City 版安装代码 -->
+
+            
+            
+            
+            <!-- utteranc评论 -->
+
+            <!-- partial('_partial/comment/changyan') -->
+            <!--PC版-->
+
+            
+            
+            
+        </div>
+    <!-- timeliness note -->
+    <!-- idea from: https://hexo.fluid-dev.com/posts/hexo-injector/#%E6%96%87%E7%AB%A0%E6%97%B6%E6%95%88%E6%80%A7%E6%8F%90%E7%A4%BA -->
+    <!-- Mathjax -->
+</main>
+
+                <!-- profile -->
+            </div>
+            <footer class="footer footer-unloaded">
+    <!-- social  -->
+        <div class="social">
+                            <a href="mailto:horbyn@outlook.com" class="iconfont-archer email" title="email" ></a>
+                <a href="https://github.com/horbyn" class="iconfont-archer github" target="_blank" title="github"></a>
+                <span class="iconfont-archer wechat" title="wechat">
+                    <img class="profile-qr" src="/assets/example_qr.jpg" />
+                </span>
+
+        </div>
+    <!-- powered by Hexo  -->
+    <div class="copyright">
+        <span id="hexo-power">Powered by <a href="https://hexo.io/" target="_blank">Hexo</a></span><span class="iconfont-archer power">&#xe635;</span><span id="theme-info">theme <a href="https://github.com/fi3ework/hexo-theme-archer" target="_blank">Archer</a></span>
+    </div>
+    <!-- website approve for Chinese user -->
+    <!-- 不蒜子  -->
+        <div class="busuanzi-container">
+                <span id="busuanzi_container_site_pv">PV: <span id="busuanzi_value_site_pv"></span> :)</span>
+        </div>
+</footer>
+
+        </div>
+        <!-- toc -->
+            <div class="toc-wrapper toc-wrapper-loding" style=    top:50vh;
+>
+                <div class="toc-catalog">
+                    <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
+                </div>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#lab"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#speed-up-system-calls-easy"><span class="toc-number">2.</span> <span class="toc-text">Speed up system calls (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82"><span class="toc-number">2.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA"><span class="toc-number">2.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary"><span class="toc-number">2.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution"><span class="toc-number">2.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#print-a-page-table-easy"><span class="toc-number">3.</span> <span class="toc-text">Print a page table (EASY)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-1"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-1"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-1"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#detecting-which-pages-have-been-accessed-hard"><span class="toc-number">4.</span> <span class="toc-text">Detecting which
+pages have been accessed (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-2"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-2"><span class="toc-number">4.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-2"><span class="toc-number">4.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">5.</span> <span class="toc-text">写在最后</span></a></li></ol>
+            </div>
+        <!-- sidebar -->
+        <div class="sidebar sidebar-hide">
+    <ul class="sidebar-tabs sidebar-tabs-active-0">
+        <li class="sidebar-tab-archives"><span class="iconfont-archer">&#xe67d;</span><span class="tab-name">Archive</span></li>
+        <li class="sidebar-tab-tags"><span class="iconfont-archer">&#xe61b;</span><span class="tab-name">Tag</span></li>
+        <li class="sidebar-tab-categories"><span class="iconfont-archer">&#xe666;</span><span class="tab-name">Cate</span></li>
+    </ul>
+    <div class="sidebar-content sidebar-content-show-archive">
+        <div class="sidebar-panel-archives">
+    <!-- 在 ejs 中将 archive 按照时间排序 -->
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    <div class="total-and-search">
+        <div class="total-archive">
+        Total : 24
+        </div>
+        <!-- search  -->
+    </div>
+    <div class="post-archive">
+            <div class="archive-year"> 2025 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/10</span>
+            <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/07</span>
+            <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/05</span>
+            <a class="archive-post-title" href="/2025/02/05/hoo-6/">「从零到一」设备驱动</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/04</span>
+            <a class="archive-post-title" href="/2025/02/04/hoo-5/">「从零到一」调度机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/01</span>
+            <a class="archive-post-title" href="/2025/02/01/hoo-4/">「从零到一」中断机制</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/30</span>
+            <a class="archive-post-title" href="/2025/01/30/hoo-3/">「从零到一」内存管理</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/07</span>
+            <a class="archive-post-title" href="/2025/01/07/hoo-2/">「从零到一」内核引导与加载</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">01/02</span>
+            <a class="archive-post-title" href="/2025/01/02/hoo-1/">「从零到一」实现一个 x86 的内核</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2023 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">11/01</span>
+            <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
+        </li>
+                </ul>
+            <div class="archive-year"> 2022 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">05/28</span>
+            <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/21</span>
+            <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/17</span>
+            <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/15</span>
+            <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/11</span>
+            <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/05</span>
+            <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">04/04</span>
+            <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/29</span>
+            <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/25</span>
+            <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/16</span>
+            <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">03/14</span>
+            <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/28</span>
+            <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/25</span>
+            <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
+        </li>
+            </ul>
+    </div>
+</div>
+
+        <div class="sidebar-panel-tags">
+    <div class="sidebar-tags-name">
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
+            </span>
+            <span class="sidebar-tag-name" data-tags="translation">
+                <span class="iconfont-archer">&#xe606;</span>
+                translation
+            </span>
+            <span class="sidebar-tag-name" data-tags="winsock">
+                <span class="iconfont-archer">&#xe606;</span>
+                winsock
+            </span>
+            <span class="sidebar-tag-name" data-tags="xv6">
+                <span class="iconfont-archer">&#xe606;</span>
+                xv6
+            </span>
+    </div>
+    <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
+    <div class="tag-load-fail" style="display: none; color: #ccc; font-size: 0.6rem;">
+        缺失模块，请参考主题文档进行安装配置：https://github.com/fi3ework/hexo-theme-archer#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98
+    </div> 
+    <div class="sidebar-tags-list"></div>
+</div>
+
+        <div class="sidebar-panel-categories">
+    <div class="sidebar-categories-name">
+        <span class="sidebar-category-name" data-categories="KERNEL">
+            <span class="iconfont-archer">&#xe60a;</span>
+            KERNEL
+        </span>
+        <span class="sidebar-category-name" data-categories="LIVEHOOD">
+            <span class="iconfont-archer">&#xe60a;</span>
+            LIVEHOOD
+        </span>
+    </div>
+    <div class="iconfont-archer sidebar-categories-empty">&#xe678;</div>
+    <div class="sidebar-categories-list"></div>
+</div>
+
+    </div>
+</div>
+
+        <!-- site-meta -->
+        <script>
+    var siteMetaRoot = "/"
+    if (siteMetaRoot === "undefined") {
+        siteMetaRoot = '/'
+    }
+    var siteMeta = {
+        url: "https://horbyn.github.io",
+        root: siteMetaRoot,
+        author: "Horbyn"
+    }
+</script>
+
+        <!-- import experimental options here -->
+        <!-- Custom Font -->
+
+        <!-- main func -->
+        <script src="/scripts/main.js"></script>
+        <!-- fancybox -->
+        <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0.36/dist/fancybox/fancybox.umd.js" onload="window.Fancybox.bind('[data-fancybox]')" defer></script>
+        <!-- algolia -->
+        <!-- busuanzi -->
+            <script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+        <!-- async load share.js -->
+            <script src="/scripts/share.js" async></script>
+        <!-- mermaid -->
+    </body>
+</html>
