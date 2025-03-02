@@ -444,51 +444,98 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="ABOUT-v4"><a class="header-anchor" href="#ABOUT-v4"></a>ABOUT</h2>
-<p>实验地址：<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/fs.html">Lab: file system</a></p>
-<br>
-<h2 id="Large-files-MODERATE"><a class="header-anchor" href="#Large-files-MODERATE"></a>Large files (MODERATE)</h2>
-<h3 id="实验要求（译）（节选）-v4"><a class="header-anchor" href="#实验要求（译）（节选）-v4"></a>实验要求（译）（节选）</h3>
+        <h2 id="about">ABOUT</h2>
+<p>实验地址：<a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/fs.html">Lab: file
+system</a></p>
+<p><br></p>
+<h2 id="large-files-moderate">Large files (MODERATE)</h2>
+<h3 id="实验要求译节选">实验要求（译）（节选）</h3>
 <blockquote>
-<p>In this assignment you’ll increase the maximum size of an xv6 file. Currently xv6 files are limited to 268 blocks, or 268*BSIZE bytes (BSIZE is 1024 in xv6). This limit comes from the fact that an xv6 inode contains 12 “direct” block numbers and one “singly-indirect” block number, which refers to a block that holds up to 256 more block numbers, for a total of 12+256=268 blocks.</p>
+<p>In this assignment you'll increase the maximum size of an xv6 file.
+Currently xv6 files are limited to 268 blocks, or 268*BSIZE bytes (BSIZE
+is 1024 in xv6). This limit comes from the fact that an xv6 inode
+contains 12 "direct" block numbers and one "singly-indirect" block
+number, which refers to a block that holds up to 256 more block numbers,
+for a total of 12+256=268 blocks.</p>
 </blockquote>
-<p>“这个任务你要增加 xv6 文件的最大尺寸。当前的 xv6 文件限定为 268 个块，或者说是 268 * BSIZE 字节（xv6 的 BSIZE 是 1024）。这个限制是因为一个 xv6 inode 包含 12 个 ‘直接’ 块号，以及一个 ‘一级间接’ 块号。这些一级索引指向一个保存最多 256 个块号的块，共计 12+256 个块”</p>
+<p>"这个任务你要增加 xv6 文件的最大尺寸。当前的 xv6 文件限定为 268
+个块，或者说是 268 * BSIZE 字节（xv6 的 BSIZE 是
+1024）。这个限制是因为一个 xv6 inode 包含 12 个 '直接' 块号，以及一个
+'一级间接' 块号。这些一级索引指向一个保存最多 256 个块号的块，共计
+12+256 个块"</p>
 <blockquote>
-<p>You’ll change the xv6 file system code to support a “doubly-indirect” block in each inode, containing 256 addresses of singly-indirect blocks, each of which can contain up to 256 addresses of data blocks. The result will be that a file will be able to consist of up to 65803 blocks, or 256*256+256+11 blocks (11 instead of 12, because we will sacrifice one of the direct block numbers for the double-indirect block).</p>
+<p>You'll change the xv6 file system code to support a "doubly-indirect"
+block in each inode, containing 256 addresses of singly-indirect blocks,
+each of which can contain up to 256 addresses of data blocks. The result
+will be that a file will be able to consist of up to 65803 blocks, or
+256*256+256+11 blocks (11 instead of 12, because we will sacrifice one
+of the direct block numbers for the double-indirect block).</p>
 </blockquote>
-<p>“你需要改变 xv6 文件系统的代码以使每个 inode 支持一个 ‘两级间接’ 块，每个二级索引块包含 256 个一级索引块的地址，而这些一级索引块又最多支持 256 个数据块的地址。结果就是一个文件能够包含 65803 个块，或者说 256 * 256 + 256 + 11 个块（是 11 而不是 12 个直接块，因为我们要牺牲一个块来放置二级索引块）”</p>
+<p>"你需要改变 xv6 文件系统的代码以使每个 inode 支持一个 '两级间接'
+块，每个二级索引块包含 256
+个一级索引块的地址，而这些一级索引块又最多支持 256
+个数据块的地址。结果就是一个文件能够包含 65803 个块，或者说 256 * 256 +
+256 + 11 个块（是 11 而不是 12
+个直接块，因为我们要牺牲一个块来放置二级索引块）"</p>
 <blockquote>
-<p>The format of an on-disk inode is defined by struct dinode in fs.h. You’re particularly interested in NDIRECT, NINDIRECT, MAXFILE, and the addrs[] element of struct dinode.</p>
+<p>The format of an on-disk inode is defined by struct dinode in fs.h.
+You're particularly interested in NDIRECT, NINDIRECT, MAXFILE, and the
+addrs[] element of struct dinode.</p>
 </blockquote>
-<p>“一个磁盘 inode 的格式定义在 <code>fs.h</code> 的 <code>struct dinode</code> 结构体种。你需要特别关注结构体里的 <code>NDIRECT</code>、<code>NINDIRECT</code>、<code>MAXFILE</code> 以及 <code>addrs[]</code> 这些字段”</p>
+<p>"一个磁盘 inode 的格式定义在 <code>fs.h</code> 的
+<code>struct dinode</code> 结构体种。你需要特别关注结构体里的
+<code>NDIRECT</code>、<code>NINDIRECT</code>、<code>MAXFILE</code> 以及
+<code>addrs[]</code> 这些字段"</p>
 <blockquote>
-<p>The code that finds a file’s data on disk is in bmap() in fs.c. Have a look at it and make sure you understand what it’s doing. bmap() is called both when reading and writing a file. When writing, bmap() allocates new blocks as needed to hold file content, as well as allocating an indirect block if needed to hold block addresses.</p>
+<p>The code that finds a file's data on disk is in bmap() in fs.c. Have
+a look at it and make sure you understand what it's doing. bmap() is
+called both when reading and writing a file. When writing, bmap()
+allocates new blocks as needed to hold file content, as well as
+allocating an indirect block if needed to hold block addresses.</p>
 </blockquote>
-<p>“在磁盘上找一个文件的数据的代码在 <code>fs.c</code> 里的 <code>bmap()</code>，阅读这个函数并确保你理解了这个函数的功能。读和写一个文件都会调用 <code>bmap()</code>。当执行写操作时，<code>bmap()</code> 会在需要保存文件内容时分配一个新块，以及在需要保存块地址时分配一个间接块”</p>
+<p>"在磁盘上找一个文件的数据的代码在 <code>fs.c</code> 里的
+<code>bmap()</code>，阅读这个函数并确保你理解了这个函数的功能。读和写一个文件都会调用
+<code>bmap()</code>。当执行写操作时，<code>bmap()</code>
+会在需要保存文件内容时分配一个新块，以及在需要保存块地址时分配一个间接块"</p>
 <blockquote>
-<p>Modify bmap() so that it implements a doubly-indirect block, in addition to direct blocks and a singly-indirect block. You’ll have to have only 11 direct blocks, rather than 12, to make room for your new doubly-indirect block; you’re not allowed to change the size of an on-disk inode. The first 11 elements of ip-&gt;addrs[] should be direct blocks; the 12th should be a singly-indirect block (just like the current one); the 13th should be your new doubly-indirect block.</p>
+<p>Modify bmap() so that it implements a doubly-indirect block, in
+addition to direct blocks and a singly-indirect block. You'll have to
+have only 11 direct blocks, rather than 12, to make room for your new
+doubly-indirect block; you're not allowed to change the size of an
+on-disk inode. The first 11 elements of ip-&gt;addrs[] should be direct
+blocks; the 12th should be a singly-indirect block (just like the
+current one); the 13th should be your new doubly-indirect block.</p>
 </blockquote>
-<p>“修改 <code>bmap()</code> 以便你可以实现除了直接块和一个一级索引块以外的另一个二级索引块。为了给新的二级索引块分配空间，你只能使用 11 个直接块，而不是 12。但你不应该修改一个磁盘 inode 的大小。<code>ip-&gt;addrs[]</code> 开始的 11 个元素应该为直接块，第 12 个应该是一级索引块（就像原来的代码那样），第 13 个应该是新的二级索引块”</p>
+<p>"修改 <code>bmap()</code>
+以便你可以实现除了直接块和一个一级索引块以外的另一个二级索引块。为了给新的二级索引块分配空间，你只能使用
+11 个直接块，而不是 12。但你不应该修改一个磁盘 inode
+的大小。<code>ip-&gt;addrs[]</code> 开始的 11 个元素应该为直接块，第 12
+个应该是一级索引块（就像原来的代码那样），第 13
+个应该是新的二级索引块"</p>
 <blockquote>
 <p>bigfile will take at least a minute and a half to run.</p>
 </blockquote>
-<p>“<code>bigfile</code> 最快也要运行一分半钟”</p>
-<br>
-<h3 id="实验提示"><a class="header-anchor" href="#实验提示"></a>实验提示</h3>
+<p>"<code>bigfile</code> 最快也要运行一分半钟"</p>
+<p><br></p>
+<h3 id="实验提示">实验提示</h3>
 <p>实验提示比较简单，所以就不译了</p>
 <ul>
 <li>理解 bmap()，主要是参考读一级索引的逻辑</li>
 <li>思考逻辑块号和一级索引块、二级索引块有什么联系</li>
 <li>主要修改的函数只有两个：bmap() 和 itrunc()</li>
 </ul>
-<br>
-<h3 id="实现思路-v3"><a class="header-anchor" href="#实现思路-v3"></a>实现思路</h3>
+<p><br></p>
+<h3 id="实现思路">实现思路</h3>
 <p>类比 bmap() 读一级索引就可以了</p>
 <p>读一级索引块：</p>
 <ul>
 <li>先读一级索引块的地址（实际上是块号）</li>
-<li>通过上一步的块号调用 bread() 读取磁盘块（实际上是磁盘块的内存副本，对应的结构是 <code>struct buf</code>）</li>
-<li>磁盘块在 xv6 组织为 “元信息” + “真正数据” 的形式，通过 “元信息” 部分找到真实的块数据。由于当前仍是在一级索引块内，所以这些块数据仍然是一个块号。最后通过这个块号才能找到实际的数据块，所以最后返回这个块号</li>
+<li>通过上一步的块号调用 bread()
+读取磁盘块（实际上是磁盘块的内存副本，对应的结构是
+<code>struct buf</code>）</li>
+<li>磁盘块在 xv6 组织为 "元信息" + "真正数据" 的形式，通过 "元信息"
+部分找到真实的块数据。由于当前仍是在一级索引块内，所以这些块数据仍然是一个块号。最后通过这个块号才能找到实际的数据块，所以最后返回这个块号</li>
 </ul>
 <p>读二级索引块（类比上面步骤）：</p>
 <ul>
@@ -497,57 +544,94 @@
 <li>得到一级索引块的地址后，和上面逻辑就是一模一样了</li>
 </ul>
 <p>但是，要注意的一点是逻辑块号和直接块、一二级索引块的联系。下面举个例子：</p>
-<p>原来的代码已经给出支持最大 12 + 256 个块，那么逻辑块号就是 0~267，如果我要访问逻辑块号 #250，那么应该是先减去前面 12 个直接块，得出 238。这个 238 说的是一级索引里的 #238 号块（由于块号是从 0 开始，可能会相差 1，这里我没仔细想）</p>
-<p>如果再加上第二级索引，那么就是 11 + 256 + 256 * 256 个块，你要访问一个块，那么要先减去前面的直接块和一级索引，这里就不细说了</p>
-<br>
-<h3 id="Solution-v22"><a class="header-anchor" href="#Solution-v22"></a>Solution</h3>
+<p>原来的代码已经给出支持最大 12 + 256 个块，那么逻辑块号就是
+0~267，如果我要访问逻辑块号 #250，那么应该是先减去前面 12 个直接块，得出
+238。这个 238 说的是一级索引里的 #238 号块（由于块号是从 0
+开始，可能会相差 1，这里我没仔细想）</p>
+<p>如果再加上第二级索引，那么就是 11 + 256 + 256 * 256
+个块，你要访问一个块，那么要先减去前面的直接块和一级索引，这里就不细说了</p>
+<p><br></p>
+<h3 id="solution">Solution</h3>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/file.c</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">inode</span> &#123;</span></span><br><span class="line">    ...</span><br><span class="line">    uint addrs[NDIRECT+<span class="number">2</span>];</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/fs.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> NDIRECT 11</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> NINDIRECT (BSIZE / sizeof(uint))</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAXFILE (NDIRECT + NINDIRECT + NINDIRECT * NINDIRECT)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// On-disk inode structure</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dinode</span> &#123;</span></span><br><span class="line">    <span class="type">short</span> type;           <span class="comment">// File type</span></span><br><span class="line">    <span class="type">short</span> major;          <span class="comment">// Major device number (T_DEVICE only)</span></span><br><span class="line">    <span class="type">short</span> minor;          <span class="comment">// Minor device number (T_DEVICE only)</span></span><br><span class="line">    <span class="type">short</span> nlink;          <span class="comment">// Number of links to inode in file system</span></span><br><span class="line">    uint size;            <span class="comment">// Size of file (bytes)</span></span><br><span class="line">    uint addrs[NDIRECT+<span class="number">2</span>];   <span class="comment">// Data block addresses</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/fs.c</span></span><br><span class="line"><span class="type">static</span> uint</span><br><span class="line"><span class="title function_">bmap</span><span class="params">(<span class="keyword">struct</span> inode *ip, uint bn)</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span>(bn &lt; NDIRECT) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    bn -= NDIRECT;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span>(bn &lt; NINDIRECT) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//lab fs 新增</span></span><br><span class="line">    bn -= NINDIRECT;</span><br><span class="line">    <span class="keyword">if</span> (bn &lt; NINDIRECT * NINDIRECT) &#123;</span><br><span class="line">        <span class="keyword">if</span>((addr = ip-&gt;addrs[NDIRECT + <span class="number">1</span>]) == <span class="number">0</span>)<span class="comment">// 0 表示没有分配块</span></span><br><span class="line">        ip-&gt;addrs[NDIRECT + <span class="number">1</span>] = addr = balloc(ip-&gt;dev);</span><br><span class="line">        bp = bread(ip-&gt;dev, addr);<span class="comment">// 读二级索引块</span></span><br><span class="line">        a = (uint*)bp-&gt;data;<span class="comment">// 在块中某个偏移处读二级索引块真实数据</span></span><br><span class="line">        <span class="comment">// 取一级索引</span></span><br><span class="line">        <span class="keyword">if</span>((addr = a[bn / NINDIRECT]) == <span class="number">0</span>) &#123;<span class="comment">// 0 表示没有分配块</span></span><br><span class="line">            a[bn / NINDIRECT] = addr = balloc(ip-&gt;dev);</span><br><span class="line">            log_write(bp);</span><br><span class="line">        &#125;</span><br><span class="line">        brelse(bp);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 读一级索引</span></span><br><span class="line">        bp = bread(ip-&gt;dev, addr);<span class="comment">// 读一级索引块</span></span><br><span class="line">        a = (uint*)bp-&gt;data;<span class="comment">// 在块中某个偏移处读一级索引块真实数据</span></span><br><span class="line">        <span class="keyword">if</span> ((addr = a[bn % NINDIRECT]) == <span class="number">0</span>) &#123;</span><br><span class="line">            a[bn % NINDIRECT] = addr = balloc(ip-&gt;dev);</span><br><span class="line">            log_write(bp);</span><br><span class="line">        &#125;</span><br><span class="line">        brelse(bp);</span><br><span class="line">        <span class="keyword">return</span> addr;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">itrunc</span><span class="params">(<span class="keyword">struct</span> inode *ip)</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="type">int</span> i, j, k;</span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">bp</span>, *<span class="title">bp2</span>;</span></span><br><span class="line">  uint *a, *a2;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 二级索引</span></span><br><span class="line">    <span class="keyword">if</span> (ip-&gt;addrs[NDIRECT + <span class="number">1</span>]) &#123;</span><br><span class="line">        bp2 = bread(ip-&gt;dev, ip-&gt;addrs[NDIRECT + <span class="number">1</span>]);</span><br><span class="line">        a2 = (uint*)bp2-&gt;data;</span><br><span class="line">        <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; NINDIRECT; ++j) &#123;</span><br><span class="line">            bp = bread(ip-&gt;dev, a2[j]);</span><br><span class="line">            a = (uint*)bp-&gt;data;</span><br><span class="line">            <span class="comment">// 一级索引</span></span><br><span class="line">            <span class="keyword">for</span> (k = <span class="number">0</span>; k &lt; NINDIRECT; ++k) &#123;</span><br><span class="line">                <span class="keyword">if</span> (a[k])    bfree(ip-&gt;dev, a[k]);</span><br><span class="line">            &#125;</span><br><span class="line">            brelse(bp);</span><br><span class="line">        &#125;</span><br><span class="line">        brelse(bp2);</span><br><span class="line">        bfree(ip-&gt;dev, ip-&gt;addrs[NINDIRECT + <span class="number">1</span>]);</span><br><span class="line">        ip-&gt;addrs[NINDIRECT + <span class="number">1</span>] = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<br>
-<h2 id="Symbolic-links-MODERATE"><a class="header-anchor" href="#Symbolic-links-MODERATE"></a>Symbolic links (MODERATE)</h2>
-<h3 id="实验要求（译）（节选）-v5"><a class="header-anchor" href="#实验要求（译）（节选）-v5"></a>实验要求（译）（节选）</h3>
+<p><br></p>
+<h2 id="symbolic-links-moderate">Symbolic links (MODERATE)</h2>
+<h3 id="实验要求译节选-1">实验要求（译）（节选）</h3>
 <blockquote>
-<p>Symbolic links (or soft links) refer to a linked file by pathname; when a symbolic link is opened, the kernel follows the link to the referred file.</p>
+<p>Symbolic links (or soft links) refer to a linked file by pathname;
+when a symbolic link is opened, the kernel follows the link to the
+referred file.</p>
 </blockquote>
-<p>“符号链接（也称为软链接）指向一个链接到某个路径名的文件，当内核打开一个符号链接时，它会跳转去所指向的文件上”</p>
+<p>"符号链接（也称为软链接）指向一个链接到某个路径名的文件，当内核打开一个符号链接时，它会跳转去所指向的文件上"</p>
 <blockquote>
-<p>You will implement the symlink(char *target, char *path) system call, which creates a new symbolic link at path that refers to file named by target.</p>
+<p>You will implement the symlink(char <em>target, char </em>path)
+system call, which creates a new symbolic link at path that refers to
+file named by target.</p>
 </blockquote>
-<p>“你要实现 <code>symlink(char *target, char *path)</code> 系统调用，这在 <code>path</code> 上创建了一个新的符号链接，指向 <code>target</code> 命名的文件”</p>
-<br>
-<h3 id="实验提示（译）（节选）-v3"><a class="header-anchor" href="#实验提示（译）（节选）-v3"></a>实验提示（译）（节选）</h3>
+<p>"你要实现 <code>symlink(char *target, char *path)</code>
+系统调用，这在 <code>path</code> 上创建了一个新的符号链接，指向
+<code>target</code> 命名的文件"</p>
+<p><br></p>
+<h3 id="实验提示译节选">实验提示（译）（节选）</h3>
 <blockquote>
-<p>Note that target does not need to exist for the system call to succeed. You will need to choose somewhere to store the target path of a symbolic link, for example, in the inode’s data blocks.</p>
+<p>Note that target does not need to exist for the system call to
+succeed. You will need to choose somewhere to store the target path of a
+symbolic link, for example, in the inode's data blocks.</p>
 </blockquote>
-<p>“注意 <code>target</code> 不需要存在以可使系统调用成功。你需要选择某个地方保存这个符号链接的 <code>target</code> 路径，比如在 inode 的数据块中”</p>
+<p>"注意 <code>target</code>
+不需要存在以可使系统调用成功。你需要选择某个地方保存这个符号链接的
+<code>target</code> 路径，比如在 inode 的数据块中"</p>
 <blockquote>
-<p>Modify the open system call to handle the case where the path refers to a symbolic link. If the file does not exist, open must fail. When a process specifies O_NOFOLLOW in the flags to open, open should open the symlink (and not follow the symbolic link).</p>
+<p>Modify the open system call to handle the case where the path refers
+to a symbolic link. If the file does not exist, open must fail. When a
+process specifies O_NOFOLLOW in the flags to open, open should open the
+symlink (and not follow the symbolic link).</p>
 </blockquote>
-<p>“修改 <code>open</code> 系统调用使之可以处理符号链接。如果一个文件不存在，<code>open</code> 失败。当一个进程指定 <code>O_NOFOLLOW</code> 标记打开时，<code>open</code> 应该打开符号链接文件本身（而不是跳转至符号链接所指向的文件）”</p>
+<p>"修改 <code>open</code>
+系统调用使之可以处理符号链接。如果一个文件不存在，<code>open</code>
+失败。当一个进程指定 <code>O_NOFOLLOW</code>
+标记打开时，<code>open</code>
+应该打开符号链接文件本身（而不是跳转至符号链接所指向的文件）"</p>
 <blockquote>
-<p>Other system calls (e.g., link and unlink) must not follow symbolic links; these system calls operate on the symbolic link itself.</p>
+<p>Other system calls (e.g., link and unlink) must not follow symbolic
+links; these system calls operate on the symbolic link itself.</p>
 </blockquote>
-<p>“其他系统调用（比如 <code>link</code> 和 <code>unlink</code>）不需要跳转至符号链接所指向的文件，这些系统调用直接操作符号链接文件本身”</p>
-<br>
-<h3 id="实现思路-v4"><a class="header-anchor" href="#实现思路-v4"></a>实现思路</h3>
-<p>安装系统调用的流程可以参考我 <a href="https://horbyn.github.io/2022/03/16/xv6-2/">系统调用一文开头处结论</a></p>
-<p>首先来说说符号链接是个什么东西，参考 <a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_44465434/article/details/111584291">csdn lab fs 一文</a>：</p>
+<p>"其他系统调用（比如 <code>link</code> 和
+<code>unlink</code>）不需要跳转至符号链接所指向的文件，这些系统调用直接操作符号链接文件本身"</p>
+<p><br></p>
+<h3 id="实现思路-1">实现思路</h3>
+<p>安装系统调用的流程可以参考我 <a
+href="https://horbyn.github.io/2022/03/16/xv6-2/">系统调用一文开头处结论</a></p>
+<p>首先来说说符号链接是个什么东西，参考 <a
+target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_44465434/article/details/111584291">csdn
+lab fs 一文</a>：</p>
 <ul>
 <li>它也是一个文件，它保存在 target 路径这个字符串</li>
 <li>它有两种打开方式：
 <ul>
 <li>follow 方式：打开 target 指向的文件</li>
 <li>nofollow 方式：打开文件本身</li>
+</ul></li>
 </ul>
-</li>
-</ul>
-<p>像 <code>symlink(&quot;/usr/a&quot;, &quot;/usr/b&quot;)</code> 这样调用，其实就是在 <code>/usr/</code> 下创建一个文件 <code>b</code>，它指向同路径下的另一个文件 <code>a</code>。如果是 follow 方式打开 <code>b</code>，其实是打开了 <code>a</code>；否则会直接打开 <code>b</code>，但打开的样子是什么样的，我也不知道，实际也不用关心</p>
-<p>所以 <code>symlink()</code> 其实就只有一个逻辑就是创建文件，直接调用 <code>create()</code> 就行了。需要注意的是创建出来的文件会占用一个 inode，但实际上一个文件只有在真正使用的时候（比如读写文件）才需要 inode。你现在只创建出来，还未到真正时候，所以应该调用 <code>iunlockput()</code> 释放掉占用的 inode，需要用的时候再通过 <code>namei()</code> 某个文件名就可以取回 inode</p>
-<p>最后一个值得注意的是，跑 <code>make grade</code> 需要把 <code>timeout</code> 改大点，我这边无论跑上一个 assignment，还是跑这个，都接近 600 s，放在原来的 <code>timeout</code> 是过不了的。虽然我也不知道这样改算不算犯规…</p>
-<br>
-<h3 id="Solution-v23"><a class="header-anchor" href="#Solution-v23"></a>Solution</h3>
+<p>像 <code>symlink("/usr/a", "/usr/b")</code> 这样调用，其实就是在
+<code>/usr/</code> 下创建一个文件
+<code>b</code>，它指向同路径下的另一个文件 <code>a</code>。如果是 follow
+方式打开 <code>b</code>，其实是打开了 <code>a</code>；否则会直接打开
+<code>b</code>，但打开的样子是什么样的，我也不知道，实际也不用关心</p>
+<p>所以 <code>symlink()</code> 其实就只有一个逻辑就是创建文件，直接调用
+<code>create()</code> 就行了。需要注意的是创建出来的文件会占用一个
+inode，但实际上一个文件只有在真正使用的时候（比如读写文件）才需要
+inode。你现在只创建出来，还未到真正时候，所以应该调用
+<code>iunlockput()</code> 释放掉占用的 inode，需要用的时候再通过
+<code>namei()</code> 某个文件名就可以取回 inode</p>
+<p>最后一个值得注意的是，跑 <code>make grade</code> 需要把
+<code>timeout</code> 改大点，我这边无论跑上一个
+assignment，还是跑这个，都接近 600 s，放在原来的 <code>timeout</code>
+是过不了的。虽然我也不知道这样改算不算犯规..</p>
+<p><br></p>
+<h3 id="solution-1">Solution</h3>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: ./Makefile</span></span><br><span class="line">UPROGS=\</span><br><span class="line">    ...</span><br><span class="line">    $U/_symlinktest\</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: ./grade-lab-fs</span></span><br><span class="line">...</span><br><span class="line">@test(<span class="number">40</span>, <span class="string">&quot;running bigfile&quot;</span>)</span><br><span class="line">def test_bigfile():</span><br><span class="line">    r.run_qemu(shell_script([</span><br><span class="line">        <span class="string">&#x27;bigfile&#x27;</span></span><br><span class="line">    ]), timeout=<span class="number">2000</span>)</span><br><span class="line">    r.match(<span class="string">&#x27;^wrote 65803 blocks$&#x27;</span>)</span><br><span class="line">    r.match(<span class="string">&#x27;^bigfile done; ok$&#x27;</span>)</span><br><span class="line">...</span><br><span class="line">@test(<span class="number">19</span>, <span class="string">&quot;usertests&quot;</span>)</span><br><span class="line">def test_usertests():</span><br><span class="line">    r.run_qemu(shell_script([</span><br><span class="line">        <span class="string">&#x27;usertests&#x27;</span></span><br><span class="line">    ]), timeout=<span class="number">2000</span>)</span><br><span class="line">    r.match(<span class="string">&#x27;^ALL TESTS PASSED$&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: user/usys.pl</span></span><br><span class="line">entry(<span class="string">&quot;symlink&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: user/user.h</span></span><br><span class="line"><span class="comment">// ulib.c</span></span><br><span class="line">...</span><br><span class="line"><span class="type">int</span> <span class="title function_">symlink</span><span class="params">(<span class="type">char</span> *, <span class="type">char</span> *)</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/syscall.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SYS_symlink 23</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/syscall.c</span></span><br><span class="line"><span class="keyword">extern</span> uint64 <span class="title function_">sys_symlink</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="title function_">uint64</span> <span class="params">(*syscalls[])</span><span class="params">(<span class="type">void</span>)</span> = &#123;</span><br><span class="line">...</span><br><span class="line">[SYS_symlink] sys_symlink,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/stat.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> T_SYMLINK 4</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/fcntl.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> O_NOFOLLOW 0x100<span class="comment">// 可以被 open() 调用</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/file.h</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">inode</span> &#123;</span></span><br><span class="line">    ...</span><br><span class="line">    <span class="type">char</span> symlink[<span class="number">128</span>];  <span class="comment">// 软链接 pathname</span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/sysfile.c</span></span><br><span class="line">uint64</span><br><span class="line"><span class="title function_">sys_open</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span>(omode &amp; O_CREATE) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">if</span>((ip = namei(path)) == <span class="number">0</span>) &#123;</span><br><span class="line">            ...</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// lab fs</span></span><br><span class="line">        <span class="comment">// 可能 link 仍然是 link，所以要迭代处理</span></span><br><span class="line">        <span class="type">int</span> depth = <span class="number">11</span>;</span><br><span class="line">        <span class="keyword">while</span> (depth--) &#123;</span><br><span class="line">            <span class="keyword">if</span> (ip-&gt;type == T_SYMLINK &amp;&amp; (omode &amp; O_NOFOLLOW) == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (depth == <span class="number">0</span>) &#123;<span class="comment">// 迭代 10 次以后相当于 cycle</span></span><br><span class="line">                    end_op();</span><br><span class="line">                    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">// NOFOLLOW 这一位为零，即以 follow 形式打开</span></span><br><span class="line">                <span class="keyword">if</span> ((ip = namei(ip-&gt;symlink)) == <span class="number">0</span>) &#123;</span><br><span class="line">                    end_op();</span><br><span class="line">                    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span>    <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 创建一个软链接，指向链接到某路径名的文件</span></span><br><span class="line"><span class="comment">// 在 path 上创建一个指向 target 的文件</span></span><br><span class="line"><span class="comment">// target 不需要存在本系统调用也可以成功</span></span><br><span class="line">uint64</span><br><span class="line"><span class="title function_">sys_symlink</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="type">char</span> target[MAXPATH], path[MAXPATH];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(argstr(<span class="number">0</span>, target, MAXPATH) &lt; <span class="number">0</span> || argstr(<span class="number">1</span>, path, MAXPATH) &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">inode</span> *<span class="title">ip</span>;</span></span><br><span class="line">    begin_op();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// symbolic link 也属于文件</span></span><br><span class="line">    <span class="comment">// create() 会返回带锁的 inode</span></span><br><span class="line">    ip = create(path, T_SYMLINK, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span>(ip == <span class="number">0</span>)&#123;</span><br><span class="line">        end_op();</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">strncpy</span>(ip-&gt;symlink, target, MAXPATH);</span><br><span class="line"></span><br><span class="line">    iunlockput(ip);</span><br><span class="line">    end_op();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<br>
-<h2 id="写在最后-v9"><a class="header-anchor" href="#写在最后-v9"></a>写在最后</h2>
+<p><br></p>
+<h2 id="写在最后">写在最后</h2>
 <p>共耗时 9h18m</p>
 
     </article>
@@ -555,7 +639,7 @@
         <div class="license-wrapper">
             <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
             <p>Link：<a href="https://horbyn.github.io/2022/04/17/xv6-9/">https://horbyn.github.io/2022/04/17/xv6-9/</a>
-            <p>Publish date：<a href="https://horbyn.github.io/2022/04/17/xv6-9/">April 17th 2022, 5:46:26 pm</a>
+            <p>Publish date：<a href="https://horbyn.github.io/2022/04/17/xv6-9/">April 17th 2022, 9:46:26 am</a>
             <p>Update date：<a href="https://horbyn.github.io/2022/04/17/xv6-9/">February 28th 2025, 3:27:31 pm</a>
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
@@ -625,7 +709,7 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ABOUT-v4"><span class="toc-number">1.</span> <span class="toc-text">ABOUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Large-files-MODERATE"><span class="toc-number">2.</span> <span class="toc-text">Large files (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%EF%BC%88%E8%AF%91%EF%BC%89%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89-v4"><span class="toc-number">2.1.</span> <span class="toc-text">实验要求（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA"><span class="toc-number">2.2.</span> <span class="toc-text">实验提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF-v3"><span class="toc-number">2.3.</span> <span class="toc-text">实现思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v22"><span class="toc-number">2.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Symbolic-links-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">Symbolic links (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%EF%BC%88%E8%AF%91%EF%BC%89%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89-v5"><span class="toc-number">3.1.</span> <span class="toc-text">实验要求（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA%EF%BC%88%E8%AF%91%EF%BC%89%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89-v3"><span class="toc-number">3.2.</span> <span class="toc-text">实验提示（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF-v4"><span class="toc-number">3.3.</span> <span class="toc-text">实现思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v23"><span class="toc-number">3.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v9"><span class="toc-number">4.</span> <span class="toc-text">写在最后</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#about"><span class="toc-number">1.</span> <span class="toc-text">ABOUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#large-files-moderate"><span class="toc-number">2.</span> <span class="toc-text">Large files (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%E8%AF%91%E8%8A%82%E9%80%89"><span class="toc-number">2.1.</span> <span class="toc-text">实验要求（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA"><span class="toc-number">2.2.</span> <span class="toc-text">实验提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF"><span class="toc-number">2.3.</span> <span class="toc-text">实现思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution"><span class="toc-number">2.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#symbolic-links-moderate"><span class="toc-number">3.</span> <span class="toc-text">Symbolic links (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%E8%AF%91%E8%8A%82%E9%80%89-1"><span class="toc-number">3.1.</span> <span class="toc-text">实验要求（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA%E8%AF%91%E8%8A%82%E9%80%89"><span class="toc-number">3.2.</span> <span class="toc-text">实验提示（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF-1"><span class="toc-number">3.3.</span> <span class="toc-text">实现思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-1"><span class="toc-number">3.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">4.</span> <span class="toc-text">写在最后</span></a></li></ol>
             </div>
         <!-- sidebar -->
         <div class="sidebar sidebar-hide">
@@ -796,6 +880,10 @@
 
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
+            <span class="sidebar-tag-name" data-tags="Blogs">
+                <span class="iconfont-archer">&#xe606;</span>
+                Blogs
+            </span>
             <span class="sidebar-tag-name" data-tags="hoo">
                 <span class="iconfont-archer">&#xe606;</span>
                 hoo
@@ -811,10 +899,6 @@
             <span class="sidebar-tag-name" data-tags="xv6">
                 <span class="iconfont-archer">&#xe606;</span>
                 xv6
-            </span>
-            <span class="sidebar-tag-name" data-tags="Blogs">
-                <span class="iconfont-archer">&#xe606;</span>
-                Blogs
             </span>
     </div>
     <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
