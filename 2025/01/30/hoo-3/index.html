@@ -18,7 +18,7 @@
 <meta property="og:description" content="x86 内核的内存管理机制负责分配和管理系统内存，包括虚拟内存管理和物理内存管理。物理内存管理负责统筹整个系统的内存空间，暴露分配和释放接口供上层使用；虚拟内存管理需要启用页表机制，它为每个进程设置了一个独立的线性空间，确保进程之间的隔离。同时，虚拟内存管理还是内存动态分配的基础">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-01-30T02:37:23.000Z">
-<meta property="article:modified_time" content="2025-02-28T15:27:31.246Z">
+<meta property="article:modified_time" content="2025-03-02T02:57:06.921Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="hoo">
 <meta name="twitter:card" content="summary">
@@ -447,7 +447,7 @@
         <h1 id="获取物理内存容量">获取物理内存容量</h1>
 <p>在引导阶段通过 <code>int $0x15, %eax = 0xe820</code> 获取的 ARDS
 结构体数组保存在内存 <code>0x7_a204</code> 处，解析代码如下，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/mem.c#L14">kern/module/mem.c</a>，逻辑很简单，直接在代码处注释了：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/mem.c#L14">kern/module/mem.c</a>，逻辑很简单，直接在代码处注释了：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ARDS 结构体</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span> base_low_;</span><br><span class="line">    <span class="type">uint32_t</span> base_hig_;</span><br><span class="line">    <span class="type">uint32_t</span> length_low_;</span><br><span class="line">    <span class="type">uint32_t</span> length_hig_;</span><br><span class="line">    <span class="type">uint32_t</span> type_;</span><br><span class="line">&#125; <span class="type">ards_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 内存信息结构体</span></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">mem_info</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span> base_;</span><br><span class="line">    <span class="type">uint32_t</span> length_;</span><br><span class="line">&#125; __mminfo = &#123; <span class="number">0x100000</span>, <span class="number">0</span> &#125;; <span class="comment">// 初始化为从 0x10_0000 开始</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 从内存 0x7_a200 处获取相关信息</span></span><br><span class="line"><span class="type">uint32_t</span> *ards_num = (<span class="type">uint32_t</span> *)<span class="number">0x7a200</span>;</span><br><span class="line"><span class="type">ards_t</span> *ards = (<span class="type">ards_t</span> *)<span class="number">0x7a204</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; *ards_num; ++i) &#123;</span><br><span class="line">	<span class="keyword">if</span> ((ards[i].type_ == <span class="number">1</span>) <span class="comment">// 类型为 1 表示软件可用，其他值表示保留给硬件使用</span></span><br><span class="line">	&amp;&amp; (ards[i].base_low_ == __mminfo.base_ + __mminfo.length_)) &#123;</span><br><span class="line">		<span class="comment">// 仅记录连续的内存区域作为可用内存</span></span><br><span class="line">		__mminfo.length_ += ards[i].length_low_;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <h1 id="物理内存管理">物理内存管理</h1>
 <p>对于 <code>32-bit</code> 内核来说，物理内存最大支持
@@ -467,7 +467,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <p>因此，分配物理地址就是找出空闲的比特位，然后置位；释放就是找出对应的比特位，清位</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MM_BASE    0x100000    <span class="comment">// 可用内存地址起址</span></span></span><br><span class="line"><span class="type">static</span> <span class="type">bitmap_t</span> __bm_phymm;    <span class="comment">// 物理内存管理模块的位图结构</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 分配物理地址</span></span><br><span class="line"><span class="type">void</span> *</span><br><span class="line"><span class="title function_">phy_alloc_page</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="type">int</span> i = bitmap_scan_empty(&amp;__bm_phymm);</span><br><span class="line">    bitmap_set(&amp;__bm_phymm, i);</span><br><span class="line">    <span class="keyword">return</span> (<span class="type">void</span> *)((i &lt;&lt;= <span class="number">12</span>) + MM_BASE);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 释放物理地址</span></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">phy_release_page</span><span class="params">(<span class="type">void</span> *phy_addr)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (phy_addr == null)    <span class="keyword">return</span>;</span><br><span class="line">    <span class="keyword">if</span> ((<span class="type">uint32_t</span>)phy_addr &lt; MM_BASE)</span><br><span class="line">        panic(<span class="string">&quot;phy_release_page(): cannot release kernel physical memory&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> i = ((<span class="type">uint32_t</span>)phy_addr - MM_BASE) &gt;&gt; <span class="number">12</span>;</span><br><span class="line">    bitmap_clear(&amp;__bm_phymm, i);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p><code>bitmap_t</code> 是一个统一封装的位图结构，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/bitmap.h#L10">kern/utilities/bitmap.h</a></p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/bitmap.h#L10">kern/utilities/bitmap.h</a></p>
 <ul>
 <li>分配
 <ul>
@@ -481,12 +481,12 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <li><code>null</code> 是一个 <code>void *</code> 指针，并不是
 0，否则虚拟地址 0 就不能被使用了。本质上 <code>null</code>
 是一个符号，对于内核，它的定义详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/x86.c#L3">kern/x86.c</a>；对于用户态应用，它的定义详见
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/x86.c#L3">kern/x86.c</a>；对于用户态应用，它的定义详见
 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/null.c#L2">user/null.c</a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/null.c#L2">user/null.c</a></li>
 <li><code>panic()</code> 函数的作用是向显卡写入字符串，然后执行
 <code>hlt</code> 指令，更多细节详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/panic.c#L47">kern/panic.c</a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/panic.c#L47">kern/panic.c</a></li>
 <li>释放物理地址的时候，先计算出位图数组的索引，然后调用
 <code>bitmap_clear()</code> 将位图数组指定元素清位</li>
 </ul></li>
@@ -533,7 +533,7 @@ PDE 291</li>
 PDE、第三次计算 PTE。其中，第二次需要指定 PDE 索引，所以组合起来就是区间
 <code>[0xffc0_0000, 0xffff_f000)</code></p>
 <p>根据这个规则，定义以下宏用来操作页目录表和页表，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/page/page_stuff.h#L13">kern/paga/page_stuff.h</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/page/page_stuff.h#L13">kern/paga/page_stuff.h</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> PGDOWN(x, align)    (((uint32_t)(x)) &amp; ~((align) - 1))</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PGUP(x, align)      (PGDOWN(((uint32_t)(x) + (align) - 1), (align)))</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PD_INDEX(x)         (((x)&gt;&gt;22) &amp; 0x3ff)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PT_INDEX(x)         ((((uint32_t)(x))&gt;&gt;12) &amp; 0x3ff)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PG_DIR_VA           0xfffff000</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> GET_PDE(va)         \</span></span><br><span class="line"><span class="meta">    (PG_DIR_VA | (PD_INDEX(PGDOWN((va), PGSIZE)) * sizeof(uint32_t)))</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> GET_PTE(va)         \</span></span><br><span class="line"><span class="meta">    (0xffc00000 | ((PD_INDEX(PGDOWN((va), PGSIZE)) &lt;&lt; 12) \</span></span><br><span class="line"><span class="meta">    | (PT_INDEX(PGDOWN((va), PGSIZE)) * sizeof(uint32_t))))</span></span><br></pre></td></tr></table></figure>
 <ul>
 <li><code>PGDOWN()</code>：线性地址向下取整，即 <code>0xc000_5124</code>
@@ -548,7 +548,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <li><code>GET_PTE()</code>：线性地址转换为对应页表的线性地址，原理也是上面的窍门</li>
 </ul>
 <p>借助这些宏定义，可以实现创建映射的接口，具体代码详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L83">kern/mem/pm.c</a>，以下代码有删减：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/pm.c#L83">kern/mem/pm.c</a>，以下代码有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">set_mapping</span><span class="params">(<span class="type">void</span> *va, <span class="type">void</span> *pa, <span class="type">pgelem_t</span> flags)</span> &#123;</span><br><span class="line"></span><br><span class="line">    __asm__ (<span class="string">&quot;invlpg (%0)&quot;</span> : : <span class="string">&quot;a&quot;</span> (va));</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 取出 PDE</span></span><br><span class="line">    <span class="type">pgelem_t</span> *pgdir_va = (<span class="type">pgelem_t</span> *)GET_PDE(va);</span><br><span class="line">    <span class="type">const</span> <span class="type">pgelem_t</span> FLAGS = PGFLAG_US | PGFLAG_RW | PGFLAG_PS;</span><br><span class="line">    <span class="type">pgelem_t</span> pde_flags = (*pgdir_va &amp; ~PG_MASK) &amp; FLAGS;</span><br><span class="line">    <span class="keyword">if</span> (pde_flags != FLAGS) &#123;</span><br><span class="line">        <span class="comment">// 缺乏页表</span></span><br><span class="line">        <span class="type">void</span> *pgtbl = phy_alloc_page();</span><br><span class="line">        *pgdir_va = (<span class="type">pgelem_t</span>)pgtbl | FLAGS;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 取出 PTE</span></span><br><span class="line">    <span class="type">pgelem_t</span> *pgtbl_va = (<span class="type">pgelem_t</span> *)GET_PTE(va);</span><br><span class="line">    *pgtbl_va = (<span class="type">pgelem_t</span>)pa | flags;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>上面代码片段有一条 <code>x86</code> 指令 <code>invlpg</code>，详见 <a
 target="_blank" rel="noopener" href="https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3a-part-1-manual.pdf">《IA32
@@ -608,12 +608,12 @@ src="https://pic1.imgdb.cn/item/679c64e7d0e0a243d4f8beda.png" /></p>
 "连续"
 的概念，链表则可以在数据域想填充什么数据就填充什么数据。而位图则是用来分配管理结构，因为管理结构也需要使用线性地址，而链表是动态结构，没办法在事前知道需要使用多少结点</p>
 <p>管理结构的分配释放和物理内存管理一样，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L34">kern/mem/vm_kern.c
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm_kern.c#L34">kern/mem/vm_kern.c
 分配函数</a> 和 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L49">kern/mem/vm_kern.c
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm_kern.c#L49">kern/mem/vm_kern.c
 释放函数</a></p>
 <p>下图是链表结构的简化视图，具体定义详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vspace.h#L19">kern/mem/vspace.h</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vspace.h#L19">kern/mem/vspace.h</a>：</p>
 <p><img
 src="https://pic1.imgdb.cn/item/679c7cddd0e0a243d4f8c025.png" /></p>
 <p>这是一个双重链表。单链表负责管理虚拟地址（虚线箭头矩形），每个单链表结点总是有序的，高地址总是放在链头，目的是分配地址时尽可能保证
@@ -633,7 +633,7 @@ src="https://pic1.imgdb.cn/item/679c8449d0e0a243d4f8c067.png" /></p>
 这个线性地址以及
 <code>2</code>。因此，<strong>单链表为空时，新建一个单链表，新建管理结构</strong></p>
 <p>具体代码详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L66">kern/mem/vm.c</a>，以下是简化片段：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L66">kern/mem/vm.c</a>，以下是简化片段：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 新建单链表</span></span><br><span class="line"><span class="type">vspace_t</span> *cur = prev;</span><br><span class="line"><span class="keyword">if</span> (list_isempty(&amp;prev-&gt;list_)) &#123;</span><br><span class="line">	cur = vspace_alloc();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 新建单链表结点</span></span><br><span class="line"><span class="type">node_t</span>  *node_free = node_alloc();</span><br><span class="line"><span class="type">vaddr_t</span> *vaddr_free = vaddr_alloc();</span><br><span class="line">vaddr_set(vaddr_free, last_end, amount);</span><br><span class="line">node_set(node_free, vaddr_free, null);</span><br><span class="line">list_insert(&amp;cur-&gt;list_, node_free, <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 单链表加入双重链表</span></span><br><span class="line"><span class="keyword">if</span> (list_isempty(&amp;prev-&gt;list_)) &#123;</span><br><span class="line">    vspace_append(prev, cur);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p><code>prev</code>
 是在遍历双重链表过程中，找到的第一个可分配地址的元素。如果找到的
@@ -651,7 +651,7 @@ src="https://pic1.imgdb.cn/item/679c8ca2d0e0a243d4f8c120.png" /></p>
 <code>56KB</code>，因此最后会将空闲地址锁定在
 <code>0x0001_7000</code>。之后便是一些链表的插入操作，因此，<strong>单链表非空时，插入结点</strong></p>
 <p>具体代码详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L52">kern/mem/vm.c</a>，以下是关键代码片段：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L52">kern/mem/vm.c</a>，以下是关键代码片段：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> (worker != null) &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (worker-&gt;next_ != null</span><br><span class="line">        &amp;&amp; (((worker-&gt;next_-&gt;begin_ - last_end) / PGSIZE) &lt; amount)) &#123;</span><br><span class="line">        <span class="comment">// 没有足够的空间</span></span><br><span class="line"></span><br><span class="line">        last_end = worker-&gt;next_-&gt;end_;</span><br><span class="line">        worker = worker-&gt;next_;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 拥有足够的空间</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125; <span class="comment">// end while()</span></span><br></pre></td></tr></table></figure>
 <p><code>worker</code> 是双重链表的工作指针，<code>while()</code>
 是整个双重链表的遍历过程。<code>if()</code>
@@ -670,7 +670,7 @@ src="https://pic1.imgdb.cn/item/679c904fd0e0a243d4f8c1a2.png" /></p>
 <code>0x0000_2000</code>
 也是同样道理。所以，如果<strong>释放地址就是链头第一个，或者链尾最后一个（即释放地址在两端），直接删除</strong></p>
 <p>具体代码详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L98">kern/mem/vm.c</a>，以下是简化片段：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L98">kern/mem/vm.c</a>，以下是简化片段：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">enum</span> <span class="title">location_e</span> &#123;</span></span><br><span class="line">    LCT_BEGIN = <span class="number">0</span>,</span><br><span class="line">    LCT_MIDDLE,</span><br><span class="line">    LCT_END</span><br><span class="line">&#125; lct;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 查找待释放地址 va 所在的单链表</span></span><br><span class="line"><span class="type">vspace_t</span> *prev_list = null;</span><br><span class="line"><span class="keyword">while</span> (cur_list != null) &#123;</span><br><span class="line">    <span class="keyword">if</span> (cur_list-&gt;begin_ &lt;= (<span class="type">uint32_t</span>)va &amp;&amp; (<span class="type">uint32_t</span>)va &lt; cur_list-&gt;end_)</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    prev_list = cur_list;</span><br><span class="line">    cur_list = cur_list-&gt;next_;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 遍历单链表</span></span><br><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">    node = list_find(&amp;cur_list-&gt;list_, i);</span><br><span class="line">    <span class="keyword">if</span> (node != null) &#123;</span><br><span class="line">        lct = (i == <span class="number">1</span>) ? LCT_BEGIN : ((i == cur_list-&gt;list_.size_) ? LCT_END : LCT_MIDDLE);</span><br><span class="line">        <span class="comment">// 释放单链表两端地址</span></span><br><span class="line">        list_remove(&amp;cur_list-&gt;list_, i);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    ++i;</span><br><span class="line">&#125; <span class="keyword">while</span> (node != null);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 释放物理页</span></span><br><span class="line"><span class="comment">// 释放管理结构</span></span><br></pre></td></tr></table></figure>
 <p>定义一个枚举值用来表示单链表结点的位置：位于单链表的链头
 <code>LCT_BEGIN</code>、中间 <code>LCT_MIDDLE</code> 和链尾
@@ -684,7 +684,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <p>后续的逻辑依次是释放虚拟地址 <code>va</code>
 对应的物理页，这会调用物理内存管理模块的接口来释放；以及释放虚拟模块使用的管理结构，与管理结构相关的分配和释放接口详见
 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/metadata.h#L8">kern/mem/metadata.{h,c}</a>，逻辑十分直白简单</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/metadata.h#L8">kern/mem/metadata.{h,c}</a>，逻辑十分直白简单</p>
 <h3 id="释放中间地址">释放中间地址</h3>
 <p>这是另一种释放地址的情况，假设之后线程需要释放 <code>0x7000</code>
 地址，则：</p>
@@ -744,10 +744,10 @@ src="https://pic1.imgdb.cn/item/67a1bd75d0e0a243d4fbc69a.png" /></p>
 <li>释放内存可以视为将元素加入链表</li>
 </ul>
 <p><code>hoo</code> 实现了一个格式化链表，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/format_list.h#L10">kern/mem/format_list.h</a>，该定义对应着链表的管理信息：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/format_list.h#L10">kern/mem/format_list.h</a>，该定义对应着链表的管理信息：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">format_list</span> &#123;</span></span><br><span class="line">    <span class="type">list_t</span>             list_;     <span class="comment">// 链表</span></span><br><span class="line">    <span class="type">uint32_t</span>           capacity_; <span class="comment">// 链表元素个数</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">format_list</span> *<span class="title">next_</span>;</span>    <span class="comment">// 下一条链表</span></span><br><span class="line">&#125; <span class="type">fmtlist_t</span>;</span><br></pre></td></tr></table></figure>
 <p>这里链表是一个统一的数据结构，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/list.h#L11">kern/utilities/list.h</a>，提供以下接口：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/list.h#L11">kern/utilities/list.h</a>，提供以下接口：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span>   <span class="title function_">list_init</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>, <span class="type">bool</span> cycle)</span>;              <span class="comment">// 初始化</span></span><br><span class="line"><span class="type">node_t</span> *<span class="title function_">list_find</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>, <span class="type">int</span> idx)</span>;                <span class="comment">// 按索引查找</span></span><br><span class="line"><span class="type">void</span>   <span class="title function_">list_insert</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>, <span class="type">node_t</span> *node, <span class="type">int</span> idx)</span>; <span class="comment">// 插入元素到指定索引</span></span><br><span class="line"><span class="type">node_t</span> *<span class="title function_">list_remove</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>, <span class="type">int</span> idx)</span>;              <span class="comment">// 移除指定索引元素</span></span><br><span class="line"><span class="type">bool</span>   <span class="title function_">list_isempty</span><span class="params">(<span class="type">list_t</span> *<span class="built_in">list</span>)</span>;                       <span class="comment">// 判空</span></span><br></pre></td></tr></table></figure>
 <p>格式化链表提供分配和释放两个接口：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">fmtlist_alloc</span><span class="params">(<span class="type">fmtlist_t</span> **fmtlist)</span>;</span><br><span class="line"><span class="type">bool</span> <span class="title function_">fmtlist_release</span><span class="params">(<span class="type">fmtlist_t</span> **fmtlist, <span class="type">void</span> *elem)</span>;</span><br></pre></td></tr></table></figure>
@@ -755,10 +755,10 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <code>list_remove()</code>；释放则对应插入链表元素，即
 <code>list_insert()</code></p>
 <p>桶管理者定义详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/bucket.h#L10">kern/mem/bucket.h</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/bucket.h#L10">kern/mem/bucket.h</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">buckX_manager</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span>             size_;</span><br><span class="line">    <span class="type">fmtlist_t</span>            *chain_;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buckX_manager</span> *<span class="title">next_</span>;</span></span><br><span class="line">&#125; <span class="type">buckx_mngr_t</span>;</span><br></pre></td></tr></table></figure>
 <p>基于上述基础结构，<code>hoo</code> 实现的动态分配详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L13">kern/dyn/dynamic.c</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L13">kern/dyn/dynamic.c</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *</span><br><span class="line"><span class="title function_">dyn_alloc</span><span class="params">(<span class="type">uint32_t</span> size)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (size == <span class="number">0</span>)    <span class="keyword">return</span> null;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// #1</span></span><br><span class="line">    <span class="type">pcb_t</span> *cur_pcb = get_current_pcb();</span><br><span class="line">    <span class="type">buckx_mngr_t</span> *mngr = cur_pcb-&gt;hmngr_;</span><br><span class="line">    <span class="type">pgelem_t</span> flags = PGFLAG_US | PGFLAG_RW | PGFLAG_PS;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// #2</span></span><br><span class="line">    <span class="keyword">while</span> (mngr != null) &#123;</span><br><span class="line">        <span class="keyword">if</span> (mngr-&gt;size_ &gt;= size) &#123;</span><br><span class="line">            <span class="keyword">if</span> (mngr-&gt;chain_ == null) &#123;</span><br><span class="line">                <span class="type">void</span> *pa = phy_alloc_page();          <span class="comment">// 分配物理页</span></span><br><span class="line">                mngr-&gt;chain_ = vir_alloc_pages();     <span class="comment">// 分配线性地址</span></span><br><span class="line">                set_mapping(mngr-&gt;chain_, pa, flags); <span class="comment">// 建立映射</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        mngr = mngr-&gt;next_;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// #3</span></span><br><span class="line">    <span class="keyword">if</span> (mngr == null) &#123;</span><br><span class="line">        <span class="type">uint32_t</span> pages = size &lt;= PGSIZE ? <span class="number">1</span> : (size + PGSIZE - <span class="number">1</span>) / PGSIZE;</span><br><span class="line"></span><br><span class="line">        <span class="type">void</span> *va = vir_alloc_pages();                <span class="comment">// 连续的线性地址的起始</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; pages; ++i) &#123;</span><br><span class="line">            <span class="type">void</span> *pa = phy_alloc_page();             <span class="comment">// 分配物理页</span></span><br><span class="line">            set_mapping(va + i * PGSIZE, pa, flags); <span class="comment">// 建立映射</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> va;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// #4</span></span><br><span class="line">    <span class="keyword">return</span> fmtlist_alloc(&amp;mngr-&gt;chain_);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：由于堆空间每个线程都不一样，所以
@@ -774,7 +774,7 @@ pcb，再取出桶管理者</li>
 以下的空间，则复用格式化链表的分配接口来分配内存</li>
 </ul>
 <p>动态释放详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L52">kern/dyn/dynamic.c</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L52">kern/dyn/dynamic.c</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">dyn_free</span><span class="params">(<span class="type">void</span> *ptr)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (ptr == null)    <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    <span class="type">pcb_t</span> *cur_pcb = get_current_pcb();</span><br><span class="line">    <span class="type">buckx_mngr_t</span> *mngr = cur_pcb-&gt;hmngr_;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (mngr != null) &#123;</span><br><span class="line">        <span class="comment">// #1</span></span><br><span class="line">        <span class="keyword">if</span> (fmtlist_release(&amp;mngr-&gt;chain_, ptr)) &#123;</span><br><span class="line">            <span class="comment">// #2</span></span><br><span class="line">            <span class="keyword">if</span> (mngr-&gt;chain_-&gt;capacity_ == mngr-&gt;chain_-&gt;list_.size_) &#123;</span><br><span class="line">                vir_release_pages();</span><br><span class="line">                mngr-&gt;chain_ = null;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        mngr = mngr-&gt;next_;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// #3</span></span><br><span class="line">    <span class="keyword">if</span> (mngr == null)    vir_release_pages();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：复用格式化链表的释放接口</li>
@@ -789,38 +789,38 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <p>对于物理内存管理模块，需要实现两类型接口：</p>
 <ul>
 <li>分配：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L37"><code>void *phy_alloc_page()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/pm.c#L37"><code>void *phy_alloc_page()</code></a></li>
 <li>释放：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L52"><code>void phy_release_page()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/pm.c#L52"><code>void phy_release_page()</code></a></li>
 </ul>
 <p>对于页表机制，需要实现：</p>
 <ul>
 <li>创建映射：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L83"><code>void set_mapping()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/pm.c#L83"><code>void set_mapping()</code></a></li>
 </ul>
 <p>对于虚拟内存管理模块，也是两类接口：</p>
 <ul>
 <li>分配
 <ul>
 <li>管理结构：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L34"><code>void *vir_alloc_kern()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm_kern.c#L34"><code>void *vir_alloc_kern()</code></a></li>
 <li>非管理结构：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L42"><code>void *vir_alloc_pages()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L42"><code>void *vir_alloc_pages()</code></a></li>
 </ul></li>
 <li>释放
 <ul>
 <li>管理结构：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L49"><code>void vir_release_kern()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm_kern.c#L49"><code>void vir_release_kern()</code></a></li>
 <li>非管理结构：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L98"><code>void vir_release_pages()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L98"><code>void vir_release_pages()</code></a></li>
 </ul></li>
 </ul>
 <p>对于动态内存管理模块，也是两类接口：</p>
 <ul>
 <li>分配：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L13"><code>void *dyn_alloc()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L13"><code>void *dyn_alloc()</code></a></li>
 <li>释放：<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L52"><code>void dyn_free()</code></a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L52"><code>void dyn_free()</code></a></li>
 </ul>
 
     </article>
@@ -829,7 +829,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
             <p>Link：<a href="https://horbyn.github.io/2025/01/30/hoo-3/">https://horbyn.github.io/2025/01/30/hoo-3/</a>
             <p>Publish date：<a href="https://horbyn.github.io/2025/01/30/hoo-3/">January 30th 2025, 10:37:23 am</a>
-            <p>Update date：<a href="https://horbyn.github.io/2025/01/30/hoo-3/">February 28th 2025, 11:27:31 pm</a>
+            <p>Update date：<a href="https://horbyn.github.io/2025/01/30/hoo-3/">March 2nd 2025, 2:57:06 am</a>
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
     <!-- paginator -->
@@ -934,9 +934,12 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
         
         
         
+        
+        
+        
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 24
+        Total : 27
         </div>
         <!-- search  -->
     </div>
@@ -944,11 +947,15 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <div class="archive-year"> 2025 </div>
             <ul class="year-list">
         <li class="archive-post-item">
+            <span class="archive-post-date">03/03</span>
+            <a class="archive-post-title" href="/2025/03/02/github-index/">美化 Github 主页</a>
+        </li>
+        <li class="archive-post-item">
             <span class="archive-post-date">02/10</span>
             <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/07</span>
+            <span class="archive-post-date">02/08</span>
             <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
         </li>
         <li class="archive-post-item">
@@ -976,21 +983,28 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <a class="archive-post-title" href="/2025/01/02/hoo-1/">「从零到一」实现一个 x86 的内核</a>
         </li>
                 </ul>
+            <div class="archive-year"> 2024 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/24</span>
+            <a class="archive-post-title" href="/2024/10/23/privilege/">关于 x86 特权级这种保护机制</a>
+        </li>
+                </ul>
             <div class="archive-year"> 2023 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">11/01</span>
+            <span class="archive-post-date">11/02</span>
             <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
         </li>
                 </ul>
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">05/28</span>
+            <span class="archive-post-date">05/29</span>
             <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/21</span>
+            <span class="archive-post-date">04/22</span>
             <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
         </li>
         <li class="archive-post-item">
@@ -998,35 +1012,35 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/17</span>
+            <span class="archive-post-date">04/18</span>
             <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/15</span>
+            <span class="archive-post-date">04/16</span>
             <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/11</span>
+            <span class="archive-post-date">04/12</span>
             <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/05</span>
+            <span class="archive-post-date">04/06</span>
             <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/04</span>
+            <span class="archive-post-date">04/05</span>
             <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/29</span>
+            <span class="archive-post-date">03/30</span>
             <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/29</span>
+            <span class="archive-post-date">03/30</span>
             <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/25</span>
+            <span class="archive-post-date">03/26</span>
             <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
         </li>
         <li class="archive-post-item">
@@ -1034,16 +1048,20 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/14</span>
+            <span class="archive-post-date">03/15</span>
             <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/28</span>
+            <span class="archive-post-date">03/01</span>
             <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/25</span>
+            <span class="archive-post-date">02/26</span>
             <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/23</span>
+            <a class="archive-post-title" href="/2022/02/22/hello-world/">Hello world</a>
         </li>
             </ul>
     </div>
@@ -1066,6 +1084,10 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <span class="sidebar-tag-name" data-tags="xv6">
                 <span class="iconfont-archer">&#xe606;</span>
                 xv6
+            </span>
+            <span class="sidebar-tag-name" data-tags="Blogs">
+                <span class="iconfont-archer">&#xe606;</span>
+                Blogs
             </span>
     </div>
     <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>

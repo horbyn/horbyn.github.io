@@ -17,11 +17,18 @@
 <meta property="og:site_name">
 <meta property="og:description" content="这个一个基于 Winsock 的 Win32 端对端聊天软件。很久很久以前大三的时候就做过控制台的烂尾工程，这次花了点时间重新捡起，新封装了 UI。但由于我兴趣不在后台这方面，所以像 IO 模型、自定义协议之类的机制，都只是 Primer 的程度，本文目的更多是提供一种实现思路">
 <meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://pic.imgdb.cn/item/626251eb239250f7c55c6cfc.png">
+<meta property="og:image" content="https://pic.imgdb.cn/item/62625226239250f7c55cf2d6.png">
+<meta property="og:image" content="https://pic.imgdb.cn/item/626252dc239250f7c55eba85.png">
+<meta property="og:image" content="https://pic.imgdb.cn/item/626252dc239250f7c55eba8b.png">
+<meta property="og:image" content="https://pic.imgdb.cn/item/626252dc239250f7c55eba91.png">
+<meta property="og:image" content="https://pic.imgdb.cn/item/62625367239250f7c5606cf7.png">
 <meta property="article:published_time" content="2022-03-14T14:39:10.000Z">
 <meta property="article:modified_time" content="2025-02-28T15:27:31.334Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="winsock">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pic.imgdb.cn/item/626251eb239250f7c55c6cfc.png">
     <meta http-equiv="Cache-control" content="no-cache">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <link rel="icon" href="/avatar/link.PNG">
@@ -444,102 +451,42 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="介绍">介绍</h2>
-<p>这是一个简单的局域网端对端通信
-demo，我开发时更多是出于学习目的，所以更多时候我采用的实现效果是入门级的，如果你想深入了解
-IO 模型或者其他内容那可能本文不适合你。整个程序基于 TCP
-协议进行通信，采用足够简单的 select
-模型实现异步，没有采用哪怕一点儿多线程知识。如果你也想实现一个类似的效果，我认为先导知识是
-<code>Win32 Framework</code>、<code>Winsock Framework</code> 和
-<code>select 模型</code> 足矣，本文目的主要是阐述设计思路</p>
-<p>项目地址 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2">Win32-chat-room-winsock2</a>，欢迎
-star/make contribution/post issue 👋</p>
-<p><br></p>
-<h2 id="license">LICENSE</h2>
-<p>文档中涉及到的源代码使用 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/master/LICENSE">MIT</a>
-许可证</p>
-<p><br></p>
-<h2 id="演示">演示</h2>
-<h3 id="本地测试">本地测试</h3>
-<p>本地测试服务器默认绑定 "127.0.0.1:8888"</p>
-<p><img
-src="https://pic.imgdb.cn/item/626251eb239250f7c55c6cfc.png" /></p>
-<p><br></p>
-<h3 id="局域网测试">局域网测试</h3>
-<p>局域网测试需确保两台电脑处于同一
-wifi，然后服务器绑定地址用环回地址是不行的，需要绑定到本地电脑的 ip
-地址上</p>
-<p>我本地地址是
-<code>192.168.1.4</code>，服务器因此绑定这个地址，我另一台电脑其本地地址
-<code>192.168.1.7</code> ，由于处于同一局域网，因此能实现通信</p>
-<p><img
-src="https://pic.imgdb.cn/item/62625226239250f7c55cf2d6.png" /></p>
-<p><img
-src="https://pic.imgdb.cn/item/626252dc239250f7c55eba85.png" /></p>
-<p><br></p>
-<h2 id="缺陷">缺陷</h2>
+        <h2 id="介绍-v2"><a class="header-anchor" href="#介绍-v2"></a>介绍</h2>
+<p>这是一个简单的局域网端对端通信 demo，我开发时更多是出于学习目的，所以更多时候我采用的实现效果是入门级的，如果你想深入了解 IO 模型或者其他内容那可能本文不适合你。整个程序基于 TCP 协议进行通信，采用足够简单的 select 模型实现异步，没有采用哪怕一点儿多线程知识。如果你也想实现一个类似的效果，我认为先导知识是 <code>Win32 Framework</code>、<code>Winsock Framework</code> 和 <code>select 模型</code> 足矣，本文目的主要是阐述设计思路</p>
+<p>项目地址 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2">Win32-chat-room-winsock2</a>，欢迎 star/make contribution/post issue 👋</p>
+<br>
+<h2 id="LICENSE"><a class="header-anchor" href="#LICENSE"></a>LICENSE</h2>
+<p>文档中涉及到的源代码使用 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/master/LICENSE">MIT</a> 许可证</p>
+<br>
+<h2 id="演示"><a class="header-anchor" href="#演示"></a>演示</h2>
+<h3 id="本地测试"><a class="header-anchor" href="#本地测试"></a>本地测试</h3>
+<p>本地测试服务器默认绑定 “127.0.0.1:8888”</p>
+<p><img src="https://pic.imgdb.cn/item/626251eb239250f7c55c6cfc.png" alt=""></p>
+<br>
+<h3 id="局域网测试"><a class="header-anchor" href="#局域网测试"></a>局域网测试</h3>
+<p>局域网测试需确保两台电脑处于同一 wifi，然后服务器绑定地址用环回地址是不行的，需要绑定到本地电脑的 ip 地址上</p>
+<p>我本地地址是 <code>192.168.1.4</code>，服务器因此绑定这个地址，我另一台电脑其本地地址 <code>192.168.1.7</code> ，由于处于同一局域网，因此能实现通信</p>
+<p><img src="https://pic.imgdb.cn/item/62625226239250f7c55cf2d6.png" alt=""></p>
+<p><img src="https://pic.imgdb.cn/item/626252dc239250f7c55eba85.png" alt=""></p>
+<br>
+<h2 id="缺陷"><a class="header-anchor" href="#缺陷"></a>缺陷</h2>
 <p>首先程序体验不完美，这也是我后面优化的方向：</p>
 <ul>
-<li>不支持中文。实际上我已经很小心处理 <code>char</code>
-和宽字符转换了，但还是会使中文出现乱码。而我在后台调试时，"Edit Control"
-接收到的中文输入就是乱码，我不确定是不是有什么地方我忽略了</li>
-<li>显示面板不友好。显示面板采用 "Static Control"
-配合我自己封装的函数实现消息显示，如果能直接采用 <code>TextOut()</code>
-配合滚动条那看起来是非常舒服的。只是说滚动条又是另外一个坑了，需要花点时间研究</li>
-<li>其他 bug。我在开启多 Client
-并且涉及中文输入、切换用户收发消息时出现消息无法正常收发的现象，但这个问题比较难复现，所以现在还不能解决</li>
-<li>C Style。Win32 本来就是一套 C API，虽然说用 C 写无可厚非。但毕竟 C
-可读性太差了，基本就是全局变量、状态标志满天飞，很多东西都零零散散地分布于整个工程，不利于后期维护和扩展，我希望以后能用
-Cpp 实现 Reconstruction</li>
+<li>不支持中文。实际上我已经很小心处理 <code>char</code> 和宽字符转换了，但还是会使中文出现乱码。而我在后台调试时，“Edit Control” 接收到的中文输入就是乱码，我不确定是不是有什么地方我忽略了</li>
+<li>显示面板不友好。显示面板采用 “Static Control” 配合我自己封装的函数实现消息显示，如果能直接采用 <code>TextOut()</code> 配合滚动条那看起来是非常舒服的。只是说滚动条又是另外一个坑了，需要花点时间研究</li>
+<li>其他 bug。我在开启多 Client 并且涉及中文输入、切换用户收发消息时出现消息无法正常收发的现象，但这个问题比较难复现，所以现在还不能解决</li>
+<li>C Style。Win32 本来就是一套 C API，虽然说用 C 写无可厚非。但毕竟 C 可读性太差了，基本就是全局变量、状态标志满天飞，很多东西都零零散散地分布于整个工程，不利于后期维护和扩展，我希望以后能用 Cpp 实现 Reconstruction</li>
 </ul>
-<p><br></p>
-<h2 id="二次开发">二次开发</h2>
-<p>关于 Server 或 Client 返回的 <strong>ERR::xxxxx</strong> 代码，可以在
-<a
-target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2">Win32
-Winsock error code</a> 页面搜索查阅，类似：</p>
-<p><img
-src="https://pic.imgdb.cn/item/626252dc239250f7c55eba8b.png" /></p>
-<p><br></p>
-<h2 id="需求分析">需求分析</h2>
-<p>在做任何一个开发前，我认为画个图捋捋思路是极其需要的。作为一个
-<code>P2P Server</code>，根本目的就是要求两个 Client
-能够通信，基于这个目的首先需要知道局域网当前在线人数，否则你都不知道有谁在，又怎么和别人聊天呢？</p>
-<p>难点就在于统计在线人数这块，如果是用
-UDP，维护一个在线人数列表可能涉及 <code>socket 广播</code>，因为 UDP
-是直接绑定就能用，单纯用本地 socket
-可以说彼此之间都不知道对方存在。但用广播这就又踩入另外一个坑了，作为一篇学习向
-POST，我希望越简单越好。所以才采用 TCP
-作为主要协议，那么统计在线人数这件事就可以完全交给 Server 负责了，因为
-Client 肯定要先与 Server 建立连接，另外 Client 离开局域网也会进行
-"四次挥手"，这就使得 Server
-能非常方便地维护一个局域网在线人数的列表。剩下 Server
-要做的就是在人数发生变化时向每一个 Client 发送当前的用户列表</p>
-<p>但也要注意到，由于 TCP 协议的使用需要引入
-Server，那么端到端通信过程也会相对变得复杂。如果是
-UDP，端到端就是字面意思；但是如果是 TCP，端到端实际是
-Client-Server-Client 的意思，也就是中间多了一步 Server
-转发。因为虽然我每个 Client 可以获取到用户列表，可以知道具体每一个其他
-Client 的 socket，但这个 socket 是和 Server 建立连接的，只能接收来自
-Server 的消息</p>
-<p>上面两点分别讨论了 <code>获取用户列表</code>、<code>转发消息</code>
-两部分内容，这段简述其他零零散散的细节。首先是
-<code>IO 模型</code>，除非你只实现一个 Client 与 Server
-的通信，否则必须使用 IO 模型，IO 模型的引入可以使得 Server 能处理与多个
-Client 的连接。然后是 <code>非阻塞</code> 的问题，写控制台程序可以直接在
-<em>while (1)</em> 一直监听或一直连接，但是放在窗口程序不能在某条
-Windows 消息里面放 <em>while ()</em>
-或者说阻塞某条消息，因为消息是处理完就要退出，你如果阻塞某条消息，那么你其他消息比如点击窗口或拖动窗口都会造成程序崩溃。再然后是
-<code>消息边界问题</code> 问题，打个比方我发了两条消息分别是 "abc" 和
-"123"，但 TCP 是流协议，说不定对端收到的信息为 "abc123" 或 "abc12"
-或别的，怎么处理这个消息边界问题？这里面涉及的问题是需要展开说的，这是个非常精彩的问题，我会在后面用到的时候具体说明。<span
-id="mess">最后聚焦于 <code>要处理的消息</code>
-问题，基于上述分析，Client 要考虑的消息包括
-<strong>发送自己想说的话</strong>、<strong>接收用户列表</strong>、<strong>接收
-Server 的转发消息</strong>；而 Server 则需要考虑
-<strong>接收用户连接请求</strong>、<strong>发送转发消息</strong>、<strong>发送用户列表</strong></span></p>
+<br>
+<h2 id="二次开发"><a class="header-anchor" href="#二次开发"></a>二次开发</h2>
+<p>关于 Server 或 Client 返回的 <strong>ERR::xxxxx</strong> 代码，可以在 <a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2">Win32 Winsock error code</a> 页面搜索查阅，类似：</p>
+<p><img src="https://pic.imgdb.cn/item/626252dc239250f7c55eba8b.png" alt=""></p>
+<br>
+<h2 id="需求分析"><a class="header-anchor" href="#需求分析"></a>需求分析</h2>
+<p>在做任何一个开发前，我认为画个图捋捋思路是极其需要的。作为一个 <code>P2P Server</code>，根本目的就是要求两个 Client 能够通信，基于这个目的首先需要知道局域网当前在线人数，否则你都不知道有谁在，又怎么和别人聊天呢？</p>
+<p>难点就在于统计在线人数这块，如果是用 UDP，维护一个在线人数列表可能涉及 <code>socket 广播</code>，因为 UDP 是直接绑定就能用，单纯用本地 socket 可以说彼此之间都不知道对方存在。但用广播这就又踩入另外一个坑了，作为一篇学习向 POST，我希望越简单越好。所以才采用 TCP 作为主要协议，那么统计在线人数这件事就可以完全交给 Server 负责了，因为 Client 肯定要先与 Server 建立连接，另外 Client 离开局域网也会进行 “四次挥手”，这就使得 Server 能非常方便地维护一个局域网在线人数的列表。剩下 Server 要做的就是在人数发生变化时向每一个 Client 发送当前的用户列表</p>
+<p>但也要注意到，由于 TCP 协议的使用需要引入 Server，那么端到端通信过程也会相对变得复杂。如果是 UDP，端到端就是字面意思；但是如果是 TCP，端到端实际是 Client-Server-Client 的意思，也就是中间多了一步 Server 转发。因为虽然我每个 Client 可以获取到用户列表，可以知道具体每一个其他 Client 的 socket，但这个 socket 是和 Server 建立连接的，只能接收来自 Server 的消息</p>
+<p>上面两点分别讨论了 <code>获取用户列表</code>、<code>转发消息</code> 两部分内容，这段简述其他零零散散的细节。首先是 <code>IO 模型</code>，除非你只实现一个 Client 与 Server 的通信，否则必须使用 IO 模型，IO 模型的引入可以使得 Server 能处理与多个 Client 的连接。然后是 <code>非阻塞</code> 的问题，写控制台程序可以直接在 <em>while (1)</em> 一直监听或一直连接，但是放在窗口程序不能在某条 Windows 消息里面放 <em>while ()</em> 或者说阻塞某条消息，因为消息是处理完就要退出，你如果阻塞某条消息，那么你其他消息比如点击窗口或拖动窗口都会造成程序崩溃。再然后是 <code>消息边界问题</code> 问题，打个比方我发了两条消息分别是 “abc” 和 “123”，但 TCP 是流协议，说不定对端收到的信息为 “abc123” 或 “abc12” 或别的，怎么处理这个消息边界问题？这里面涉及的问题是需要展开说的，这是个非常精彩的问题，我会在后面用到的时候具体说明。<span id="mess">最后聚焦于 <code>要处理的消息</code> 问题，基于上述分析，Client 要考虑的消息包括 <strong>发送自己想说的话</strong>、<strong>接收用户列表</strong>、<strong>接收 Server 的转发消息</strong>；而 Server 则需要考虑 <strong>接收用户连接请求</strong>、<strong>发送转发消息</strong>、<strong>发送用户列表</strong></span></p>
 <p>现在总结一下：</p>
 <p>对于 Server：</p>
 <ul>
@@ -555,420 +502,170 @@ Server 的转发消息</strong>；而 Server 则需要考虑
 <li>接收转发消息</li>
 <li>接收在线人数列表</li>
 </ul>
-<p><br></p>
-<h2 id="准备知识">准备知识</h2>
-<h3 id="win32-framework">Win32 Framework</h3>
-<p>推荐毛星云前辈的 <a
-target="_blank" rel="noopener" href="https://book.douban.com/subject/25756435/">《逐梦旅途》</a>
-，看前四章就好，能理解怎么创建窗口程序，理解 Framework 里每个 API
-就够了</p>
-<p><br></p>
-<h3 id="win32-controls">Win32 Controls</h3>
-<p>推荐参考 <a
-target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/controls/window-controls">Microsoft:
-Windows Controls</a></p>
-<p>用到哪个参考哪个，如果不介意我的 UI 丑的话，你也可以像我一样，只使用
-"Static"、"Button"、"Edit" 和 "Combo box"</p>
-<p><br></p>
-<h3 id="winsock-framework">Winsock Framework</h3>
-<p>推荐参考 <a
-target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/winsock/getting-started-with-winsock">Microsoft:
-Getting Started with Winsock</a></p>
-<p>需要注意微软给的 Example 非常非常简单，只涉及一个 Client 和 Server
-通信。如果你需要实现更多 Client 和一个 Server
-的通信，那么你需要关注下面的 <em>Advanced Winsock Samples</em></p>
-<p>但是毕竟 Winsock 是整个 program
-的重点，所以我这里简单地班门弄斧一下</p>
-<p>服务器 Program Flow 是 <em>初始化 dll：WSAStartup()</em> -&gt;
-<em>创建：socket()</em> -&gt; <em>绑定：bind()</em> -&gt;
-<em>监听：listen()</em> -&gt; <em>接收连接：accept()</em> -&gt;
-<em>收发</em></p>
-<p>客户端 Program Flow 是 <em>初始化 dll：WSAStartup()</em> -&gt;
-<em>创建：socket()</em> -&gt; <em>连接：connect()</em> -&gt;
-<em>收发</em></p>
-<p><br></p>
-<h3 id="select-model-nonblocking">Select Model &amp;&amp;
-Nonblocking</h3>
+<br>
+<h2 id="准备知识"><a class="header-anchor" href="#准备知识"></a>准备知识</h2>
+<h3 id="Win32-Framework"><a class="header-anchor" href="#Win32-Framework"></a>Win32 Framework</h3>
+<p>推荐毛星云前辈的 <a target="_blank" rel="noopener" href="https://book.douban.com/subject/25756435/">《逐梦旅途》</a> ，看前四章就好，能理解怎么创建窗口程序，理解 Framework 里每个 API 就够了</p>
+<br>
+<h3 id="Win32-Controls"><a class="header-anchor" href="#Win32-Controls"></a>Win32 Controls</h3>
+<p>推荐参考 <a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/controls/window-controls">Microsoft: Windows Controls</a></p>
+<p>用到哪个参考哪个，如果不介意我的 UI 丑的话，你也可以像我一样，只使用 “Static”、“Button”、“Edit” 和 “Combo box”</p>
+<br>
+<h3 id="Winsock-Framework"><a class="header-anchor" href="#Winsock-Framework"></a>Winsock Framework</h3>
+<p>推荐参考 <a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/winsock/getting-started-with-winsock">Microsoft: Getting Started with Winsock</a></p>
+<p>需要注意微软给的 Example 非常非常简单，只涉及一个 Client 和 Server 通信。如果你需要实现更多 Client 和一个 Server 的通信，那么你需要关注下面的 <em>Advanced Winsock Samples</em></p>
+<p>但是毕竟 Winsock 是整个 program 的重点，所以我这里简单地班门弄斧一下</p>
+<p>服务器 Program Flow 是 <em>初始化 dll：WSAStartup()</em> -&gt; <em>创建：socket()</em> -&gt; <em>绑定：bind()</em> -&gt; <em>监听：listen()</em> -&gt; <em>接收连接：accept()</em> -&gt; <em>收发</em></p>
+<p>客户端 Program Flow 是 <em>初始化 dll：WSAStartup()</em> -&gt; <em>创建：socket()</em> -&gt; <em>连接：connect()</em> -&gt; <em>收发</em></p>
+<br>
+<h3 id="Select-Model-Nonblocking"><a class="header-anchor" href="#Select-Model-Nonblocking"></a>Select Model &amp;&amp; Nonblocking</h3>
 <p>我觉得这两个内容密不可分，所以放在一起</p>
 <p>首先需要明确有些 Winsock 函数（默认）是阻塞的：</p>
 <ul>
-<li><strong>accept():</strong>
-执行到这个函数会一直等待直至有连接请求出现</li>
-<li><strong>connect():</strong>
-执行到这个函数会一直等待直至与服务器建立连接</li>
-<li><strong>recv()/send()/recvfrom()/sendto():</strong>
-接收数据会阻塞可能很好理解，但发送数据会阻塞是怎么回事？这里又涉及一些
-low-level 知识，后面再解释</li>
+<li><strong>accept():</strong> 执行到这个函数会一直等待直至有连接请求出现</li>
+<li><strong>connect():</strong> 执行到这个函数会一直等待直至与服务器建立连接</li>
+<li><strong>recv()/send()/recvfrom()/sendto():</strong> 接收数据会阻塞可能很好理解，但发送数据会阻塞是怎么回事？这里又涉及一些 low-level 知识，后面再解释</li>
 </ul>
-<p>上面讨论过窗口程序不能在一个消息里面出现阻塞，所以这才需要把这些函数改为非阻塞模式，可以用
-<code>ioctlsocket()</code> 修改，详见 <a
-target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-ioctlsocket">Microsoft:
-ioctlsocket function</a></p>
-<p>现在详细讨论下 select model，参考 <a
-target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-select">Microsoft:
-select function</a>。当然阅读理解就不用做了，我们来看中间部分谈到的
-"可读"、"可写" 和 "异常" 事件</p>
+<p>上面讨论过窗口程序不能在一个消息里面出现阻塞，所以这才需要把这些函数改为非阻塞模式，可以用 <code>ioctlsocket()</code> 修改，详见 <a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-ioctlsocket">Microsoft: ioctlsocket function</a></p>
+<p>现在详细讨论下 select model，参考 <a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-select">Microsoft: select function</a>。当然阅读理解就不用做了，我们来看中间部分谈到的 “可读”、“可写” 和 “异常” 事件</p>
 <blockquote>
-<p>In summary, a socket will be identified in a particular set when
-select returns if:</p>
+<p>In summary, a socket will be identified in a particular set when select returns if:</p>
 <p>readfds:</p>
 <ul>
-<li>If listen has been called and a connection is pending, accept will
-succeed.<br />
-</li>
-<li>Data is available for reading (includes OOB data if SO_OOBINLINE is
-enabled).</li>
+<li>If listen has been called and a connection is pending, accept will succeed.</li>
+<li>Data is available for reading (includes OOB data if SO_OOBINLINE is enabled).</li>
 <li>Connection has been closed/reset/terminated.</li>
 </ul>
 <p>writefds:</p>
 <ul>
-<li>If processing a connect call (nonblocking), connection has
-succeeded.</li>
+<li>If processing a connect call (nonblocking), connection has succeeded.</li>
 <li>Data can be sent.</li>
 </ul>
 <p>exceptfds:</p>
 <ul>
-<li>If processing a connect call (nonblocking), connection attempt
-failed.</li>
-<li>OOB data is available for reading (only if SO_OOBINLINE is
-disabled).</li>
+<li>If processing a connect call (nonblocking), connection attempt failed.</li>
+<li>OOB data is available for reading (only if SO_OOBINLINE is disabled).</li>
 </ul>
 </blockquote>
-<p>简单来说，<em>连接请求到达</em>、<em>数据到达</em> 以及
-<em>关闭连接</em> 都会触发 "可读事件"；<em>客户端请求连接</em> 以及
-<em>数据已发送</em> 会触发 "可写事件"。至于 "异常事件"
-我没使用到，所以没去了解。总之，这些 "xx 事件"
-其实就是现在这个时刻发生了什么样的事件而已，select model
-就是用于捕捉这样的事件而诞生的。所以，以前我们发出一个操作，必须要等它完成我们才能做其他事；现在我们可以交给
-select()，然后去做其他事，当我们设置的操作被 select()
-捕捉后，再去处理</p>
-<p>但是我也想说，不是说使用了 select model 就一定要把所有操作交给
-select() 去捕捉。像是 <em>ECHO Server</em> 这种入门
-demo，你完全可以只使用 select() 去捕捉连接，至于 <em>echo</em>
-的逻辑完全可以一收到消息就马上转发（<em>ECHO Server</em> 可以想想
-<em>echo
-命令</em>，客户端发出消息，服务器收到后马上原路发回，然后客户端接收消息显示出来，这就是
-<em>ECHO Server</em>）。像这一步转发如果用
-select()，那你发一条消息你能收到一万条回复</p>
-<p>基于上个场景，你可能还有疑问："如果转发不使用 <code>select()</code>
-只 <code>send()</code> 一次，那消息没发送成功岂不是会丢消息吗？"
-这时候就要引入 nonblocking 机制里非常著名的一个错误码 <a
-target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2">WSAEWOULDBLOCK
-错误码(10035)，Linux 对应 EWOULDBLOCK</a> 。简单来说这个错误码等于和你说
-"别急，正在处理"，事实上这个错误码并不算真正意义上的错误码。当调用
-nonblocking 的 <code>accept(); connect(); recv()...</code>
-这些函数时都可能出现这个错误码，比如
-<code>connect()</code>，就是说我三次握手需要时间，第一次调用其实就起作用了，但可能在握手时间内又连续调用了好几次
-<code>connect()</code> 那么后面的连接请求都会返回
-<strong>WSAEWOULDBLOCK</strong>，所以你只需要等，不用作其他处理就行。上面那个问题也是如此，
-<code>send()</code>
-只需调用一次就起效了，消息就能发送出去，如果不是网络问题或其他 Fatal
-问题，会返回 "WSAEWOULDBLOCK"，所以其实大多数情况下都不会丢失消息的</p>
+<p>简单来说，<em>连接请求到达</em>、<em>数据到达</em> 以及 <em>关闭连接</em> 都会触发 “可读事件”；<em>客户端请求连接</em> 以及 <em>数据已发送</em> 会触发 “可写事件”。至于 “异常事件” 我没使用到，所以没去了解。总之，这些 “xx 事件” 其实就是现在这个时刻发生了什么样的事件而已，select model 就是用于捕捉这样的事件而诞生的。所以，以前我们发出一个操作，必须要等它完成我们才能做其他事；现在我们可以交给 select()，然后去做其他事，当我们设置的操作被 select() 捕捉后，再去处理</p>
+<p>但是我也想说，不是说使用了 select model 就一定要把所有操作交给 select() 去捕捉。像是 <em>ECHO Server</em> 这种入门 demo，你完全可以只使用 select() 去捕捉连接，至于 <em>echo</em> 的逻辑完全可以一收到消息就马上转发（<em>ECHO Server</em> 可以想想 <em>echo 命令</em>，客户端发出消息，服务器收到后马上原路发回，然后客户端接收消息显示出来，这就是 <em>ECHO Server</em>）。像这一步转发如果用 select()，那你发一条消息你能收到一万条回复</p>
+<p>基于上个场景，你可能还有疑问：“如果转发不使用 <code>select()</code> 只 <code>send()</code> 一次，那消息没发送成功岂不是会丢消息吗？” 这时候就要引入 nonblocking 机制里非常著名的一个错误码 <a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2">WSAEWOULDBLOCK 错误码(10035)，Linux 对应 EWOULDBLOCK</a> 。简单来说这个错误码等于和你说 “别急，正在处理”，事实上这个错误码并不算真正意义上的错误码。当调用 nonblocking 的 <code>accept(); connect(); recv()...</code> 这些函数时都可能出现这个错误码，比如 <code>connect()</code>，就是说我三次握手需要时间，第一次调用其实就起作用了，但可能在握手时间内又连续调用了好几次 <code>connect()</code> 那么后面的连接请求都会返回 <strong>WSAEWOULDBLOCK</strong>，所以你只需要等，不用作其他处理就行。上面那个问题也是如此， <code>send()</code> 只需调用一次就起效了，消息就能发送出去，如果不是网络问题或其他 Fatal 问题，会返回 “WSAEWOULDBLOCK”，所以其实大多数情况下都不会丢失消息的</p>
 <p>现在总结一下 select() 用法</p>
 <ul>
-<li>对于服务器接收连接：先 <code>listen()</code>，然后
-<code>select()</code>，当捕获连接请求，再 <code>accept()</code></li>
-<li>对于客户端请求连接：先 <code>connect()</code>，然后
-<code>select()</code>，当捕获连接请求，再处理收发</li>
-<li>对于收发消息：不要求等待 <code>select()</code>
-捕捉可读或可写事件后才调用 <code>recv()</code> 或
-<code>send()</code>，顺序是任意的，取决于用在什么场景</li>
+<li>对于服务器接收连接：先 <code>listen()</code>，然后 <code>select()</code>，当捕获连接请求，再 <code>accept()</code></li>
+<li>对于客户端请求连接：先 <code>connect()</code>，然后 <code>select()</code>，当捕获连接请求，再处理收发</li>
+<li>对于收发消息：不要求等待 <code>select()</code> 捕捉可读或可写事件后才调用 <code>recv()</code> 或 <code>send()</code>，顺序是任意的，取决于用在什么场景</li>
 </ul>
-<p>至此 select 这个 IO 模型就讨论完了，可以看出这里用 select model
-主要用于解决连接问题，具体来说是一对多的连接，即所谓异步问题</p>
-<p>最后推荐大家可以参考 <a
-target="_blank" rel="noopener" href="https://www.winsocketdotnetworkprogramming.com/winsock2programming/winsock2advancediomethod5a.html">Select
-Model Tutorial</a> 看看别人具体是怎么使用的，我 Server
-的最终也是参考了里面的思路</p>
-<p><br></p>
-<h3 id="消息边界">消息边界</h3>
-<p>之前讨论这个问题的时候说了会涉及一个底层问题，这就是 <em>socket
-缓冲区</em> 的问题，但这里建议参考 <a
-target="_blank" rel="noopener" href="http://c.biancheng.net/view/2349.html">socket缓冲区以及阻塞模式详解</a>
-或其他资料去了解</p>
-<p>为简化问题，假设传输层是不出错的（假设 TCP
-真的非常可靠）。这可以忽略一些细节先把功能实现，也即总是可以想象
-<code>send()</code> 或 <code>recv()</code>
-这类函数是符合逻辑的，你传输多少它接收多少</p>
-<p>其实事实也差不多如此，参考 <a
-target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-send">Microsoft:
-send()</a> 和 <a
-target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-recv">Microsoft:
-recv()</a></p>
+<p>至此 select 这个 IO 模型就讨论完了，可以看出这里用 select model 主要用于解决连接问题，具体来说是一对多的连接，即所谓异步问题</p>
+<p>最后推荐大家可以参考 <a target="_blank" rel="noopener" href="https://www.winsocketdotnetworkprogramming.com/winsock2programming/winsock2advancediomethod5a.html">Select Model Tutorial</a> 看看别人具体是怎么使用的，我 Server 的最终也是参考了里面的思路</p>
+<br>
+<h3 id="消息边界"><a class="header-anchor" href="#消息边界"></a>消息边界</h3>
+<p>之前讨论这个问题的时候说了会涉及一个底层问题，这就是 <em>socket 缓冲区</em> 的问题，但这里建议参考 <a target="_blank" rel="noopener" href="http://c.biancheng.net/view/2349.html">socket缓冲区以及阻塞模式详解</a> 或其他资料去了解</p>
+<p>为简化问题，假设传输层是不出错的（假设 TCP 真的非常可靠）。这可以忽略一些细节先把功能实现，也即总是可以想象 <code>send()</code> 或 <code>recv()</code> 这类函数是符合逻辑的，你传输多少它接收多少</p>
+<p>其实事实也差不多如此，参考 <a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-send">Microsoft: send()</a> 和 <a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-recv">Microsoft: recv()</a></p>
 <blockquote>
-<p>On nonblocking stream oriented sockets, the number of bytes written
-can be between 1 and the requested length, depending on buffer
-availability on both the client and server computers.</p>
+<p>On nonblocking stream oriented sockets, the number of bytes written can be between 1 and the requested length, depending on buffer availability on both the client and server computers.</p>
 </blockquote>
-<p>对于一个非阻塞的流式 socket，send() 可写入的字节数介乎 1
-与你请求发送的消息长度之间，具体多少取决于两端缓冲区的可用容量（作为一个局域网低并发的
-demo，可以总是想象缓冲区容量充足）</p>
+<p>对于一个非阻塞的流式 socket，send() 可写入的字节数介乎 1 与你请求发送的消息长度之间，具体多少取决于两端缓冲区的可用容量（作为一个局域网低并发的 demo，可以总是想象缓冲区容量充足）</p>
 <blockquote>
-<p>For connection-oriented sockets (type SOCK_STREAM for example),
-calling recv will return as much data as is currently available—up to
-the size of the buffer specified.</p>
+<p>For connection-oriented sockets (type SOCK_STREAM for example), calling recv will return as much data as is currently available—up to the size of the buffer specified.</p>
 </blockquote>
-<p>对于一个面向连接的 socket（如 SOCK_STREAM），recv()
-总是会返回尽可能多的数据，直至所指定缓冲区的容量大小（同理想象为缓冲区容量充足）</p>
-<p>数据边界问题推荐参考 <a
-target="_blank" rel="noopener" href="https://www.zhihu.com/question/20210025/answer/1982654161">怎么解决TCP网络传输「粘包」问题？</a>。我自己的解决方案也是应用层自己定义一个协议，在此不再班门弄斧</p>
-<p><br></p>
-<h3 id="传输二进制">传输二进制</h3>
+<p>对于一个面向连接的 socket（如 SOCK_STREAM），recv() 总是会返回尽可能多的数据，直至所指定缓冲区的容量大小（同理想象为缓冲区容量充足）</p>
+<p>数据边界问题推荐参考 <a target="_blank" rel="noopener" href="https://www.zhihu.com/question/20210025/answer/1982654161">怎么解决TCP网络传输「粘包」问题？</a>。我自己的解决方案也是应用层自己定义一个协议，在此不再班门弄斧</p>
+<br>
+<h3 id="传输二进制"><a class="header-anchor" href="#传输二进制"></a>传输二进制</h3>
 <p>最后一个想分享的知识点是，如何传输结构体？</p>
-<p>我们都知道网络传输是分 <em>网络字节序（大端字节序）（NBO）</em> 和
-<em>主机字节序（小端字节序）（HBO）</em> 的，所以在 API
-上，<code>send()</code> 和 <code>recv()</code> 都只支持 <em>char *</em>
-数据</p>
-<p>那么传输结构体你完全可以做一些处理转换为 <em>char *</em>
-先传输待接收后再还原回来，但这么做就更复杂了，在此我推荐直接用二进制传输。即我们传输结构体总是
-<code>memcpy()</code> 将数据拷贝到 <code>char *</code>
-数组，然后传输这个数组。这样有个好处，可以不用理会字节序的转化，发送端直接
-<code>memcpy()</code> 发送，接收端也直接 <code>memcpy()</code> 使用</p>
-<p>但是对于字符型数据慎用
-<code>memcpy()</code>，除非你能保证数据长度，否则造成内存越界后果就是程序闪退</p>
-<p><br></p>
-<h2 id="实现思路">实现思路</h2>
-<h3 id="win32-消息循环">Win32 消息循环</h3>
-<p>像 Win32 控件使用、Win32
-消息处理，这些东西我不打算记录下来了，唯一想单独拎出来分享的是消息机制</p>
-<p>我刚开始摸索的时候真的是往服务器主线程上写
-<code>while (1)</code>，结果现象就是，我一点击窗口或拖动窗口，标题栏便显示
-"(无响应)" 三个字，随之而来的就是一个类似于 Trouble shooting
-之类的无响应专属弹窗，也是这时候我开始对消息循环有了感性的认识</p>
-<p>简单来说，消息循环有两套，一套以 <code>PostMessage()</code>
-为核心，一套以 <code>PeepMessage()</code>
-为核心。区别就是前者阻塞后者不阻塞，前者会一直卡在函数处直至有
-<code>WM</code>
-消息到达，如果用这套消息循环，意味着你需要点击一下鼠标、或者拖动一下窗口，程序逻辑才会继续执行。很明显在
-Winsock
-这个场景里行不通，因为服务器要逻辑上死循环，一直监听连接请求。所以才有了现在这个
-<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L25">PeepMessage()
-逻辑</a>，值得一提的是，这也是我阅读毛星云前辈《逐梦旅途》学习来的，我大三的时候刚开始学习
-Win32 也是通过这本书，再次向前辈敬礼，R.I.P.</p>
-<p><br></p>
-<h3 id="服务器逻辑">服务器逻辑</h3>
-<p>我将服务器逻辑分成两大部分，分别是 <strong>配置服务器</strong>（参考
-<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L226">BOOL
-ServerConfig()</a>）以及 <strong>运行服务器</strong>（参考 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L347">void
-ServerRun()</a>）</p>
-<p><br></p>
-<h3 id="serverconfig">ServerConfig()</h3>
+<p>我们都知道网络传输是分 <em>网络字节序（大端字节序）（NBO）</em> 和 <em>主机字节序（小端字节序）（HBO）</em> 的，所以在 API 上，<code>send()</code> 和 <code>recv()</code> 都只支持 <em>char *</em> 数据</p>
+<p>那么传输结构体你完全可以做一些处理转换为 <em>char *</em> 先传输待接收后再还原回来，但这么做就更复杂了，在此我推荐直接用二进制传输。即我们传输结构体总是 <code>memcpy()</code> 将数据拷贝到 <code>char *</code> 数组，然后传输这个数组。这样有个好处，可以不用理会字节序的转化，发送端直接 <code>memcpy()</code> 发送，接收端也直接 <code>memcpy()</code> 使用</p>
+<p>但是对于字符型数据慎用 <code>memcpy()</code>，除非你能保证数据长度，否则造成内存越界后果就是程序闪退</p>
+<br>
+<h2 id="实现思路"><a class="header-anchor" href="#实现思路"></a>实现思路</h2>
+<h3 id="Win32-消息循环"><a class="header-anchor" href="#Win32-消息循环"></a>Win32 消息循环</h3>
+<p>像 Win32 控件使用、Win32 消息处理，这些东西我不打算记录下来了，唯一想单独拎出来分享的是消息机制</p>
+<p>我刚开始摸索的时候真的是往服务器主线程上写 <code>while (1)</code>，结果现象就是，我一点击窗口或拖动窗口，标题栏便显示 “(无响应)” 三个字，随之而来的就是一个类似于 Trouble shooting 之类的无响应专属弹窗，也是这时候我开始对消息循环有了感性的认识</p>
+<p>简单来说，消息循环有两套，一套以 <code>PostMessage()</code> 为核心，一套以 <code>PeepMessage()</code> 为核心。区别就是前者阻塞后者不阻塞，前者会一直卡在函数处直至有 <code>WM</code> 消息到达，如果用这套消息循环，意味着你需要点击一下鼠标、或者拖动一下窗口，程序逻辑才会继续执行。很明显在 Winsock 这个场景里行不通，因为服务器要逻辑上死循环，一直监听连接请求。所以才有了现在这个 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L25">PeepMessage() 逻辑</a>，值得一提的是，这也是我阅读毛星云前辈《逐梦旅途》学习来的，我大三的时候刚开始学习 Win32 也是通过这本书，再次向前辈敬礼，R.I.P.</p>
+<br>
+<h3 id="服务器逻辑"><a class="header-anchor" href="#服务器逻辑"></a>服务器逻辑</h3>
+<p>我将服务器逻辑分成两大部分，分别是 <strong>配置服务器</strong>（参考 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L226">BOOL ServerConfig()</a>）以及 <strong>运行服务器</strong>（参考 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L347">void ServerRun()</a>）</p>
+<br>
+<h3 id="ServerConfig"><a class="header-anchor" href="#ServerConfig"></a>ServerConfig()</h3>
 <p>此函数内就是 Winsock Framework，在此只想分享几个细节问题</p>
-<p>sockaddr 和 sockaddr_in
-两个结构体。都是用于封装协议所识别的信息的，不同的是后者专门用于 TCP/IP
-协议栈，所以后者直接划分了两个字段用于存放标识————即 IP 地址和端口号
-Port。而前者是广义协议使用的，好比现在有个协议叫 UDQ/JQ 协议栈，这是用
-OQ 和 Qpsu 来标识协议实体的，那么对于这个协议就应该用 sockaddr</p>
-<p><a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L266">创建
-socket</a> 这里使用的是微软 Example 的写法，按 POSIX 写法应该是直接
-sockaddr 实例化一个对象，然后用这个对象去创建 socket()，我在客户端 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L374">创建
-socket</a>
-用了这种写法。如果你电脑只有一块网卡，那么这两种写法没区别，如果你电脑有多块网卡，而且你只想绑定到其中一块网卡，那这种场景就用后者的写法</p>
-<p>此函数 Program Flow 直至 <code>accept()</code>
-为止，因为绑定服务器地址只需进行一次，而接收连接请求却需要一直进行，所以这两步要分开进行</p>
-<p><br></p>
-<h3 id="serverrun">ServerRun()</h3>
+<p>sockaddr 和 sockaddr_in 两个结构体。都是用于封装协议所识别的信息的，不同的是后者专门用于 TCP/IP 协议栈，所以后者直接划分了两个字段用于存放标识————即 IP 地址和端口号 Port。而前者是广义协议使用的，好比现在有个协议叫 UDQ/JQ 协议栈，这是用 OQ 和 Qpsu 来标识协议实体的，那么对于这个协议就应该用 sockaddr</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L266">创建 socket</a> 这里使用的是微软 Example 的写法，按 POSIX 写法应该是直接 sockaddr 实例化一个对象，然后用这个对象去创建 socket()，我在客户端 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L374">创建 socket</a> 用了这种写法。如果你电脑只有一块网卡，那么这两种写法没区别，如果你电脑有多块网卡，而且你只想绑定到其中一块网卡，那这种场景就用后者的写法</p>
+<p>此函数 Program Flow 直至 <code>accept()</code> 为止，因为绑定服务器地址只需进行一次，而接收连接请求却需要一直进行，所以这两步要分开进行</p>
+<br>
+<h3 id="ServerRun"><a class="header-anchor" href="#ServerRun"></a>ServerRun()</h3>
 <p>这是服务器最重要的逻辑了</p>
-<p>首先要处理的是连接请求，像上面说的那样先用 <code>select()</code>
-捕捉，像接收连接请求这种事件属于可读事件，所以 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L371">只需要填充第二个参数</a></p>
-<p><code>select()</code> 执行完首先要做的是 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L379">检查有无连接请求</a>，通过判断用于监听的
-socket 是否在可读集合内实现。如果有新连接到达，此条件就满足，因此会进入
-<code>if()</code> 分支</p>
-<p>值得一提的是，<code>accept()</code> 会返回新的专门用于数据传输的
-socket，原来用于监听的 socket
-还会继续监听连接。然后新连接到达后我后面的逻辑是 <em>"打印用户信息"</em>
--&gt; <em>"维护在线用户列表"</em>。维护用户列表我分为了两步：保存用户
-socket 和 sockaddr（后面哈希表的处理就是为了保存 sockaddr
-结构体的信息）。需要注意到 socket 本身并不等于 sockaddr
-结构体，前者本质是一个整型值，是服务器本地才能识别的。端到端通信取决于知不知道对方的
-IP 地址和端口，这两个数据是 sockaddr 结构体维护的，所以用户列表必须包含
-sockaddr 结构体发送给每个 Client，这样 Client
-才知道要通信的另外一端的信息。</p>
-<p>再详细分享下哈希表的思想，首先要看下 sockaddr_in 结构体的组成（在
-TCP/IP 协议栈里，你可以把 sockaddr_in 和 sockaddr 视为等价）：</p>
+<p>首先要处理的是连接请求，像上面说的那样先用 <code>select()</code> 捕捉，像接收连接请求这种事件属于可读事件，所以 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L371">只需要填充第二个参数</a></p>
+<p><code>select()</code> 执行完首先要做的是 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L379">检查有无连接请求</a>，通过判断用于监听的 socket 是否在可读集合内实现。如果有新连接到达，此条件就满足，因此会进入 <code>if()</code> 分支</p>
+<p>值得一提的是，<code>accept()</code> 会返回新的专门用于数据传输的 socket，原来用于监听的 socket 还会继续监听连接。然后新连接到达后我后面的逻辑是 <em>“打印用户信息”</em> -&gt; <em>“维护在线用户列表”</em>。维护用户列表我分为了两步：保存用户 socket 和 sockaddr（后面哈希表的处理就是为了保存 sockaddr 结构体的信息）。需要注意到 socket 本身并不等于 sockaddr 结构体，前者本质是一个整型值，是服务器本地才能识别的。端到端通信取决于知不知道对方的 IP 地址和端口，这两个数据是 sockaddr 结构体维护的，所以用户列表必须包含 sockaddr 结构体发送给每个 Client，这样 Client 才知道要通信的另外一端的信息。</p>
+<p>再详细分享下哈希表的思想，首先要看下 sockaddr_in 结构体的组成（在 TCP/IP 协议栈里，你可以把 sockaddr_in 和 sockaddr 视为等价）：</p>
 <blockquote>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sockaddr_in</span> &#123;</span></span><br><span class="line">    <span class="type">short</span>            sin_family;   <span class="comment">// 2B</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">short</span>   sin_port;     <span class="comment">// 2B</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">in_addr</span>   <span class="title">sin_addr</span>;</span>     <span class="comment">// 4B</span></span><br><span class="line">    <span class="type">char</span>             sin_zero[<span class="number">8</span>];  <span class="comment">// 8B</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
 </blockquote>
-<p>由于后 8 Bytes 只用来填充，总是 0，所以我用前 8 Bytes
-作为哈希表的键，对应它的 socket。所以是一个 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L75">uint64_t
--&gt; SOCKET 的哈希表</a></p>
-<p>至此，便是接收请求的逻辑。后面 <strong>维护用户列表</strong>
-思路可能比较凌乱，如果你有其他想法可以按你自己的思路来，这里仅提供其中一个思路</p>
-<p><br></p>
-<p>接收完连接请求，便需要遍历用户列表里面所有用户有无产生 IO
-事件了，还记得前面一开始分析需求的时候 <a
-href="#mess">服务器要处理的消息</a> 吗？</p>
-<p>现在来回顾一下，对于服务器来说需要接收 "连接请求" 以及 "其他 Client
-发送来的消息"，需要发送
-"在线用户列表"。翻译一下就是对于服务器，可读事件是
-"连接请求"、"用户的聊天消息"（当然 Client
-下线也属于可读事件）；可写事件是 " '广播' 在线用户列表"
-（当然此处广播并不是真正意义上的广播，只是用一个 <code>for()</code>
-循环不断发送以达到给每个 Client 发送的目的）</p>
-<p>连接请求这个可读事件前面已经处理了，所以现在 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L447">捕获的是另一个可读事件
-———— "用户聊天消息"</a>。对于这个事件，服务器要做的事情 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L486">就是转发而已</a></p>
-<p>最后一个可读事件，<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L457">用户下线</a>，这里涉及
-TCP 协议里一个名词 "优雅关闭"，详见 <a
-target="_blank" rel="noopener" href="http://c.biancheng.net/view/2354.html">shutdown()函数：优雅地断开TCP连接</a>。简单提一点，客户端需要先告诉服务器自己要断开连接了，好处就是未收发完的数据会继续收发，只有新数据不处理；然后服务器对这个已断开连接的用户
-<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L457">最后一次
-<code>recv()</code> 会返回
-0</a>，此时服务器才可以进行释放资源之类的操作</p>
-<p>事实上，若 Client 是优雅关闭的 (graceful termination) 会进入 TCP
-四次挥手过程的 TIME_WAIT 阶段</p>
-<p><img
-src="https://pic.imgdb.cn/item/626252dc239250f7c55eba91.png" /></p>
-<p>而如果 Client 不是优雅关闭，Server 最后一次 <code>recv()</code>
-会返回 <em>SOCKET_ERROR</em>，错误码需要通过
-<code>WSAGetLastError()</code> 获取</p>
-<p><img
-src="https://pic.imgdb.cn/item/62625367239250f7c5606cf7.png" /></p>
-<p><br></p>
-<p>处理完可读事件，现在来考虑怎么处理可写事件 ———— 即
-"发送用户列表"。虽然理论上你可以交给 <code>select()</code>
-去决定什么时候可以发送，然后才将用户列表发送出去。但要考虑到，在一个局域网环境，而且是低并发量的情景下，几乎无时无刻都会触发
-"可写事件"。因为你不用考虑网络因素，而且数据量足够少，那么只要遍历到一个
-socket 就可以发送一次数据，这样反而无时无刻 Server
-都会广播用户列表。Client
-接收到的用户列表肯定是大量大量地重复的，反而会使 Client
-要专门写一个实现去重的逻辑</p>
-<p>退一万步讲，只要我有一次能将用户列表更新成功，后续的更新就算有延迟其实也不影响
-Client 原来的聊天，更何况我们现在的需求下网络环境几乎可以不考虑</p>
-<p>所以，为了使问题简化，我不打算将这个可写事件交给
-<code>select()</code> 处理。相反，我只在必要的时候更新，也即 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L436">新用户上线</a>
-以及 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L481">原有用户下线</a>
-这两种情况进行更新</p>
-<p><br></p>
-<h3 id="客户端逻辑">客户端逻辑</h3>
-<p>客户端这边我引入了一个比较有趣的动作，就是按一下 "Connect"
-会连接服务器，同时按钮切换为 "Terminate"
-示意你再按一次会断开与服务器的连接。这里就不展开了，主要就是
-<code>SetWindowText()</code> 的使用，具体逻辑参考 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L313">void
-ResetState()</a> 和 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L330">void
-ChangeState(int *)</a> 这两个函数</p>
-<p>和服务器类似，Winsock Framework
-我也是分为几个逻辑去处理。但不同的是，Client
-请求连接要单独分出来，这也是一个需要不断重复的逻辑，只有你连接上服务器，才能进行下一步不是吗。所以总共分为
-<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L357">配置:
-ClientConfig()</a>、<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L433">连接:
-ClientConn()</a> 和 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L494">运行:
-ClientRun()</a></p>
-<p>配置和连接类似服务器所以不展开，而如果你参考我的代码你会发现傻逼全局标识变量满天飞，这是我的问题，我承认我是
-"面向测试编程" 一步步来的，没有一个很宏观的设计，确实很容易导致
-"xx标识"、"全局xx" 使用过量，所以仅供参考，我主要想分享的是思路</p>
-<p>现在再来回顾下 <a href="#mess">客户端需要关注的消息</a>。要发送的是
-"自己想说的话"；要接收的是 "在线用户列表" 和 "Server
-的转发"。翻译过来就是前者是可写事件，后者是可读事件</p>
-<p>我把 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L526">检测可读事件</a>
-放在前面是因为，如果 <code>recv()</code> 返回 0
-即意味着服务器下线了，那再处理什么都没意义，就可以直接退出了</p>
-<p>由于 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L543">可读事件有两种类型</a>，所以有可读事件到达时，应用层需要做些事情才能区分出来，这也是自定义协议最重要的作用。像前面说的区分数据边界，放在这个入门
-Demo
-里其实我大可规定一个固定的消息长度，每次收发都是这个长度的消息，也可以达到区分边界的目的。但你想让应用层能正确处理多种类型的信息，那最优解还是自定义一个协议。至于我自己的思路，我放在后面分享，现在先关注客户端的逻辑</p>
-<p>先将 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L545">UpdateUser()</a>
-和 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L547">PrintMess()</a>
-看作 <strong>Stub program</strong> <a
-target="_blank" rel="noopener" href="https://www.zhihu.com/question/24844900/answer/35126766">（关于桩代码（Stub））</a>，那可读事件就算完成了</p>
-<p><br></p>
-<p>关于 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L556">可写事件</a>，看到这里相信你也有些想法了，就是
-<em>"从控件中获取用户输入"</em> -&gt;
-<em>"发送"</em>，只是说在真正发送之前，请务必 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L584">封装协议</a></p>
-<p><br></p>
-<h3 id="自定义协议">自定义协议</h3>
-<p>现在关注剩余的几个函数：服务器端 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L513">转发消息:
-TransferMess()</a> 和 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L558">广播用户列表:
-SendUserList()</a>；客户端 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L611">显示消息:
-PrintMess()</a>、<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L674">更新用户列表:
-UpdateUser()</a> 和 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L720">封装协议:
-Packing()</a>，这些函数都和自定义协议有关</p>
-<p>所以我想先分享下我协议的定义思路，我也放到 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L1">注释：制表符画的协议</a>
-了</p>
+<p>由于后 8 Bytes 只用来填充，总是 0，所以我用前 8 Bytes 作为哈希表的键，对应它的 socket。所以是一个 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L75">uint64_t -&gt; SOCKET 的哈希表</a></p>
+<p>至此，便是接收请求的逻辑。后面 <strong>维护用户列表</strong> 思路可能比较凌乱，如果你有其他想法可以按你自己的思路来，这里仅提供其中一个思路</p>
+<br>
+<p>接收完连接请求，便需要遍历用户列表里面所有用户有无产生 IO 事件了，还记得前面一开始分析需求的时候 <a href="#mess">服务器要处理的消息</a> 吗？</p>
+<p>现在来回顾一下，对于服务器来说需要接收 “连接请求” 以及 “其他 Client 发送来的消息”，需要发送 “在线用户列表”。翻译一下就是对于服务器，可读事件是 “连接请求”、“用户的聊天消息”（当然 Client 下线也属于可读事件）；可写事件是 &quot; ‘广播’ 在线用户列表&quot; （当然此处广播并不是真正意义上的广播，只是用一个 <code>for()</code> 循环不断发送以达到给每个 Client 发送的目的）</p>
+<p>连接请求这个可读事件前面已经处理了，所以现在 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L447">捕获的是另一个可读事件 ———— “用户聊天消息”</a>。对于这个事件，服务器要做的事情 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L486">就是转发而已</a></p>
+<p>最后一个可读事件，<a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L457">用户下线</a>，这里涉及 TCP 协议里一个名词 “优雅关闭”，详见 <a target="_blank" rel="noopener" href="http://c.biancheng.net/view/2354.html">shutdown()函数：优雅地断开TCP连接</a>。简单提一点，客户端需要先告诉服务器自己要断开连接了，好处就是未收发完的数据会继续收发，只有新数据不处理；然后服务器对这个已断开连接的用户 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L457">最后一次 <code>recv()</code> 会返回 0</a>，此时服务器才可以进行释放资源之类的操作</p>
+<p>事实上，若 Client 是优雅关闭的 (graceful termination) 会进入 TCP 四次挥手过程的 TIME_WAIT 阶段</p>
+<p><img src="https://pic.imgdb.cn/item/626252dc239250f7c55eba91.png" alt=""></p>
+<p>而如果 Client 不是优雅关闭，Server 最后一次 <code>recv()</code> 会返回 <em>SOCKET_ERROR</em>，错误码需要通过 <code>WSAGetLastError()</code> 获取</p>
+<p><img src="https://pic.imgdb.cn/item/62625367239250f7c5606cf7.png" alt=""></p>
+<br>
+<p>处理完可读事件，现在来考虑怎么处理可写事件 ———— 即 “发送用户列表”。虽然理论上你可以交给 <code>select()</code> 去决定什么时候可以发送，然后才将用户列表发送出去。但要考虑到，在一个局域网环境，而且是低并发量的情景下，几乎无时无刻都会触发 “可写事件”。因为你不用考虑网络因素，而且数据量足够少，那么只要遍历到一个 socket 就可以发送一次数据，这样反而无时无刻 Server 都会广播用户列表。Client 接收到的用户列表肯定是大量大量地重复的，反而会使 Client 要专门写一个实现去重的逻辑</p>
+<p>退一万步讲，只要我有一次能将用户列表更新成功，后续的更新就算有延迟其实也不影响 Client 原来的聊天，更何况我们现在的需求下网络环境几乎可以不考虑</p>
+<p>所以，为了使问题简化，我不打算将这个可写事件交给 <code>select()</code> 处理。相反，我只在必要的时候更新，也即 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L436">新用户上线</a> 以及 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L481">原有用户下线</a> 这两种情况进行更新</p>
+<br>
+<h3 id="客户端逻辑"><a class="header-anchor" href="#客户端逻辑"></a>客户端逻辑</h3>
+<p>客户端这边我引入了一个比较有趣的动作，就是按一下 “Connect” 会连接服务器，同时按钮切换为 “Terminate” 示意你再按一次会断开与服务器的连接。这里就不展开了，主要就是 <code>SetWindowText()</code> 的使用，具体逻辑参考 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L313">void ResetState()</a> 和 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L330">void  ChangeState(int *)</a> 这两个函数</p>
+<p>和服务器类似，Winsock Framework 我也是分为几个逻辑去处理。但不同的是，Client 请求连接要单独分出来，这也是一个需要不断重复的逻辑，只有你连接上服务器，才能进行下一步不是吗。所以总共分为 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L357">配置: ClientConfig()</a>、<a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L433">连接: ClientConn()</a> 和 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L494">运行: ClientRun()</a></p>
+<p>配置和连接类似服务器所以不展开，而如果你参考我的代码你会发现傻逼全局标识变量满天飞，这是我的问题，我承认我是 “面向测试编程” 一步步来的，没有一个很宏观的设计，确实很容易导致 “xx标识”、“全局xx” 使用过量，所以仅供参考，我主要想分享的是思路</p>
+<p>现在再来回顾下 <a href="#mess">客户端需要关注的消息</a>。要发送的是 “自己想说的话”；要接收的是 “在线用户列表” 和 “Server 的转发”。翻译过来就是前者是可写事件，后者是可读事件</p>
+<p>我把 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L526">检测可读事件</a> 放在前面是因为，如果 <code>recv()</code> 返回 0 即意味着服务器下线了，那再处理什么都没意义，就可以直接退出了</p>
+<p>由于 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L543">可读事件有两种类型</a>，所以有可读事件到达时，应用层需要做些事情才能区分出来，这也是自定义协议最重要的作用。像前面说的区分数据边界，放在这个入门 Demo 里其实我大可规定一个固定的消息长度，每次收发都是这个长度的消息，也可以达到区分边界的目的。但你想让应用层能正确处理多种类型的信息，那最优解还是自定义一个协议。至于我自己的思路，我放在后面分享，现在先关注客户端的逻辑</p>
+<p>先将 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L545">UpdateUser()</a> 和 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L547">PrintMess()</a> 看作 <strong>Stub program</strong> <a target="_blank" rel="noopener" href="https://www.zhihu.com/question/24844900/answer/35126766">（关于桩代码（Stub））</a>，那可读事件就算完成了</p>
+<br>
+<p>关于 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L556">可写事件</a>，看到这里相信你也有些想法了，就是 <em>“从控件中获取用户输入”</em> -&gt; <em>“发送”</em>，只是说在真正发送之前，请务必 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L584">封装协议</a></p>
+<br>
+<h3 id="自定义协议"><a class="header-anchor" href="#自定义协议"></a>自定义协议</h3>
+<p>现在关注剩余的几个函数：服务器端 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L513">转发消息: TransferMess()</a> 和 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.cpp#L558">广播用户列表: SendUserList()</a>；客户端 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L611">显示消息: PrintMess()</a>、<a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L674">更新用户列表: UpdateUser()</a> 和 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L720">封装协议: Packing()</a>，这些函数都和自定义协议有关</p>
+<p>所以我想先分享下我协议的定义思路，我也放到 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L1">注释：制表符画的协议</a> 了</p>
 <blockquote>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 针对 P2P Server，应用层需要提供自己的协议，此处自定义协议规则如下</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 自定义协议：由包头和包体两部分组成，总是固定长度（MSG_SIZE）</span></span><br><span class="line"><span class="comment"> *     包头逻辑上同以下结构体</span></span><br><span class="line"><span class="comment"> *     struct HEAD &#123;</span></span><br><span class="line"><span class="comment"> *         uint8_t type; // 1B</span></span><br><span class="line"><span class="comment"> *         uint8_t size; // 2B</span></span><br><span class="line"><span class="comment"> *     &#125;;</span></span><br><span class="line"><span class="comment"> *     包体总是 128B</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 类型一：</span></span><br><span class="line"><span class="comment"> * type == 0x7f: 内含数据为用户列表</span></span><br><span class="line"><span class="comment"> * size:         指出包体数据实际长度</span></span><br><span class="line"><span class="comment"> *   ├ 1B ┼ 2B ┼     Body: 128B      ┤</span></span><br><span class="line"><span class="comment"> *   ┌────┬────┬─────────────────────┐</span></span><br><span class="line"><span class="comment"> *   │0x7f│size│     128 Bytes       │</span></span><br><span class="line"><span class="comment"> *   └────┴────┴─────────────────────┘</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 类型二：</span></span><br><span class="line"><span class="comment"> * type == 0x00: 内含数据为聊天消息</span></span><br><span class="line"><span class="comment"> * size:         指出包体数据实际长度</span></span><br><span class="line"><span class="comment"> * 包体开头 16B:  指出消息来自哪个 socket</span></span><br><span class="line"><span class="comment"> *   ├ 1B ┼ 2B ┼     Body: 128B      ┤</span></span><br><span class="line"><span class="comment"> *   ┌────┬────┬─────┬───────────────┐</span></span><br><span class="line"><span class="comment"> *   │0x00│size│ 16B │   MESSAGES    │</span></span><br><span class="line"><span class="comment"> *   └────┴────┴─────┴───────────────┘</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
 </blockquote>
-<p>我把每一条消息固定了长度，只因简化处理逻辑。消息分为包头和包体两部分，包头含
-<code>type 类型</code>、<code>size 消息长度</code> 两个字段，共 3
-Bytes。包体不同类型不同定义：对于类型一，用于封装用户列表，包体全部 128
-Bytes 都用来封装用户的 sockaddr_in 结构体，这个数字是根据 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L51">MAX_CLIENT</a>
-和 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L55">MSG_SIZE</a>
-这两个宏得到的，总是可以囊括全部的用户 sockaddr_in
-结构体信息；对于类型二，用于封装聊天信息，包体开头 16 Bytes 用于封装
-Client 本地的 sockaddr_in，这样对端才知道消息来自于哪个 IP
-哪个端口，剩下的字节均用于封装具体的消息。值得一提的是，虽然聊天信息本身就是字符串，封装时确实也可以用
-<code>strcat()</code> 来处理，但我这里以 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L747">以二进制形式封装聊天数据</a>
-实测也可以，算是提供另外一个思路。但就像前面说的那样，对字符串使用
-<code>memcpy()</code> 前提是确保拷贝长度无误，否则慎用</p>
-<p>以上思路仅供参考，你也可以定义自己喜欢的协议格式，其实剩余的函数就是对照上面的协议格式进行
-"封包" 和 "解包" 而已，我就不展开了</p>
-<p><br></p>
-<h2 id="写在最后">写在最后</h2>
+<p>我把每一条消息固定了长度，只因简化处理逻辑。消息分为包头和包体两部分，包头含 <code>type 类型</code>、<code>size 消息长度</code> 两个字段，共 3 Bytes。包体不同类型不同定义：对于类型一，用于封装用户列表，包体全部 128 Bytes 都用来封装用户的 sockaddr_in 结构体，这个数字是根据 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L51">MAX_CLIENT</a> 和 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Server.h#L55">MSG_SIZE</a> 这两个宏得到的，总是可以囊括全部的用户 sockaddr_in 结构体信息；对于类型二，用于封装聊天信息，包体开头 16 Bytes 用于封装 Client 本地的 sockaddr_in，这样对端才知道消息来自于哪个 IP 哪个端口，剩下的字节均用于封装具体的消息。值得一提的是，虽然聊天信息本身就是字符串，封装时确实也可以用 <code>strcat()</code> 来处理，但我这里以 <a target="_blank" rel="noopener" href="https://github.com/horbyn/Win32-chat-room-winsock2/blob/a62a76976d1db28b63cc57782f3f10c1156809a4/Client.cpp#L747">以二进制形式封装聊天数据</a> 实测也可以，算是提供另外一个思路。但就像前面说的那样，对字符串使用 <code>memcpy()</code> 前提是确保拷贝长度无误，否则慎用</p>
+<p>以上思路仅供参考，你也可以定义自己喜欢的协议格式，其实剩余的函数就是对照上面的协议格式进行 “封包” 和 “解包” 而已，我就不展开了</p>
+<br>
+<h2 id="写在最后"><a class="header-anchor" href="#写在最后"></a>写在最后</h2>
 <p>我想分享下这个过程中我遇到的两个 bug，是什么现象又是怎么解决的</p>
-<p><br></p>
-<h3 id="bug-1-闪退">BUG 1: 闪退</h3>
+<br>
+<h3 id="BUG-1-闪退"><a class="header-anchor" href="#BUG-1-闪退"></a>BUG 1: 闪退</h3>
 <p>现象：</p>
 <ul>
-<li>程序不能百分百正常运行。比如打开程序 10 次，总会有 3~5
-次出现闪退</li>
+<li>程序不能百分百正常运行。比如打开程序 10 次，总会有 3~5 次出现闪退</li>
 </ul>
 <p>解决：</p>
 <ul>
 <li>这是一个非常非常常见的 bug，原因是 <strong>缓冲区溢出</strong></li>
-<li>此时需要重点关注所有的
-<strong>字符串函数</strong>，特别是不规定字符串长度的函数如
-<code>strcpy()</code>、<code>strcat()</code> 等，所以我在实现上全部换成
-<code>StringCchCopy()</code>、<code>StringCchCat()</code>；如果你是
-Linux 程序对应 <code>strcpy_s()</code>、<code>strcat_s()</code></li>
+<li>此时需要重点关注所有的 <strong>字符串函数</strong>，特别是不规定字符串长度的函数如 <code>strcpy()</code>、<code>strcat()</code> 等，所以我在实现上全部换成 <code>StringCchCopy()</code>、<code>StringCchCat()</code>；如果你是 Linux 程序对应 <code>strcpy_s()</code>、<code>strcat_s()</code></li>
 </ul>
-<p><br></p>
-<h3 id="bug-2-无响应">BUG 2: 无响应</h3>
+<br>
+<h3 id="BUG-2-无响应"><a class="header-anchor" href="#BUG-2-无响应"></a>BUG 2: 无响应</h3>
 <p>现象：</p>
 <ul>
 <li>标题栏标题后面新增 <em>(无响应)</em> 三个字</li>
-<li>点击窗口右上角关闭按钮，会出现 "window 无响应"、"是否发送错误报告"
-之类的弹窗</li>
+<li>点击窗口右上角关闭按钮，会出现 “window 无响应”、“是否发送错误报告” 之类的弹窗</li>
 </ul>
 <p>解决：</p>
 <ul>
 <li>这是修改了比 <code>malloc()</code> 给定的内存更大的内存空间</li>
 <li>这种 bug 在运行时可能不会出现任何问题，但是一旦关闭，就会崩溃</li>
-<li>这就是没有养成 <code>malloc()</code> 和 <code>free()</code>
-配套的好习惯。事实上，只要加上
-<code>free()</code>，并且程序有越界访问的行文，编译阶段就会被检查出来</li>
+<li>这就是没有养成 <code>malloc()</code> 和 <code>free()</code> 配套的好习惯。事实上，只要加上 <code>free()</code>，并且程序有越界访问的行文，编译阶段就会被检查出来</li>
 </ul>
-<p><br></p>
+<br>
 <p>以上是本文所有内容，欢迎评论、欢迎给予我意见，也欢迎交流</p>
 
     </article>
@@ -977,7 +674,7 @@ Linux 程序对应 <code>strcpy_s()</code>、<code>strcat_s()</code></li>
             <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
             <p>Link：<a href="https://horbyn.github.io/2022/03/14/winsock/">https://horbyn.github.io/2022/03/14/winsock/</a>
             <p>Publish date：<a href="https://horbyn.github.io/2022/03/14/winsock/">March 14th 2022, 10:39:10 pm</a>
-            <p>Update date：<a href="https://horbyn.github.io/2022/03/14/winsock/">February 28th 2025, 11:27:31 pm</a>
+            <p>Update date：<a href="https://horbyn.github.io/2022/03/14/winsock/">February 28th 2025, 3:27:31 pm</a>
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
     <!-- paginator -->
@@ -1046,8 +743,7 @@ Linux 程序对应 <code>strcpy_s()</code>、<code>strcat_s()</code></li>
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%8B%E7%BB%8D"><span class="toc-number">1.</span> <span class="toc-text">介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#license"><span class="toc-number">2.</span> <span class="toc-text">LICENSE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%BC%94%E7%A4%BA"><span class="toc-number">3.</span> <span class="toc-text">演示</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E6%B5%8B%E8%AF%95"><span class="toc-number">3.1.</span> <span class="toc-text">本地测试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%80%E5%9F%9F%E7%BD%91%E6%B5%8B%E8%AF%95"><span class="toc-number">3.2.</span> <span class="toc-text">局域网测试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BC%BA%E9%99%B7"><span class="toc-number">4.</span> <span class="toc-text">缺陷</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E6%AC%A1%E5%BC%80%E5%8F%91"><span class="toc-number">5.</span> <span class="toc-text">二次开发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%9C%80%E6%B1%82%E5%88%86%E6%9E%90"><span class="toc-number">6.</span> <span class="toc-text">需求分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%86%E5%A4%87%E7%9F%A5%E8%AF%86"><span class="toc-number">7.</span> <span class="toc-text">准备知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#win32-framework"><span class="toc-number">7.1.</span> <span class="toc-text">Win32 Framework</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#win32-controls"><span class="toc-number">7.2.</span> <span class="toc-text">Win32 Controls</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#winsock-framework"><span class="toc-number">7.3.</span> <span class="toc-text">Winsock Framework</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#select-model-nonblocking"><span class="toc-number">7.4.</span> <span class="toc-text">Select Model &amp;&amp;
-Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E8%BE%B9%E7%95%8C"><span class="toc-number">7.5.</span> <span class="toc-text">消息边界</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%A0%E8%BE%93%E4%BA%8C%E8%BF%9B%E5%88%B6"><span class="toc-number">7.6.</span> <span class="toc-text">传输二进制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF"><span class="toc-number">8.</span> <span class="toc-text">实现思路</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#win32-%E6%B6%88%E6%81%AF%E5%BE%AA%E7%8E%AF"><span class="toc-number">8.1.</span> <span class="toc-text">Win32 消息循环</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%8D%E5%8A%A1%E5%99%A8%E9%80%BB%E8%BE%91"><span class="toc-number">8.2.</span> <span class="toc-text">服务器逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#serverconfig"><span class="toc-number">8.3.</span> <span class="toc-text">ServerConfig()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#serverrun"><span class="toc-number">8.4.</span> <span class="toc-text">ServerRun()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91"><span class="toc-number">8.5.</span> <span class="toc-text">客户端逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8D%8F%E8%AE%AE"><span class="toc-number">8.6.</span> <span class="toc-text">自定义协议</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">9.</span> <span class="toc-text">写在最后</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#bug-1-%E9%97%AA%E9%80%80"><span class="toc-number">9.1.</span> <span class="toc-text">BUG 1: 闪退</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#bug-2-%E6%97%A0%E5%93%8D%E5%BA%94"><span class="toc-number">9.2.</span> <span class="toc-text">BUG 2: 无响应</span></a></li></ol></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%8B%E7%BB%8D-v2"><span class="toc-number">1.</span> <span class="toc-text">介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LICENSE"><span class="toc-number">2.</span> <span class="toc-text">LICENSE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%BC%94%E7%A4%BA"><span class="toc-number">3.</span> <span class="toc-text">演示</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E6%B5%8B%E8%AF%95"><span class="toc-number">3.1.</span> <span class="toc-text">本地测试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%80%E5%9F%9F%E7%BD%91%E6%B5%8B%E8%AF%95"><span class="toc-number">3.2.</span> <span class="toc-text">局域网测试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BC%BA%E9%99%B7"><span class="toc-number">4.</span> <span class="toc-text">缺陷</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E6%AC%A1%E5%BC%80%E5%8F%91"><span class="toc-number">5.</span> <span class="toc-text">二次开发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%9C%80%E6%B1%82%E5%88%86%E6%9E%90"><span class="toc-number">6.</span> <span class="toc-text">需求分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%86%E5%A4%87%E7%9F%A5%E8%AF%86"><span class="toc-number">7.</span> <span class="toc-text">准备知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-Framework"><span class="toc-number">7.1.</span> <span class="toc-text">Win32 Framework</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-Controls"><span class="toc-number">7.2.</span> <span class="toc-text">Win32 Controls</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Winsock-Framework"><span class="toc-number">7.3.</span> <span class="toc-text">Winsock Framework</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Select-Model-Nonblocking"><span class="toc-number">7.4.</span> <span class="toc-text">Select Model &amp;&amp; Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B6%88%E6%81%AF%E8%BE%B9%E7%95%8C"><span class="toc-number">7.5.</span> <span class="toc-text">消息边界</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%A0%E8%BE%93%E4%BA%8C%E8%BF%9B%E5%88%B6"><span class="toc-number">7.6.</span> <span class="toc-text">传输二进制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF"><span class="toc-number">8.</span> <span class="toc-text">实现思路</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Win32-%E6%B6%88%E6%81%AF%E5%BE%AA%E7%8E%AF"><span class="toc-number">8.1.</span> <span class="toc-text">Win32 消息循环</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%8D%E5%8A%A1%E5%99%A8%E9%80%BB%E8%BE%91"><span class="toc-number">8.2.</span> <span class="toc-text">服务器逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ServerConfig"><span class="toc-number">8.3.</span> <span class="toc-text">ServerConfig()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ServerRun"><span class="toc-number">8.4.</span> <span class="toc-text">ServerRun()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91"><span class="toc-number">8.5.</span> <span class="toc-text">客户端逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8D%8F%E8%AE%AE"><span class="toc-number">8.6.</span> <span class="toc-text">自定义协议</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">9.</span> <span class="toc-text">写在最后</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#BUG-1-%E9%97%AA%E9%80%80"><span class="toc-number">9.1.</span> <span class="toc-text">BUG 1: 闪退</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BUG-2-%E6%97%A0%E5%93%8D%E5%BA%94"><span class="toc-number">9.2.</span> <span class="toc-text">BUG 2: 无响应</span></a></li></ol></li></ol>
             </div>
         <!-- sidebar -->
         <div class="sidebar sidebar-hide">
@@ -1083,9 +779,12 @@ Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" 
         
         
         
+        
+        
+        
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 24
+        Total : 27
         </div>
         <!-- search  -->
     </div>
@@ -1093,11 +792,15 @@ Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" 
             <div class="archive-year"> 2025 </div>
             <ul class="year-list">
         <li class="archive-post-item">
+            <span class="archive-post-date">03/03</span>
+            <a class="archive-post-title" href="/2025/03/02/github-index/">美化 Github 主页</a>
+        </li>
+        <li class="archive-post-item">
             <span class="archive-post-date">02/10</span>
             <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/07</span>
+            <span class="archive-post-date">02/08</span>
             <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
         </li>
         <li class="archive-post-item">
@@ -1125,21 +828,28 @@ Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" 
             <a class="archive-post-title" href="/2025/01/02/hoo-1/">「从零到一」实现一个 x86 的内核</a>
         </li>
                 </ul>
+            <div class="archive-year"> 2024 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/24</span>
+            <a class="archive-post-title" href="/2024/10/23/privilege/">关于 x86 特权级这种保护机制</a>
+        </li>
+                </ul>
             <div class="archive-year"> 2023 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">11/01</span>
+            <span class="archive-post-date">11/02</span>
             <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
         </li>
                 </ul>
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">05/28</span>
+            <span class="archive-post-date">05/29</span>
             <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/21</span>
+            <span class="archive-post-date">04/22</span>
             <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
         </li>
         <li class="archive-post-item">
@@ -1147,35 +857,35 @@ Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" 
             <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/17</span>
+            <span class="archive-post-date">04/18</span>
             <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/15</span>
+            <span class="archive-post-date">04/16</span>
             <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/11</span>
+            <span class="archive-post-date">04/12</span>
             <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/05</span>
+            <span class="archive-post-date">04/06</span>
             <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/04</span>
+            <span class="archive-post-date">04/05</span>
             <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/29</span>
+            <span class="archive-post-date">03/30</span>
             <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/29</span>
+            <span class="archive-post-date">03/30</span>
             <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/25</span>
+            <span class="archive-post-date">03/26</span>
             <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
         </li>
         <li class="archive-post-item">
@@ -1183,16 +893,20 @@ Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" 
             <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/14</span>
+            <span class="archive-post-date">03/15</span>
             <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/28</span>
+            <span class="archive-post-date">03/01</span>
             <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/25</span>
+            <span class="archive-post-date">02/26</span>
             <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/23</span>
+            <a class="archive-post-title" href="/2022/02/22/hello-world/">Hello world</a>
         </li>
             </ul>
     </div>
@@ -1215,6 +929,10 @@ Nonblocking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" 
             <span class="sidebar-tag-name" data-tags="xv6">
                 <span class="iconfont-archer">&#xe606;</span>
                 xv6
+            </span>
+            <span class="sidebar-tag-name" data-tags="Blogs">
+                <span class="iconfont-archer">&#xe606;</span>
+                Blogs
             </span>
     </div>
     <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>

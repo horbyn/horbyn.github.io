@@ -18,7 +18,7 @@
 <meta property="og:description" content="x86 内核文件系统的功能可以分为两个部分，管理一个磁盘以及实现文件操作接口。hoo 没有采取流行的文件系统格式，而是另外实现了一套组织方式，并围绕这套方式定义了四个主要的文件系统接口：打开文件、关闭文件、创建文件、删除文件、读取文件和写入文件">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-02-07T09:41:24.000Z">
-<meta property="article:modified_time" content="2025-02-28T15:27:31.272Z">
+<meta property="article:modified_time" content="2025-03-02T02:57:06.822Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="hoo">
 <meta name="twitter:card" content="summary">
@@ -484,7 +484,7 @@ src="https://pic1.imgdb.cn/item/67a5d3e3d0e0a243d4fc8f13.png" /></p>
 </ul>
 <h2 id="超级块初始化">超级块初始化</h2>
 <p>超级块定义在 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/super_block.h#L11">kern/fs/super_block.h</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/super_block.h#L11">kern/fs/super_block.h</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">super_block</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span> magic_;                 <span class="comment">// magic number</span></span><br><span class="line">    <span class="type">uint32_t</span> lba_partition_,         <span class="comment">// 分区信息所在的 LBA 号</span></span><br><span class="line">        lba_super_block_,            <span class="comment">// 超级块所在的 LBA 号</span></span><br><span class="line">        lba_map_inode_,              <span class="comment">// inode 位图所在的 LBA 号</span></span><br><span class="line">        lba_inodes_,                 <span class="comment">// inode 所在的 LBA 号</span></span><br><span class="line">        lba_map_free_,               <span class="comment">// 空闲块位图所在的 LBA 号</span></span><br><span class="line">        lba_free_;                   <span class="comment">// 空闲块所在的 LBA 号</span></span><br><span class="line">    <span class="type">uint32_t</span> map_free_sectors_;      <span class="comment">// 空闲块占据了多少个扇区</span></span><br><span class="line">    <span class="type">uint32_t</span> inode_block_index_max_; <span class="comment">// 二级索引最多有多少个扇区</span></span><br><span class="line">&#125; <span class="type">super_block_t</span>;</span><br></pre></td></tr></table></figure>
 <p>以下是一些说明：</p>
 <ul>
@@ -494,7 +494,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <li><code>inode_block_index_max_</code>：如前文所示，一个 inode
 会拥有一个包含了 8 个元素的索引表，<code>hoo</code>
 的索引表是二级索引。那么，一个 inode 可表示的扇区数量就是（详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/super_block.c#L41">kern/fs/super_block.c</a>）：
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/super_block.c#L41">kern/fs/super_block.c</a>）：
 <ul>
 <li>前 6 个索引是直接索引，可以表示 6 个扇区</li>
 <li>第 7 个索引是一级索引，可以表示 512 / 4 = 128
@@ -513,7 +513,7 @@ src="https://pic1.imgdb.cn/item/67a62072d0e0a243d4fca291.png" /></p>
 in-memory。所有线程的 inode 读写都是面向 in-memory
 结构，然后内核会在适当时刻将 in-memory 结构统一写入硬盘</p>
 <p>in-memory 结构的 inode 位图借助 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/bitmap.h#L18">kern/utilities/bitmap.h</a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/bitmap.h#L18">kern/utilities/bitmap.h</a>
 的接口来操作，对 inode 位图和 inode 块的初始化分两种情况：</p>
 <ul>
 <li>硬盘已经写入了文件系统
@@ -528,17 +528,17 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 </ul></li>
 </ul>
 <p>inode 定义详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/inodes.h#L20">kern/fs/inodes.h</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/inodes.h#L20">kern/fs/inodes.h</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_INODE_BLOCKS 8</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">inode</span> &#123;</span></span><br><span class="line">    <span class="comment">// 文件大小或目录个数</span></span><br><span class="line">    <span class="type">uint32_t</span>    size_;</span><br><span class="line">    <span class="comment">// 索引表: [0-5] 直接索引; [6] 一级索引; [7] 二级索引</span></span><br><span class="line">    <span class="type">uint32_t</span> iblocks_[MAX_INODE_BLOCKS];</span><br><span class="line">&#125; <span class="type">inode_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 全局 inode in-memory 数组</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_INODES   64</span></span><br><span class="line"><span class="keyword">extern</span> <span class="type">inode_t</span> __fs_inodes[MAX_INODES];</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">inodes_rw_disk</span><span class="params">(<span class="type">int</span> inode_idx, <span class="type">atacmd_t</span> cmd)</span>;</span><br></pre></td></tr></table></figure>
 <p><code>__fs_nodes</code> 对象是 in-memory inodes
 数组，整个文件系统最多支持 64 个
 inode，换句话说，文件和目录加在一起最多只支持保存 64 个。伴随 inode
 出现同时还定义一个读写 inode 的接口，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/inodes.c#L100"><code>kern/fs/inodes.c</code></a>，实际上是
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/inodes.c#L100"><code>kern/fs/inodes.c</code></a>，实际上是
 ATA 读写的一个封装。对于 ATA 读是 on-disk inode 读取到 in-memory
 inode；对于 ATA 写则是 in-memory inode 写入 on-disk inode</p>
 <p>初始化详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/inodes.c#L20">kern/fs/inodes.c</a>，以下代码片段有删减：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/inodes.c#L20">kern/fs/inodes.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> BYTES_SECTOR 512</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_INODES   64</span></span><br><span class="line"><span class="type">static</span> <span class="type">bitmap_t</span> __bmfs;                          <span class="comment">// 1</span></span><br><span class="line"><span class="type">static</span> <span class="type">uint8_t</span> __bmbuff_fs_inodes[BYTES_SECTOR];</span><br><span class="line"><span class="type">inode_t</span> __fs_inodes[MAX_INODES];</span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">setup_inode</span><span class="params">(<span class="type">bool</span> is_new)</span> &#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 2</span></span><br><span class="line">    <span class="type">atacmd_t</span> cmd = is_new ? ATA_CMD_IO_WRITE : ATA_CMD_IO_READ;</span><br><span class="line">    bitmap_init(&amp;__bmfs, MAX_INODES, __bmbuff_fs_inodes);</span><br><span class="line">    bzero(__fs_inodes, <span class="keyword">sizeof</span>(__fs_inodes));</span><br><span class="line">    bzero(__bmbuff_fs_inodes, <span class="keyword">sizeof</span>(__bmbuff_fs_inodes));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3</span></span><br><span class="line">    ata_driver_rw(__bmbuff_fs_inodes, <span class="keyword">sizeof</span>(__bmbuff_fs_inodes),</span><br><span class="line">        FS_LAYOUT_BASE_MAP_INODES, cmd);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 4</span></span><br><span class="line">    <span class="keyword">if</span> (is_new == <span class="literal">false</span>) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; MAX_INODES; ++i) &#123;</span><br><span class="line">            <span class="keyword">if</span> (bitmap_test(&amp;__bmfs, i) != <span class="literal">false</span>)</span><br><span class="line">                inodes_rw_disk(i, cmd);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：<code>__bmfs</code> 是全局 inode 位图，后面的
@@ -571,7 +571,7 @@ inode 元素。从 inode
 命令，会输出一个列表，可以是目录和文件）</p>
 <p>通过这种组织方式，当需要检索根目录时，就是遍历最后的目录项数组；当需要在根目录下创建文件或目录时，就是写入最后的目录项数组</p>
 <p><code>hoo</code> 在 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.h#L16">kern/fs/dir.h</a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.h#L16">kern/fs/dir.h</a>
 定义了目录项和目录项数组：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="type">uint32_t</span> <span class="type">inode_type_t</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">define</span> INODE_TYPE_INVALID  0</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> INODE_TYPE_FILE     1</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> INODE_TYPE_DIR      2</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 目录项</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dir_item</span> &#123;</span></span><br><span class="line">    <span class="type">inode_type_t</span> type_;</span><br><span class="line">    <span class="type">int</span>          inode_idx_;</span><br><span class="line">    <span class="type">char</span>         name_[DIRITEM_NAME_LEN]; <span class="comment">// 13.3 格式</span></span><br><span class="line">&#125; <span class="type">diritem_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BYTES_SECTOR            512</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_DIRITEM_PER_BLOCK   ((BYTES_SECTOR) / sizeof(diritem_t))</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 目录项数组</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dir_block</span> &#123;</span></span><br><span class="line">    <span class="type">diritem_t</span> dir_[MAX_DIRITEM_PER_BLOCK];</span><br><span class="line">&#125; <span class="type">dirblock_t</span>;</span><br></pre></td></tr></table></figure>
 <ul>
@@ -588,12 +588,12 @@ target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/8.3_filename"
 <p>因为根目录结构体成员的值是固定的，所以其目录项不保存到硬盘，也就是只有
 in-memory 而没有 on-disk 结构。而新盘和旧盘的初始化稍微不同： -
 新盘：调用 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L296"><code>diritem_create()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L296"><code>diritem_create()</code></a>
 接口创建根目录的目录项 - 旧盘：直接为 in-memory 的目录项赋值，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/fs.c#L34">kern/module/fs.c</a></p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/fs.c#L34">kern/module/fs.c</a></p>
 <p><code>diritem_create()</code>
 是目录项操作，用来新建一个目录，详细代码见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L296">kern/fs/dir.c</a>，这里忽略具体实现，下面展示这个函数的功能示意图：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L296">kern/fs/dir.c</a>，这里忽略具体实现，下面展示这个函数的功能示意图：</p>
 <p><img
 src="https://pic1.imgdb.cn/item/67a700f9d0e0a243d4fcf8cf.png" /></p>
 <ul>
@@ -609,10 +609,10 @@ inode 索引是 0，没有上一级目录，所以 inode 索引是 -1</li>
 引入了全局文件数组。同一个文件是全局唯一的，使用全局文件数组来记录。使用引用计数来管理文件的存留，多个线程引用同一个文件则引用计数增加，当引用计数递减为
 0 则释放文件</p>
 <p>文件定义详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/fs_stuff.h#L29">kern/fs/fs_stuff.h</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/fs_stuff.h#L29">kern/fs/fs_stuff.h</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">files</span> &#123;</span></span><br><span class="line">    <span class="type">int</span>      inode_idx_; <span class="comment">// 文件对应的 inode 数组索引</span></span><br><span class="line">    <span class="type">uint32_t</span> ref_;       <span class="comment">// 引用计数</span></span><br><span class="line">&#125; <span class="type">files_t</span>;</span><br></pre></td></tr></table></figure>
 <p>全局文件数组初始化详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L49">kern/fs/files.c</a>：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L49">kern/fs/files.c</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_TASKS_AMOUNT    1024</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_FILES_PER_TASK  64</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_OPEN_FILES      ((MAX_FILES_PER_TASK) * (MAX_TASKS_AMOUNT))</span></span><br><span class="line"></span><br><span class="line"><span class="type">files_t</span> *__fs_files;</span><br><span class="line">__fs_files = dyn_alloc(<span class="keyword">sizeof</span>(<span class="type">files_t</span>) * MAX_OPEN_FILES);</span><br></pre></td></tr></table></figure>
 <p><code>hoo</code> 最大支持 1024 个任务，每个任务最多支持打开 64
 个文件，所以全局文件数组最多 1024 * 64
@@ -629,7 +629,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <li>将文件对应的目录项写入父目录项</li>
 </ul>
 <p><code>hoo</code> 的具体实现详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L63">kern/fs/files.c</a>，以下代码片段有删减：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L63">kern/fs/files.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> DIRNAME_ROOT_ASCII  47    <span class="comment">// 根目录 / 字符的 ASCII 码</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DIRITEM_NAME_LEN    16    <span class="comment">// 文件名长度</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span></span><br><span class="line"><span class="title function_">files_create</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name)</span> &#123;</span><br><span class="line">	<span class="comment">// 1</span></span><br><span class="line">    <span class="type">inode_type_t</span> type = (name[<span class="built_in">strlen</span>(name) - <span class="number">1</span>] == DIRNAME_ROOT_ASCII) ?</span><br><span class="line">        INODE_TYPE_DIR : INODE_TYPE_FILE;</span><br><span class="line"></span><br><span class="line">    <span class="type">diritem_t</span> *self = dyn_alloc(<span class="keyword">sizeof</span>(<span class="type">diritem_t</span>));</span><br><span class="line">    <span class="keyword">if</span> (diritem_find(name, self)) &#123; <span class="comment">// 2</span></span><br><span class="line">        dyn_free(self);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    dyn_free(self);</span><br><span class="line"></span><br><span class="line">    <span class="type">diritem_t</span> *di_parent = dyn_alloc(<span class="keyword">sizeof</span>(<span class="type">diritem_t</span>));</span><br><span class="line">    <span class="type">char</span> parent[DIRITEM_NAME_LEN], cur[DIRITEM_NAME_LEN];</span><br><span class="line">    get_parent_child_filename(parent, cur); <span class="comment">// 3</span></span><br><span class="line">    diritem_find(parent, di_parent);        <span class="comment">// 4</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 5</span></span><br><span class="line">    <span class="type">diritem_t</span> *di_cur = diritem_create(type, cur, di_parent-&gt;inode_idx_);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 6</span></span><br><span class="line">    diritem_push(di_parent, di_cur);</span><br><span class="line">    dyn_free(di_parent);</span><br><span class="line">    dyn_free(di_cur);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：判断创建文件还是目录。<code>hoo</code>
@@ -638,12 +638,12 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 则是创建文件；如果是创建 <code>/bin/abc/</code> 则是创建目录</li>
 <li>注释
 2：查找待创建文件的目录项。如果存在则直接返回，避免重复创建相同的文件。<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L206"><code>diritem_find()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L206"><code>diritem_find()</code></a>
 是目录项接口，用来返回给定文件名的目录项</li>
 <li>注释 3：将文件名拆分为父名称和子名称。比如
 <code>/bin/abc</code>（<code>/bin/abc/</code> 也是）会被拆分为父名称
 <code>/bin</code> 和子名称 <code>abc</code>，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/curdir.c#L119">kern/utilities/curdir.c</a></li>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/curdir.c#L119">kern/utilities/curdir.c</a></li>
 <li>注释 4：查找父目录项</li>
 <li>注释
 5：创建给定文件的目录项。需要指定待创建文件的文件类型、文件名、父目录的
@@ -651,7 +651,7 @@ inode
 数组索引，通过这些信息创建一个新的目录项，<code>diritem_create()</code>
 逻辑在创建根目录一节已经给出，不再赘述</li>
 <li>注释 6：上一步创建的新目录项写入父目录项。<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L333"><code>diritem_push()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L333"><code>diritem_push()</code></a>
 也是目录项接口，用来将子目录项写入父目录项</li>
 </ul>
 <p><code>diritem_push()</code>
@@ -673,13 +673,13 @@ src="https://pic1.imgdb.cn/item/67a71c59d0e0a243d4fd094f.png" /></p>
 <li>从父目录项中删除给定文件的目录项</li>
 </ul>
 <p><code>hoo</code> 的具体实现详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L107">kern/fs/files.c</a>，以下代码片段有删减：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L107">kern/fs/files.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span></span><br><span class="line"><span class="title function_">files_remove</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name)</span> &#123;</span><br><span class="line">    <span class="type">char</span> parent[DIRITEM_NAME_LEN];</span><br><span class="line">    get_parent_child_filename(parent, <span class="number">0</span>); <span class="comment">// 1</span></span><br><span class="line"></span><br><span class="line">    <span class="type">diritem_t</span> di_parent, di_cur;</span><br><span class="line">    diritem_find(parent, &amp;di_parent);     <span class="comment">// 2</span></span><br><span class="line">    diritem_find(name, &amp;di_cur);</span><br><span class="line"></span><br><span class="line">    diritem_remove(&amp;di_parent, &amp;di_cur);  <span class="comment">// 3</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：从待删除文件名中提取出父文件名</li>
 <li>注释 2：找到待删除文件的父目录项和自己的目录项</li>
 <li>注释 3：从父目录项中删除自己。<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L374"><code>diritem_remove()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L374"><code>diritem_remove()</code></a>
 是目录项接口，用来从父目录项中删除给定的子目录项</li>
 </ul>
 <p>同样 <code>diritem_remove()</code>
@@ -709,7 +709,7 @@ fd，表示的是全局文件数组中的索引。如前文所示，全局文件
 <li>通过索引表就可以找到磁盘块，进而把整个文件找到</li>
 </ul>
 <p><code>hoo</code> 为 pcb 的文件数组实现了一层封装，称为 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/fmngr.h#L11">文件管理器</a>，通过位图来记录文件数组哪些元素已分配哪些未分配，提供了一组操作接口：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/fmngr.h#L11">文件管理器</a>，通过位图来记录文件数组哪些元素已分配哪些未分配，提供了一组操作接口：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_manager</span> &#123;</span></span><br><span class="line">    <span class="type">bitmap_t</span> fd_set_; <span class="comment">// 管理结构</span></span><br><span class="line">    <span class="type">fd_t</span>     *files_; <span class="comment">// 文件数组</span></span><br><span class="line">&#125; <span class="type">fmngr_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="type">fd_t</span> <span class="title function_">fmngr_alloc</span><span class="params">(<span class="type">fmngr_t</span> *fmngr)</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">fmngr_free</span><span class="params">(<span class="type">fmngr_t</span> *fmngr, <span class="type">fd_t</span> fd)</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">fmngr_files_set</span><span class="params">(<span class="type">fmngr_t</span> *fmngr, <span class="type">fd_t</span> fd, <span class="type">fd_t</span> val)</span>;</span><br><span class="line"><span class="type">fd_t</span> <span class="title function_">fmngr_files_get</span><span class="params">(<span class="type">fmngr_t</span> *fmngr, <span class="type">fd_t</span> fd)</span>;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>分配：从管理结构位图中查找未分配的比特位，则该比特位的索引就是 pcb
@@ -726,13 +726,13 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 文件数组中取出一个未分配的元素索引，上一步的全局索引赋值给该元素</li>
 </ul>
 <p><code>hoo</code> 的具体实现详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L132">kern/fs/files.c</a>，以下代码片段有删减：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L132">kern/fs/files.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">files_t</span> *__fs_files; <span class="comment">// 全局文件数组</span></span><br><span class="line"></span><br><span class="line"><span class="type">fd_t</span></span><br><span class="line"><span class="title function_">files_open</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (name == <span class="number">0</span>)    panic(<span class="string">&quot;files_open(): null pointer&quot;</span>);</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 1</span></span><br><span class="line">    <span class="type">diritem_t</span> *self = dyn_alloc(<span class="keyword">sizeof</span>(<span class="type">diritem_t</span>));</span><br><span class="line">    diritem_find(name, self);</span><br><span class="line">    <span class="keyword">if</span> (self-&gt;type_ != INODE_TYPE_FILE)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 2</span></span><br><span class="line">    <span class="type">fd_t</span> index = fd_global_alloc();</span><br><span class="line">    __fs_files[index].inode_idx_ = self-&gt;inode_idx_;</span><br><span class="line">    ++__fs_files[index].ref_;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 3</span></span><br><span class="line">    <span class="type">pcb_t</span> *cur_pcb = get_current_pcb();</span><br><span class="line">    <span class="type">fd_t</span> fd = fmngr_alloc(cur_pcb-&gt;fmngr_);</span><br><span class="line">    fmngr_files_set(cur_pcb-&gt;fmngr_, fd, index);</span><br><span class="line"></span><br><span class="line">    dyn_free(self);</span><br><span class="line">    <span class="keyword">return</span> fd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释
 1：获取待打开文件的目录项，检查文件类型，不是文件类型返回错误</li>
 <li>注释 2：设置全局文件数组。<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L22"><code>fd_global_alloc()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L22"><code>fd_global_alloc()</code></a>
 返回一个未分配的全局文件描述符，该文件描述符作为索引，此时通过索引更新全局文件数组</li>
 <li>注释 3：设置线程自己的文件数组。通过文件管理器接口
 <code>fmngr_alloc()</code> 获取一个未分配的索引，再通过
@@ -745,13 +745,13 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <li>全局文件数组取出文件，引用计数减一</li>
 </ul>
 <p><code>hoo</code> 的实现很简单，详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L158">kern/fs/files.c</a>，以下代码有删减：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L158">kern/fs/files.c</a>，以下代码有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">files_close</span><span class="params">(<span class="type">fd_t</span> fd)</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="type">pcb_t</span> *cur_pcb = get_current_pcb();</span><br><span class="line">    <span class="type">fd_t</span> index = fmngr_files_get(cur_pcb-&gt;fmngr_, fd);           <span class="comment">// 1</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (__fs_files[index].ref_ &gt; <span class="number">0</span>)    --__fs_files[index].ref_; <span class="comment">// 2</span></span><br><span class="line">    <span class="keyword">if</span> (__fs_files[index].ref_ == <span class="number">0</span>)    fd_global_free(index);   <span class="comment">// 3</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：从线程 pcb 的文件数组中取出全局文件描述符</li>
 <li>注释 2：先对全局文件的引用计数减一</li>
 <li>注释 3：再判断全局文件的引用计数是否减至 0，是则回收该全局文件。<a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L40"><code>fd_global_free()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L40"><code>fd_global_free()</code></a>
 主要是将全局文件描述符设置为未分配</li>
 </ul>
 <h2 id="读取文件">读取文件</h2>
@@ -778,7 +778,7 @@ src="https://pic1.imgdb.cn/item/67a75fc2d0e0a243d4fd1b1a.png" /></p>
 <li>读取 LBA 100 和 LBA 200，就可以获悉整个文件的内容</li>
 </ul>
 <p><code>hoo</code> 的具体实现详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L178">kern/fs/files.c</a>，以下代码片段有删减：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L178">kern/fs/files.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_INODES 64</span></span><br><span class="line"><span class="type">files_t</span> *__fs_files;             <span class="comment">// 全局文件数组</span></span><br><span class="line"><span class="type">inode_t</span> __fs_inodes[MAX_INODES]; <span class="comment">// in-memory inode 数组</span></span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">files_read</span><span class="params">(<span class="type">fd_t</span> fd, <span class="type">void</span> *buf, <span class="type">uint32_t</span> size)</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fd == FD_STDIN) &#123;</span><br><span class="line">	    <span class="comment">// 1</span></span><br><span class="line">        <span class="type">cclbuff_t</span> *cclbuff = get_kb_buff();</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; size; ++i) &#123;</span><br><span class="line">            *((<span class="type">char</span> *)buf + i) = cclbuff_get(cclbuff);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 2</span></span><br><span class="line">    <span class="type">pcb_t</span> *cur_pcb = get_current_pcb();</span><br><span class="line">    <span class="type">fd_t</span> index = fmngr_files_get(cur_pcb-&gt;fmngr_, fd);</span><br><span class="line">    <span class="type">int</span> inode_idx = __fs_files[index].inode_idx_;</span><br><span class="line">    <span class="type">inode_t</span> *inode = __fs_inodes + inode_idx;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 3</span></span><br><span class="line">	<span class="type">uint32_t</span> cr = size / BYTES_SECTOR;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; cr; ++i) &#123;</span><br><span class="line">        free_rw_disk();</span><br><span class="line">        memmove();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释
@@ -787,11 +787,11 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
 <li>注释 2：从线程 pcb 自己的文件数组中取出全局文件，进而取出文件对应的
 inode</li>
 <li>注释 3：调用 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/free.c#L76"><code>free_rw_disk()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/free.c#L76"><code>free_rw_disk()</code></a>
 接口循环地从磁盘文件中读取数据，该接口封装了对 ATA
 设备的读写，本质上也是从磁盘中读取，此处忽略其细节；后面每读取一个磁盘块（512B）就调用
 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/lib.c#L72"><code>memmove()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/lib.c#L72"><code>memmove()</code></a>
 将其拷贝到结果 <code>buf</code></li>
 </ul>
 <h2 id="写入文件">写入文件</h2>
@@ -801,7 +801,7 @@ target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Color_Graphic
 标准</a>（CGA 是老标准，相对更新更广泛的是 VGA，当然，VGA
 也很老了），对应的基础设施是 <code>80 * 25</code>
 字符模式的显存输出。<code>hoo</code> 的实现详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/cga/cga.h#L8">kern/driver/cga/cga.h</a>，主要提供了一个操作接口
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/cga/cga.h#L8">kern/driver/cga/cga.h</a>，主要提供了一个操作接口
 —— 写入，写入位置和字符属性等由这个 CGA 模块内部负责：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">cga_putstr</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *str, <span class="type">uint32_t</span> len)</span>; <span class="comment">// 将这个缓冲区的字符写入显存</span></span><br></pre></td></tr></table></figure>
 <p>那么，写入文件的核心思路就分为两步：</p>
@@ -824,7 +824,7 @@ src="https://pic1.imgdb.cn/item/67a76724d0e0a243d4fd1d7e.png" /></p>
 <li>将缓冲区写入 LBA 100</li>
 </ul>
 <p><code>hoo</code> 的具体实现详见 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L220">kern/fs/files.c</a>，以下代码片段有删减：</p>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L220">kern/fs/files.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">files_write</span><span class="params">(<span class="type">fd_t</span> fd, <span class="type">const</span> <span class="type">char</span> *buf, <span class="type">uint32_t</span> size)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (fd == FD_STDOUT) &#123;</span><br><span class="line">	    <span class="comment">// 1</span></span><br><span class="line">        cga_putstr(buf, size);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 2</span></span><br><span class="line">    <span class="type">pcb_t</span> *cur_pcb = get_current_pcb();</span><br><span class="line">    <span class="type">fd_t</span> index = fmngr_files_get(cur_pcb-&gt;fmngr_, fd);</span><br><span class="line">    <span class="type">int</span> inode_idx = __fs_files[index].inode_idx_;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt;= size / BYTES_SECTOR; ++i) &#123;</span><br><span class="line">	    <span class="comment">// 3</span></span><br><span class="line">        free_rw_disk();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 4</span></span><br><span class="line">    __fs_inodes[inode_idx].size_ = size;</span><br><span class="line">    inodes_rw_disk(inode_idx, ATA_CMD_IO_WRITE);</span><br><span class="line">    free_map_update();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：对于标准输出，直接将整个缓冲区写入到 CGA 模块</li>
@@ -835,7 +835,7 @@ inode 索引</li>
 写入磁盘（同步 on-disk inode），最后更新 inode
 位图，因为写入文件就相当于 inode 已分配，因此 inode
 位图对应比特位需要置位，接口 <a
-target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/free.c#L63"><code>free_map_update()</code></a>
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/free.c#L63"><code>free_map_update()</code></a>
 就是将整个 in-memory inode 位图写入磁盘（同步 on-disk inode 位图）</li>
 </ul>
 
@@ -845,7 +845,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
             <p>Link：<a href="https://horbyn.github.io/2025/02/07/hoo-7/">https://horbyn.github.io/2025/02/07/hoo-7/</a>
             <p>Publish date：<a href="https://horbyn.github.io/2025/02/07/hoo-7/">February 7th 2025, 5:41:24 pm</a>
-            <p>Update date：<a href="https://horbyn.github.io/2025/02/07/hoo-7/">February 28th 2025, 11:27:31 pm</a>
+            <p>Update date：<a href="https://horbyn.github.io/2025/02/07/hoo-7/">March 2nd 2025, 2:57:06 am</a>
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
     <!-- paginator -->
@@ -950,9 +950,12 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
         
         
         
+        
+        
+        
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 24
+        Total : 27
         </div>
         <!-- search  -->
     </div>
@@ -960,11 +963,15 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <div class="archive-year"> 2025 </div>
             <ul class="year-list">
         <li class="archive-post-item">
+            <span class="archive-post-date">03/03</span>
+            <a class="archive-post-title" href="/2025/03/02/github-index/">美化 Github 主页</a>
+        </li>
+        <li class="archive-post-item">
             <span class="archive-post-date">02/10</span>
             <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/07</span>
+            <span class="archive-post-date">02/08</span>
             <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
         </li>
         <li class="archive-post-item">
@@ -992,21 +999,28 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <a class="archive-post-title" href="/2025/01/02/hoo-1/">「从零到一」实现一个 x86 的内核</a>
         </li>
                 </ul>
+            <div class="archive-year"> 2024 </div>
+            <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">10/24</span>
+            <a class="archive-post-title" href="/2024/10/23/privilege/">关于 x86 特权级这种保护机制</a>
+        </li>
+                </ul>
             <div class="archive-year"> 2023 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">11/01</span>
+            <span class="archive-post-date">11/02</span>
             <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
         </li>
                 </ul>
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">05/28</span>
+            <span class="archive-post-date">05/29</span>
             <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/21</span>
+            <span class="archive-post-date">04/22</span>
             <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
         </li>
         <li class="archive-post-item">
@@ -1014,35 +1028,35 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/17</span>
+            <span class="archive-post-date">04/18</span>
             <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/15</span>
+            <span class="archive-post-date">04/16</span>
             <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/11</span>
+            <span class="archive-post-date">04/12</span>
             <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/05</span>
+            <span class="archive-post-date">04/06</span>
             <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/04</span>
+            <span class="archive-post-date">04/05</span>
             <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/29</span>
+            <span class="archive-post-date">03/30</span>
             <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/29</span>
+            <span class="archive-post-date">03/30</span>
             <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/25</span>
+            <span class="archive-post-date">03/26</span>
             <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
         </li>
         <li class="archive-post-item">
@@ -1050,16 +1064,20 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/14</span>
+            <span class="archive-post-date">03/15</span>
             <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/28</span>
+            <span class="archive-post-date">03/01</span>
             <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/25</span>
+            <span class="archive-post-date">02/26</span>
             <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
+        </li>
+        <li class="archive-post-item">
+            <span class="archive-post-date">02/23</span>
+            <a class="archive-post-title" href="/2022/02/22/hello-world/">Hello world</a>
         </li>
             </ul>
     </div>
@@ -1082,6 +1100,10 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/0d9ad0a8
             <span class="sidebar-tag-name" data-tags="xv6">
                 <span class="iconfont-archer">&#xe606;</span>
                 xv6
+            </span>
+            <span class="sidebar-tag-name" data-tags="Blogs">
+                <span class="iconfont-archer">&#xe606;</span>
+                Blogs
             </span>
     </div>
     <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
