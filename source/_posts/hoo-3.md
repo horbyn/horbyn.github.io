@@ -8,7 +8,7 @@ tag: hoo
 
 # 获取物理内存容量
 
-在引导阶段通过 `int $0x15, %eax = 0xe820` 获取的 ARDS 结构体数组保存在内存 `0x7_a204` 处，解析代码如下，详见 [kern/module/mem.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/mem.c#L14)，逻辑很简单，直接在代码处注释了：
+在引导阶段通过 `int $0x15, %eax = 0xe820` 获取的 ARDS 结构体数组保存在内存 `0x7_a204` 处，解析代码如下，详见 [kern/module/mem.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/mem.c#L14)，逻辑很简单，直接在代码处注释了：
 
 ```c
 // ARDS 结构体
@@ -95,15 +95,15 @@ phy_release_page(void *phy_addr) {
 }
 ```
 
-`bitmap_t` 是一个统一封装的位图结构，详见 [kern/utilities/bitmap.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/bitmap.h#L10)
+`bitmap_t` 是一个统一封装的位图结构，详见 [kern/utilities/bitmap.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/bitmap.h#L10)
 
 - 分配
 	- `bitmap_scan_empty()` 在给定位图结构里面寻找一个为 0 的比特位，返回位图数组的索引
 	- `bitmap_set()` 将给定位图数组的元素置位
 	- 最后将索引左移 12 位并加上 `1MB` 即可用的物理地址
 - 释放
-	- `null` 是一个 `void *` 指针，并不是 0，否则虚拟地址 0 就不能被使用了。本质上 `null` 是一个符号，对于内核，它的定义详见 [kern/x86.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/x86.c#L3)；对于用户态应用，它的定义详见 [user/null.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/null.c#L2)
-	- `panic()` 函数的作用是向显卡写入字符串，然后执行 `hlt` 指令，更多细节详见 [kern/panic.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/panic.c#L47)
+	- `null` 是一个 `void *` 指针，并不是 0，否则虚拟地址 0 就不能被使用了。本质上 `null` 是一个符号，对于内核，它的定义详见 [kern/x86.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/x86.c#L3)；对于用户态应用，它的定义详见 [user/null.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/null.c#L2)
+	- `panic()` 函数的作用是向显卡写入字符串，然后执行 `hlt` 指令，更多细节详见 [kern/panic.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/panic.c#L47)
 	- 释放物理地址的时候，先计算出位图数组的索引，然后调用 `bitmap_clear()` 将位图数组指定元素清位
 
 # 页表机制
@@ -134,7 +134,7 @@ MMU 的逻辑详见 [IA32 手册 volume 3A，4.3 章图片 4-2](https://www.inte
 
 同样的道理，当需要访问页表本身时，需要第一次计算 PDE、第二次计算 PDE、第三次计算 PTE。其中，第二次需要指定 PDE 索引，所以组合起来就是区间 `[0xffc0_0000, 0xffff_f000)`
 
-根据这个规则，定义以下宏用来操作页目录表和页表，详见 [kern/paga/page_stuff.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/page/page_stuff.h#L13)：
+根据这个规则，定义以下宏用来操作页目录表和页表，详见 [kern/paga/page_stuff.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/page/page_stuff.h#L13)：
 
 ```c
 #define PGDOWN(x, align)    (((uint32_t)(x)) & ~((align) - 1))
@@ -156,7 +156,7 @@ MMU 的逻辑详见 [IA32 手册 volume 3A，4.3 章图片 4-2](https://www.inte
 - `GET_PDE()`：线性地址转换为对应页目录表的线性地址，原理就是上面的窍门，定义较为繁琐
 - `GET_PTE()`：线性地址转换为对应页表的线性地址，原理也是上面的窍门
 
-借助这些宏定义，可以实现创建映射的接口，具体代码详见 [kern/mem/pm.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L83)，以下代码有删减：
+借助这些宏定义，可以实现创建映射的接口，具体代码详见 [kern/mem/pm.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/pm.c#L83)，以下代码有删减：
 
 ```c
 void
@@ -221,9 +221,9 @@ set_mapping(void *va, void *pa, pgelem_t flags) {
 
 `hoo` 的管理结构是两者都有。理由是，申请线性地址时会涉及连续的分配，位图结构没有额外信息可以在释放地址时知道 "连续" 的概念，链表则可以在数据域想填充什么数据就填充什么数据。而位图则是用来分配管理结构，因为管理结构也需要使用线性地址，而链表是动态结构，没办法在事前知道需要使用多少结点
 
-管理结构的分配释放和物理内存管理一样，详见 [kern/mem/vm_kern.c 分配函数](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L34) 和 [kern/mem/vm_kern.c 释放函数](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L49)
+管理结构的分配释放和物理内存管理一样，详见 [kern/mem/vm_kern.c 分配函数](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm_kern.c#L34) 和 [kern/mem/vm_kern.c 释放函数](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm_kern.c#L49)
 
-下图是链表结构的简化视图，具体定义详见 [kern/mem/vspace.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vspace.h#L19)：
+下图是链表结构的简化视图，具体定义详见 [kern/mem/vspace.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vspace.h#L19)：
 
 ![](https://pic1.imgdb.cn/item/679c7cddd0e0a243d4f8c025.png)
 
@@ -241,7 +241,7 @@ set_mapping(void *va, void *pa, pgelem_t flags) {
 
 `8KB` 即两个物理页，因此结点记录 `0x0000_0000` 这个线性地址以及 `2`。因此，**单链表为空时，新建一个单链表，新建管理结构**
 
-具体代码详见 [kern/mem/vm.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L66)，以下是简化片段：
+具体代码详见 [kern/mem/vm.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L66)，以下是简化片段：
 
 ```c
 // 新建单链表
@@ -275,7 +275,7 @@ if (list_isempty(&prev->list_)) {
 
 进程依然是从 `0x0000_0000` 开始遍历，这里先忽略其中的细节，只关注核心思路，即双重链表记录了已经使用的地址区间是 `[0x0000_0000, 0x0000_2000) ∪ [0x0001_0000, 0x0001_7000)`，中间有一段地址区间是可用的，但稍微计算后会发现只有 `56KB`，因此最后会将空闲地址锁定在 `0x0001_7000`。之后便是一些链表的插入操作，因此，**单链表非空时，插入结点**
 
-具体代码详见 [kern/mem/vm.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L52)，以下是关键代码片段：
+具体代码详见 [kern/mem/vm.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L52)，以下是关键代码片段：
 
 ```c
 while (worker != null) {
@@ -307,7 +307,7 @@ while (worker != null) {
 
 这里直接释放就行，从整体上看地址区间没有问题。另一种情况比如释放 `0x0000_2000` 也是同样道理。所以，如果**释放地址就是链头第一个，或者链尾最后一个（即释放地址在两端），直接删除**
 
-具体代码详见 [kern/mem/vm.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L98)，以下是简化片段：
+具体代码详见 [kern/mem/vm.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L98)，以下是简化片段：
 
 ```c
 enum location_e {
@@ -348,7 +348,7 @@ do {
 
 第二个 `do-while()` 循环用来遍历单链表，每枚举一个链表结点，就判断其位置。对于单链表两端的结点，只需要直接移除
 
-后续的逻辑依次是释放虚拟地址 `va` 对应的物理页，这会调用物理内存管理模块的接口来释放；以及释放虚拟模块使用的管理结构，与管理结构相关的分配和释放接口详见 [kern/mem/metadata.{h,c}](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/metadata.h#L8)，逻辑十分直白简单
+后续的逻辑依次是释放虚拟地址 `va` 对应的物理页，这会调用物理内存管理模块的接口来释放；以及释放虚拟模块使用的管理结构，与管理结构相关的分配和释放接口详见 [kern/mem/metadata.{h,c}](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/metadata.h#L8)，逻辑十分直白简单
 
 ### 释放中间地址
 
@@ -421,7 +421,7 @@ do {
 - 分配内存可以视为从链表中取出元素
 - 释放内存可以视为将元素加入链表
 
-`hoo` 实现了一个格式化链表，详见 [kern/mem/format_list.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/format_list.h#L10)，该定义对应着链表的管理信息：
+`hoo` 实现了一个格式化链表，详见 [kern/mem/format_list.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/format_list.h#L10)，该定义对应着链表的管理信息：
 
 ```c
 typedef struct format_list {
@@ -431,7 +431,7 @@ typedef struct format_list {
 } fmtlist_t;
 ```
 
-这里链表是一个统一的数据结构，详见 [kern/utilities/list.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/list.h#L11)，提供以下接口：
+这里链表是一个统一的数据结构，详见 [kern/utilities/list.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/list.h#L11)，提供以下接口：
 
 ```c
 void   list_init(list_t *list, bool cycle);              // 初始化
@@ -450,7 +450,7 @@ bool fmtlist_release(fmtlist_t **fmtlist, void *elem);
 
 格式化链表的分配，其实是取出链表元素，即 `list_remove()`；释放则对应插入链表元素，即 `list_insert()`
 
-桶管理者定义详见 [kern/mem/bucket.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/bucket.h#L10)：
+桶管理者定义详见 [kern/mem/bucket.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/bucket.h#L10)：
 
 ```c
 typedef struct buckX_manager {
@@ -460,7 +460,7 @@ typedef struct buckX_manager {
 } buckx_mngr_t;
 ```
 
-基于上述基础结构，`hoo` 实现的动态分配详见 [kern/dyn/dynamic.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L13)：
+基于上述基础结构，`hoo` 实现的动态分配详见 [kern/dyn/dynamic.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L13)：
 
 ```c
 void *
@@ -507,7 +507,7 @@ dyn_alloc(uint32_t size) {
 - 注释 3：如果是动态分配 1024B 以上的空间，则前一步循环遍历完后，桶管理者依然会是空的，这个时候再进行按需分配，分配完成后直接返回该线性地址
 - 注释 4：如果是动态分配 1024B 以下的空间，则复用格式化链表的分配接口来分配内存
 
-动态释放详见 [kern/dyn/dynamic.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L52)：
+动态释放详见 [kern/dyn/dynamic.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L52)：
 
 ```c
 void
@@ -543,23 +543,23 @@ dyn_free(void *ptr) {
 
 对于物理内存管理模块，需要实现两类型接口：
 
-- 分配：[`void *phy_alloc_page()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L37)
-- 释放：[`void phy_release_page()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L52)
+- 分配：[`void *phy_alloc_page()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/pm.c#L37)
+- 释放：[`void phy_release_page()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/pm.c#L52)
 
 对于页表机制，需要实现：
 
-- 创建映射：[`void set_mapping()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/pm.c#L83)
+- 创建映射：[`void set_mapping()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/pm.c#L83)
 
 对于虚拟内存管理模块，也是两类接口：
 
 - 分配
-	- 管理结构：[`void *vir_alloc_kern()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L34)
-	- 非管理结构：[`void *vir_alloc_pages()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L42)
+	- 管理结构：[`void *vir_alloc_kern()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm_kern.c#L34)
+	- 非管理结构：[`void *vir_alloc_pages()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L42)
 - 释放
-	- 管理结构：[`void vir_release_kern()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm_kern.c#L49)
-	- 非管理结构：[`void vir_release_pages()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/mem/vm.c#L98)
+	- 管理结构：[`void vir_release_kern()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm_kern.c#L49)
+	- 非管理结构：[`void vir_release_pages()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/mem/vm.c#L98)
 
 对于动态内存管理模块，也是两类接口：
 
-- 分配：[`void *dyn_alloc()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L13)
-- 释放：[`void dyn_free()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L52)
+- 分配：[`void *dyn_alloc()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L13)
+- 释放：[`void dyn_free()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L52)

@@ -15,7 +15,7 @@ tag: hoo
 - 系统调用既可以由用户线程，也可以由内核线程发起，因此特权级是 `ring3`
 - 系统调用可以嵌套发起，意味着系统调用过程中不能关中断
 
-基于这两点，`hoo` 对于系统调用做了以下基础工作，详见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/do_intr.c#L28)：
+基于这两点，`hoo` 对于系统调用做了以下基础工作，详见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/do_intr.c#L28)：
 
 ```c
 #define IDT_ENTRIES_NUM   256
@@ -53,7 +53,7 @@ set_idt_entry(&__idt[ISR128_SYSCALL], PL_USER, TRAP_GATE,
 
 当 `ring0` 的栈帧准备好了，执行流就进入 `syscall()` 函数，该函数会根据 `eax` 寄存器的值（系统调用号），跳转到对应的内核功能函数，像 `Linux` 的 `read()`、`write()` 等。这些内核功能函数会根据栈帧中的参数，执行相应的功能，最后返回
 
-`hoo` 的实现详见如下，系统调用用户侧详见 [user/user.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.h#L7)，以下代码片段有删减：
+`hoo` 的实现详见如下，系统调用用户侧详见 [user/user.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.h#L7)，以下代码片段有删减：
 
 ```c
 // 以打开文件为例
@@ -99,7 +99,7 @@ syscall_entry(int syscall_number, void *retval) {
 
 就这样在设置完上下文之后，通过 `int $0x80` 指令进入 `ring0`，完成了从用户态到内核态的切换。后面经过中断机制的一系列流程，现在会进入注册在 IDT 128 号元素的 `syscall()`
 
-`hoo` 系统调用的内核侧实现详见 [kern/syscall/syscall_impl.S](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/syscall/syscall_impl.S#L7)：
+`hoo` 系统调用的内核侧实现详见 [kern/syscall/syscall_impl.S](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/syscall/syscall_impl.S#L7)：
 
 ```assembly
 syscall:
@@ -134,13 +134,13 @@ syscall_exit:
     ret
 ```
 
-依然是结合栈帧来看，需要注意的是 `ring3` 上下文经中断机制后便保存到 `ring0` 栈了，而中断机制在进入 ISR 之前最后一条指令是 [`pusha`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/trampoline.S#L13)，所以进入 `syscall()` 时的栈帧如下：
+依然是结合栈帧来看，需要注意的是 `ring3` 上下文经中断机制后便保存到 `ring0` 栈了，而中断机制在进入 ISR 之前最后一条指令是 [`pusha`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/trampoline.S#L13)，所以进入 `syscall()` 时的栈帧如下：
 
 ![](https://pic1.imgdb.cn/item/67ab0ed1d0e0a243d4fe5305.png)
 
 - 注释 1：获取用户栈帧。`0x20(%ebp)` 和 `0x18(%ebp)` 分别对应用户态上下文的 `%ecx` 和 `%ebx`，即对应用户栈帧的栈底和栈顶。这些信息保存到 `ring0` 上下文的 `%eax` 和 `%ebx` 中
 - 注释 2：借助 `movsb` 将用户栈帧拷贝到 `ring0` 栈
-- 注释 3：以系统调用号作为数组索引，调用内核功能函数（[`__stub`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/syscall/syscall.c#L13) 是一个函数指针数组）
+- 注释 3：以系统调用号作为数组索引，调用内核功能函数（[`__stub`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/syscall/syscall.c#L13) 是一个函数指针数组）
 - 注释 4：内核功能函数返回后，根据指针决定是否需要设置 `%eax` 返回值
 
 至此整个系统调用流程结束，系统调用返回用户态也是借助中断机制完成
@@ -153,24 +153,24 @@ syscall_exit:
 
 系统调用号|用户侧系统调用|功能|内核功能函数
 -|-|-|-
-0|[`sys_create()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L30)|创建文件|[`files_create()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L63)
-1|[`sys_remove()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L46)|删除文件|[`files_remove()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L107)
-2|[`sys_open()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L59)|打开文件|[`files_open()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L132)
-3|[`sys_close()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L71)|关闭文件|[`files_close()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L158)
-4|[`sys_read()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L83)|读取文件|[`files_read()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L178)
-5|[`sys_write()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L95)|写入文件|[`files_write()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L220)
-6|[`sys_printf()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L105)|格式化输出|[`kprintf()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/io.c#L22)
-7|[`sys_fork()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L115)|克隆进程|[`fork()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L251)
-8|[`sys_wait()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L132)|父进程等待子进程终止|[`wait_child()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L323)
-9|[`sys_exit()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L148)|退出|[`exit()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L334)
-10|[`sys_cd()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L163)|切换目录|[`dir_change()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L422)
-11|[`sys_exec()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L175)|切换执行流|[`exec()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/exec.c#L16)
-12|[`sys_ls()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L188)|输出目录列表|[`files_list()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L287)
-13|[`sys_alloc()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L201)|动态分配内存|[`dyn_alloc()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L13)
-14|[`sys_free()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L213)|释放动态分配的内存|[`dyn_free()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/dyn/dynamic.c#L52)
-15|[`sys_workingdir()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L227)|获取当前目录|[`dir_get_current()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L492)
+0|[`sys_create()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L30)|创建文件|[`files_create()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L63)
+1|[`sys_remove()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L46)|删除文件|[`files_remove()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L107)
+2|[`sys_open()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L59)|打开文件|[`files_open()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L132)
+3|[`sys_close()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L71)|关闭文件|[`files_close()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L158)
+4|[`sys_read()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L83)|读取文件|[`files_read()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L178)
+5|[`sys_write()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L95)|写入文件|[`files_write()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L220)
+6|[`sys_printf()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L105)|格式化输出|[`kprintf()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/io.c#L22)
+7|[`sys_fork()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L115)|克隆进程|[`fork()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L251)
+8|[`sys_wait()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L132)|父进程等待子进程终止|[`wait_child()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L323)
+9|[`sys_exit()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L148)|退出|[`exit()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L334)
+10|[`sys_cd()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L163)|切换目录|[`dir_change()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L422)
+11|[`sys_exec()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L175)|切换执行流|[`exec()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/exec.c#L16)
+12|[`sys_ls()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L188)|输出目录列表|[`files_list()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L287)
+13|[`sys_alloc()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L201)|动态分配内存|[`dyn_alloc()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L13)
+14|[`sys_free()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L213)|释放动态分配的内存|[`dyn_free()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L52)
+15|[`sys_workingdir()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L227)|获取当前目录|[`dir_get_current()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L492)
 
-上表细节详见 [kern/syscall/syscall.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/syscall/syscall.c#L18)，其中，`#0` 至 `#5` 和 `#13` 至 `#14` 已经出现在「文件系统」和「内存管理」一文，后文将略过
+上表细节详见 [kern/syscall/syscall.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/syscall/syscall.c#L18)，其中，`#0` 至 `#5` 和 `#13` 至 `#14` 已经出现在「文件系统」和「内存管理」一文，后文将略过
 
 ## 格式化输出
 
@@ -187,7 +187,7 @@ sys_printf(const char *format, ...) {
 
 格式化输出相关内容参考 [GNU 可变参数宏](https://www.gnu.org/software/libc/manual/html_node/How-Variadic.html) 等资料，主要是 `va_list`、`va_start()`、`va_arg()`、`va_end()` 等宏函数的使用
 
-`hoo` 实现了一个格式化模块，详见 [kern/utilities/format.{h,c}](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/format.h#L13)，这里将不跳入具体的细节了：
+`hoo` 实现了一个格式化模块，详见 [kern/utilities/format.{h,c}](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/format.h#L13)，这里将不跳入具体的细节了：
 
 ```c
 typedef char *va_list;
@@ -227,7 +227,7 @@ kprintf(const char *fmt, ...) {
 
 如图所示，拷贝发生在最后一层，最终结果是父子进程所有页表的每个 PTE，都指向同一个物理页，这就是所谓的 *"共享"*。这个过程中，唯一要注意的是 PTE 的属性位，前文「中断机制」一文提及了 `hoo` 在缺页异常中实现了 C.O.W，因此子进程在拷贝 PTE 的时候需要将 `R/W` 清位
 
-详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L251)，以下代码片段有删减：
+详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L251)，以下代码片段有删减：
 
 ```c
 #define PG_DIR_VA  0xfffff000 // 页目录表对应的线性地址
@@ -276,9 +276,9 @@ new_pgdir_va[copy_end] = (pgelem_t)new_pgdir_pa | flags;
 tid_t fork(void *entry);
 ```
 
-这里形参 `entry` 就可以指定执行流起点，既可以指定为下一条指令的地址，也可以指定为某一个函数。但是由于用户侧系统调用已经固定了 `fork()` 子进程执行流为下一条指令，所以实际上形参 `entry` 并没有起太大作用，所以关于执行流起点这部分逻辑此处省略，代码详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L300)
+这里形参 `entry` 就可以指定执行流起点，既可以指定为下一条指令的地址，也可以指定为某一个函数。但是由于用户侧系统调用已经固定了 `fork()` 子进程执行流为下一条指令，所以实际上形参 `entry` 并没有起太大作用，所以关于执行流起点这部分逻辑此处省略，代码详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L300)
 
-`hoo` 的具体实现详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L251)，以下代码片段有删减：
+`hoo` 的具体实现详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L251)，以下代码片段有删减：
 
 ```c
 tid_t
@@ -323,7 +323,7 @@ fork(void *entry) {
 - 注释 4：拷贝 pcb。pcb 中除了保存像 `ring0` 栈、`ring3` 栈、页目录表等信息外，还有一些信息和父进程有关，这里需要将这些所有信息写入子进程 pcb 中
 - 注释 5：将子进程 pcb 加入就绪队列的队尾
 
-用户侧的系统调用接口如下，详见 [user/user.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L115)：
+用户侧的系统调用接口如下，详见 [user/user.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L115)：
 
 ```c
 int
@@ -363,7 +363,7 @@ tid_t fork(void *entry);
 
 `wait()` 用于调用 `fork()` 之后的父进程等待子进程的执行结束。子进程执行期间父进程可能需要等待，父进程通过睡眠来减少对处理器的占用，子进程执行完毕再将父进程唤醒
 
-借助前文「设备驱动」一文的 `sleep()`，`wait()` 的实现非常简单，见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L323)：
+借助前文「设备驱动」一文的 `sleep()`，`wait()` 的实现非常简单，见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L323)：
 
 ```c
 void
@@ -376,7 +376,7 @@ wait_child(spinlock_t *sl) {
 
 由于睡眠需要提供一个等待就绪的资源，所以这里直接把 spinlock 视为资源
 
-用户侧的系统调用接口如下，详见 [user/user.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L132)：
+用户侧的系统调用接口如下，详见 [user/user.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L132)：
 
 ```c
 void
@@ -417,7 +417,7 @@ void wait_child(spinlock_t *sl);
 - 将自己 pcb 加入任务销毁队列，等待后面内核进一步释放资源
 - 重新调度。因为 pcb 已经从任务运行队列移动到其他队列，所以需要调度器重置任务运行队列
 
-`hoo` 的具体实现详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L334)，以下代码片段有删减：
+`hoo` 的具体实现详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L334)，以下代码片段有删减：
 
 ```c
 #define PD_INDEX(x)             (((x)>>22) & 0x3ff)
@@ -477,7 +477,7 @@ exit() {
 - 注释 3：将子进程从任务运行队列中移除，并添加到任务销毁队列中。`LSIDX_AFTAIL()` 是一个宏函数用来范围队列的最后一个元素的索引，这里将前面运行队列中出队的元素加入销毁队列的队尾
 - 注释 4：重新调度。子进程退出后，不能再回到用户态，但此时任务运行队列已经没有任务，所以调用 `scheduler()` 切换其他进程执行
 
-用户侧系统调用详见 [user/user.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L148)：
+用户侧系统调用详见 [user/user.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L148)：
 
 ```c
 void
@@ -496,7 +496,7 @@ sys_exit() {
 
 每个进程都使用一个物理页来保存目录结构，而 `hoo` 一个文件名最多 16 字节，所有计算得一个进程最多可以嵌套 `4096 / 16 = 256` 个目录。对于 `/usr/boo/mytext.txt` 这个目录，分为 `/`、`usr`、`boo`、`mytext.txt` 四部分，每个部分都是目录结构中的一个字符串
 
-目录结构定义详见 [kern/utilities/curdir.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/curdir.h#L18)，本质是一个字符数组指针和数组长度，除此之外还定义了两个操作接口：
+目录结构定义详见 [kern/utilities/curdir.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/curdir.h#L18)，本质是一个字符数组指针和数组长度，除此之外还定义了两个操作接口：
 
 ```c
 typedef struct current_directory {
@@ -510,7 +510,7 @@ int  curdir_set(curdir_t *curdir, const char *path);
 
 操作接口会定义一个工作指针，通过每次移动 16 字节的指针长度，实现对目录结构的遍历
 
-获取接口详见 [kern/utilities/curdir.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/curdir.c#L34)，以下代码片段有删减：
+获取接口详见 [kern/utilities/curdir.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/curdir.c#L34)，以下代码片段有删减：
 
 ```c
 #define PGSIZE              4096
@@ -548,7 +548,7 @@ curdir_get(const curdir_t *curdir, char *path, uint32_t pathlen) {
 - 注释 2：获取每次迭代的目录名
 - 注释 3：如果形参给出的缓冲区长度还足够，则将目录名复制到缓冲区中
 
-设置接口详见 [kern/utilities/curdir.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/curdir.c#L67)，以下代码片段有删减：
+设置接口详见 [kern/utilities/curdir.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/curdir.c#L67)，以下代码片段有删减：
 
 ```c
 #define DIRNAME_ROOT_ASCII  47 // '/' 的 ASCII 码
@@ -591,7 +591,7 @@ curdir_set(curdir_t *curdir, const char *path) {
 - 判断目录名格式。绝对路径还是相对路径，如果是相对路径则通过目录结构接口转换为绝对路径
 - 设置目录结构。通过传入一个绝对路径，调用目录结构的设置接口
 
-`hoo` 的实现详见 [kern/fs/dir.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L422)，以下代码片段有删减：
+`hoo` 的实现详见 [kern/fs/dir.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L422)，以下代码片段有删减：
 
 ```c
 #define DIRNAME_ROOT_ASCII  47 // '/' 的 ASCII 码
@@ -632,7 +632,7 @@ dir_change(const char *dir) {
 - 注释 3：判断决定路径对应的目录是否存在
 - 注释 4：更新当前进程的当前目录和父进程的当前目录。上述代码片段是通过系统调用一步步进入的，而系统调用最终会被封装为一个 `ring3` 程序，即 `cd` 命令。当用户在命令行输入 `cd` 命令时，实际上是在 `shell` 进程中执行 `cd` 命令。而 `shell` 进程的逻辑是每执行一个任务就通过 `fork()` 和 `exec()` 创建一个全新的子进程来执行。因此对于切换目录来说，仅仅修改子进程的目录结构是无意义的，必须一并修改父进程的目录结构，这样当 `shell` 进程执行完 `cd` 命令后，再执行其他命令时，才能在新的目录下执行。更多详情见后面的 `shell` 进程
 
-用户侧系统调用接口详见 [user/user.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L163)：
+用户侧系统调用接口详见 [user/user.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L163)：
 
 ```c
 int
@@ -659,7 +659,7 @@ sys_cd(const char *dir) {
 
 这一步会通过将控制流从原来 `ring3` 代码转移到新加载程序的 `ring3` 代码保证。为了执行新代码，需要先把二进制文件读取到内存中，这个内存地址就是新二进制文件的入口地址，然后通过 `jmp` 指令跳转到新二进制文件的入口地址，这样就完成了执行流的切换
 
-遵循着上面两点核心思路，`hoo` 的实现如下，详见 [kern/fs/exec.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/exec.c#L16)，下面代码片段有删减：
+遵循着上面两点核心思路，`hoo` 的实现如下，详见 [kern/fs/exec.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/exec.c#L16)，下面代码片段有删减：
 
 ```c
 #define MAX_ARGV            2
@@ -751,7 +751,7 @@ exec(const char *filename) {
 
 - 注释 1：处理命令和参数。传入的形参 `filename` 可能是 `cd /opt/some_dir/` 这种，命令和参数通过空格来分割，将空格前面字符串保存到数组 `cmd` 而后面字符串保存到数组 `param`，最后赋值变量 `argc` 和 `argv`，`hoo` 目前最多只支持一个参数
 - 注释 2：格式化文件名。传入的形参 `filename` 就是一个命令，比如 `cd`，实际上在 `hoo` 中这些命令是文件系统中的一个文件，它保存在 `/bin` 目录下。所以当执行 `cd` 命令的时候，对应的文件 `/bin/cd`，这里就是得到这个决定路径。然后通过文件系统接口 `files_open()` 打开文件
-- 注释 3：获取二进制文件大小。利用文件系统接口 [`files_get_size()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L270)，该接口通过读取文件 inode 来确定文件大小。虽然此时获得了二进制文件的实际大小，但由于页表映射的地址是对齐 `4KB` 的，所以后续通过 `PGUP()` 进行向上对其
+- 注释 3：获取二进制文件大小。利用文件系统接口 [`files_get_size()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L270)，该接口通过读取文件 inode 来确定文件大小。虽然此时获得了二进制文件的实际大小，但由于页表映射的地址是对齐 `4KB` 的，所以后续通过 `PGUP()` 进行向上对其
 - 注释 4：重置当前进程的二进制数据边界
 - 注释 5：重置当前进程的线性空间。前面说过重置也就是重新分配 paging-structure，具体来说就是（1）重新赋值 PDE；（2）重新赋值 PTE
     - 外循环枚举 PDE，每次为 PDE 分配一个物理页作为页表，将物理地址写入 PDE
@@ -788,7 +788,7 @@ __asm__ ("..."
 
 前面说过 `mode_ring3()` 借助 `iret` 进入 `ring3`，本质上需要特殊设置 `ring0` 栈的布局，但 `mode_ring3()` 还需要一些额外信息，需要知道 `ring3` 栈在哪里、`ring3` 函数入口在哪里。所以两条入栈指令将变量 `program`（二进制文件的内存地址）和 `%eax`（根据前面的汇编指令可知，`%eax` 是 `ring3` 栈）记录在 `ring0` 栈中，然后才跳入 `mode_ring3()`。汇编标号 `next_insc` 是 `mode_ring3()` 的下一条指令，控制 `ring3` 执行流的返回
 
-下面结合流程图来看下 `mode_ring3()` 的详情，它位于 [kern/sched/switch.S](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/switch.S#L46)：
+下面结合流程图来看下 `mode_ring3()` 的详情，它位于 [kern/sched/switch.S](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/switch.S#L46)：
 
 ```assembly
 mode_ring3:
@@ -828,7 +828,7 @@ mode_ring3:
 
 ![](https://pic1.imgdb.cn/item/67b1b5bfd0e0a243d4ffd18b.png)
 
-- 注释 1：重置数据段。`$((4 * 8) | 3)` 表示的是用户态使用的数据段（[`hoo` 设置的 GDT 数组](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/conf.c#L11)下标 4 表示用户态数据段）
+- 注释 1：重置数据段。`$((4 * 8) | 3)` 表示的是用户态使用的数据段（[`hoo` 设置的 GDT 数组](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/conf.c#L11)下标 4 表示用户态数据段）
 - 注释 2：伪造 `ring0` 栈。结合右图可知 `0x4(%ebp)` 是 `ring3` 栈，`0x8(%ebp)` 是 `ring3` 返回地址，而 `$((3 * 8) | 3)` 和前一点一样，是 GDT 下标 3 表示用户态代码段。总的来看就是依次入栈 `%ss`、`%esp`、`%eflags`、`%cs`、`%eip`，这样 `iret` 才能正确执行
 - 注释 3：重置上下文。在进入一个新的执行流之前，把所有寄存器都重置，而 `%ebp` 设置为和 `ring3` 栈顶一样，表示新执行流开始时 `%esp` 和 `%ebp` 都指向同一个地方，即 `ring3` 栈顶
 
@@ -854,7 +854,7 @@ __asm__ ("..."
 
 退出当前进程后，`hoo` 会通过调度器选择下一个就绪进程来执行，至此便结束了整个新的执行流
 
-用户侧系统调用接口详见 [user/user.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L175)：
+用户侧系统调用接口详见 [user/user.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L175)：
 
 ```c
 void
@@ -872,7 +872,7 @@ sys_exec(const char *program) {
 - 给定一个文件：输出文件大小和文件的绝对路径名字，比如 `32B    /opt/file.txt`
 - 给定一个目录：输出目录里面的内容，比如 `/bin` 目录下面有两个二进制文件和一个子目录，会输出 `ls    cd    subdir/`。其中，目录以 `/` 结尾，文件则什么后缀都没有
 
-`hoo` 的实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L287)，以下代码片段有删减：
+`hoo` 的实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L287)，以下代码片段有删减：
 
 ```c
 #define DIRNAME_ROOT_ASCII  47  // '/' 的 ASCII 码
@@ -919,9 +919,9 @@ files_list(const char *dir_or_file) {
 - 注释 1：获取形参给定目录名的绝对路径。值得注意的是，当执行 `ls` 时是不带形参的，此时需要打印当前目录下的内容，借助前面章节目录结构的接口 `curdir_get()` 获取当前目录
 - 注释 2：检查给定目录是否存在
 - 注释 3：对于文件，直接打印大小和绝对路径名
-- 注释 4：对于目录，递归打印目录下的所有文件名。[`diritem_traversal()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L255) 是目录项接口，其功能是遍历目录项数组，每枚举一个，就保存它的目录名。遍历完成后目录名就被一级一级地保存下来，最终返回上层，即这里的变量 `dir`。目录的 inode 其 `size_` 成员保存的是目录的数量，所以以它为循环条件将每一级目录名打印出来
+- 注释 4：对于目录，递归打印目录下的所有文件名。[`diritem_traversal()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L255) 是目录项接口，其功能是遍历目录项数组，每枚举一个，就保存它的目录名。遍历完成后目录名就被一级一级地保存下来，最终返回上层，即这里的变量 `dir`。目录的 inode 其 `size_` 成员保存的是目录的数量，所以以它为循环条件将每一级目录名打印出来
 
-用户侧系统调用接口见 [user/user.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L188)：
+用户侧系统调用接口见 [user/user.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L188)：
 
 ```c
 int
@@ -934,7 +934,7 @@ sys_ls(const char *dir_or_file) {
 
 ## 获取当前目录
 
-就是实现一个 `Linux` 的 `pwd` 命令。由于 `hoo` 使用目录结构来缓存整个目录树，所以现在要实现 `pwd` 就很简单了，直接调用目录结构的获取接口，见 [kern/fs/dir.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L492)：
+就是实现一个 `Linux` 的 `pwd` 命令。由于 `hoo` 使用目录结构来缓存整个目录树，所以现在要实现 `pwd` 就很简单了，直接调用目录结构的获取接口，见 [kern/fs/dir.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L492)：
 
 ```c
 int
@@ -945,7 +945,7 @@ dir_get_current(char *buff, uint32_t bufflen) {
 
 只需要提供缓冲区，借助 `curdir_get()` 获取当前目录的绝对路径即可
 
-用户侧系统调用接口见 [user/user.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/user.c#L227)：
+用户侧系统调用接口见 [user/user.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L227)：
 
 ```c
 int
@@ -960,7 +960,7 @@ sys_workingdir(char *wd, unsigned int len) {
 
 内置命令本质上是磁盘中一个二进制文件，最初保存在 `hoo` 内核链接到一起，伴随着 `hoo` 内核一并加载到内存，然后在内核初始化过程中被写入文件系统。当需要执行内置命令是，则从文件系统中打开文件，读取文件到内存
 
-`hoo` 在初始化时通过 [`load_builtins()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/kern.c#L54) 函数加载内置命令，详见 [kern/fs/builtins.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/builtins.c#L52)，下面代码片段有删减：
+`hoo` 在初始化时通过 [`load_builtins()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/kern.c#L54) 函数加载内置命令，详见 [kern/fs/builtins.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/builtins.c#L52)，下面代码片段有删减：
 
 ```c
 #define DIR_LOADER      "/bin/"
@@ -994,7 +994,7 @@ builtin_to_file(const char *filename, void *addr, uint32_t len) {
 ```
 
 - 注释 1：创建 `/bin` 目录，用来保存所有内置命令
-- 注释 2：将内置命令（这里以 `shell` 为例）写入文件系统。其中 `__BASE_BUILTIN_SH` 和 `__END_BUILTIN_SH` 在 Makefile 中定义，并在编译阶段导出，作为 `shell` 的起始和结束地址，详见 [Makefile](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/Makefile#L164)
+- 注释 2：将内置命令（这里以 `shell` 为例）写入文件系统。其中 `__BASE_BUILTIN_SH` 和 `__END_BUILTIN_SH` 在 Makefile 中定义，并在编译阶段导出，作为 `shell` 的起始和结束地址，详见 [Makefile](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/Makefile#L164)
 - 注释 3：将 `/bin` 和 `shell` 拼接成 `/bin/shell`，即内置命令 `shell` 的绝对路径名
 - 注释 4：将 `shell` 写入文件系统的具体实现。先在文件系统中创建文件，创建成功则写入 `__BASE_BUILTIN_SH` 到 `__END_BUILTIN_SH` 之间的数据，即 `shell` 的代码
 
@@ -1036,7 +1036,7 @@ the_first_ring3(void) {
 
 前文「系统调用 - exit」提过，每个进程销毁自己时，会将自己的 pcb 加入到任务销毁队列，因此 `kill()` 通过它就可以找到需要进一步清除资源的进程，这些资源进程在销毁自己时不能释放，因此推迟到这一步 `kill()` 来完成。有三个：`ring0` 栈、`ring3` 栈和页目录表
 
-所以 `kill()` 的逻辑很简单，就是遍历任务销毁队列，释放上面三个资源，详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L386)：
+所以 `kill()` 的逻辑很简单，就是遍历任务销毁队列，释放上面三个资源，详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L386)：
 
 ```c
 void
@@ -1069,7 +1069,7 @@ kill(void) {
 
 考虑下 `shell` 的执行场景，应该是每执行一个命令，就需要创建一个新的进程，`shell` 作为父进程陷入睡眠，等待子进程执行完毕；子进程用来执行命令
 
-`hoo` 的实现如下，详见 [user/builtin_shell.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/builtin_shell.c#L14)，以下代码片段有删减：
+`hoo` 的实现如下，详见 [user/builtin_shell.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/builtin_shell.c#L14)，以下代码片段有删减：
 
 ```c
 #define FD_STDIN    0
@@ -1125,7 +1125,7 @@ main_shell(int argc, char **argv) {
 
 ## 切换目录
 
-[`cd` 命令](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/builtin_cd.c#L10) 主要封装了切换目录的系统调用，很简单：
+[`cd` 命令](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/builtin_cd.c#L10) 主要封装了切换目录的系统调用，很简单：
 
 ```c
 void
@@ -1140,7 +1140,7 @@ main_cd(int argc, char **argv) {
 
 ## 列出目录
 
-[`ls` 命令](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/builtin_ls.c#L10) 也是封装了列出目录的系统调用：
+[`ls` 命令](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/builtin_ls.c#L10) 也是封装了列出目录的系统调用：
 
 ```c
 void
@@ -1153,7 +1153,7 @@ main_ls(int argc, char **argv) {
 
 ## 获取当前目录
 
-[`pwd` 命令](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/builtin_pwd.c#L11) 也是封装了对应的系统调用：
+[`pwd` 命令](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/builtin_pwd.c#L11) 也是封装了对应的系统调用：
 
 ```c
 void
@@ -1167,7 +1167,7 @@ main_pwd(int argc, char **argv) {
 
 ## 创建目录
 
-创建目录需要处理相对路径和绝对路径的问题，`hoo` 的做法是统一将相对路径转换为绝对路径，然后才发起创建目录的系统调用，详见 [user/builtin_mkdir.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/builtin_mkdir.c#L13)
+创建目录需要处理相对路径和绝对路径的问题，`hoo` 的做法是统一将相对路径转换为绝对路径，然后才发起创建目录的系统调用，详见 [user/builtin_mkdir.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/builtin_mkdir.c#L13)
 
 ```c
 #define MAX_PATH_LEN 512
@@ -1200,13 +1200,13 @@ main_mkdir(int argc, char **argv) {
 }
 ```
 
-- 注释 1：转换绝对路径。[`alloc()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/lib.c#L90) 是动态内存分配系统调用的封装，[`workingdir()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/lib.c#L114) 是获取当前目录系统调用的封装，[`free()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/lib.c#L100) 是动态内存释放系统调用的封装。这些函数放在 user/lib.c 中，作为 `hoo` 平台的库函数。这里通过 `workdingdir()` 获取当前目录，保存到数组 `abs`，然后将相对路径追加到数组后面
+- 注释 1：转换绝对路径。[`alloc()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/lib.c#L90) 是动态内存分配系统调用的封装，[`workingdir()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/lib.c#L114) 是获取当前目录系统调用的封装，[`free()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/lib.c#L100) 是动态内存释放系统调用的封装。这些函数放在 user/lib.c 中，作为 `hoo` 平台的库函数。这里通过 `workdingdir()` 获取当前目录，保存到数组 `abs`，然后将相对路径追加到数组后面
 - 注释 2：`sys_create()` 通过后缀 `/` 来区分是否目录，所以数组 `abs` 最后需要加上后缀
 - 注释 3：发起系统调用
 
 ## 创建文件
 
-创建文件和创建目录一样，不同之处在于 `hoo` 文件不需要 `/` 后缀，因此大致流程和创建目录一样，详见 [user/builtin_touch.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/builtin_touch.c#L13)：
+创建文件和创建目录一样，不同之处在于 `hoo` 文件不需要 `/` 后缀，因此大致流程和创建目录一样，详见 [user/builtin_touch.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/builtin_touch.c#L13)：
 
 ```c
 void
@@ -1229,7 +1229,7 @@ main_touch(int argc, char **argv) {
 
 ## 删除目录或文件
 
-删除命令对于目录和文件的处理都是统一的，但是也要区分绝对路径的问题，详见 [user/builtin_rm.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/builtin_rm.c#L13)：
+删除命令对于目录和文件的处理都是统一的，但是也要区分绝对路径的问题，详见 [user/builtin_rm.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/builtin_rm.c#L13)：
 
 ```c
 #define MAX_PATH_LEN 512

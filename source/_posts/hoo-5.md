@@ -8,7 +8,7 @@ tag: hoo
 
 # 进程控制块
 
-一个任务就是一个执行流，一个执行流本质上是一堆 `x86` 指令的集合，在执行指令的时候，需要有一个栈（比如 `call` 指令、`ret` 指令）、还需要使用寄存器组（比如 `mov` 指令）。换句话说，每个任务在其运行时，都对应一套环境。将这套环境再加上一些和任务有关的管理信息封装到一起，便成为了进程控制块，PCB，`hoo` 的定义详见 [kern/sched/pcb.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/pcb.h#L21)
+一个任务就是一个执行流，一个执行流本质上是一堆 `x86` 指令的集合，在执行指令的时候，需要有一个栈（比如 `call` 指令、`ret` 指令）、还需要使用寄存器组（比如 `mov` 指令）。换句话说，每个任务在其运行时，都对应一套环境。将这套环境再加上一些和任务有关的管理信息封装到一起，便成为了进程控制块，PCB，`hoo` 的定义详见 [kern/sched/pcb.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/pcb.h#L21)
 
 # 调度机制
 
@@ -36,7 +36,7 @@ tag: hoo
 
 # spinlock
 
-任务调度会使得多个任务（多个线程） "同时" 访问一些共享资源，带来数据不一致的问题，因此需要实现锁，`hoo` 主要使用 spinlock 来保证多个线程之间串行访问资源，参考 [OSDev spinlock](https://wiki.osdev.org/Spinlock#Improved_Lock)。`hoo` spinlock 是一个 [整型值结构体](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/spinlock.h#L10)，1 表示锁被占用，0 表示锁空闲：
+任务调度会使得多个任务（多个线程） "同时" 访问一些共享资源，带来数据不一致的问题，因此需要实现锁，`hoo` 主要使用 spinlock 来保证多个线程之间串行访问资源，参考 [OSDev spinlock](https://wiki.osdev.org/Spinlock#Improved_Lock)。`hoo` spinlock 是一个 [整型值结构体](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/spinlock.h#L10)，1 表示锁被占用，0 表示锁空闲：
 
 ```c
 typedef struct spinlock {
@@ -44,7 +44,7 @@ typedef struct spinlock {
 } spinlock_t;
 ```
 
-实现了两个接口，[获取锁](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/spinlock.c#L23) 和 [释放锁](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/spinlock.c#L41)：
+实现了两个接口，[获取锁](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/spinlock.c#L23) 和 [释放锁](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/spinlock.c#L41)：
 
 ```c
 // 获取锁
@@ -83,7 +83,7 @@ signal(spinlock_t *spin) {
 static queue_t __queue_ready, __queue_running;
 ```
 
-队列是统一的封装的数据结构，详见 [kern/utilities/queue.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/queue.h#L10)，提供了如下接口（初始化、判队空、入队、出对和查看队头）：
+队列是统一的封装的数据结构，详见 [kern/utilities/queue.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/queue.h#L10)，提供了如下接口（初始化、判队空、入队、出对和查看队头）：
 
 ```c
 // 队列插入位置
@@ -99,7 +99,7 @@ node_t *queue_pop(queue_t *q);
 node_t *queue_front(queue_t *q);
 ```
 
-则 `hoo` 任务系统的初始化为，详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L125)：
+则 `hoo` 任务系统的初始化为，详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L125)：
 
 ```c
 static spinlock_t __sl_tasks;
@@ -117,7 +117,7 @@ queue_push(&__queue_running, hoo_node, TAIL);
 
 ## 调度器
 
-完整代码详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L161)，以下是关键片段：
+完整代码详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L161)，以下是关键片段：
 
 ```c
 #define TIMETICKS 16 // 每 16 个时间片就执行一次调度
@@ -174,11 +174,11 @@ scheduler() {
 - 注释 1：检查剩余的时间片。从运行队列取出队头，如果时间片未递减到 0 则递减并退出后续流程；否则重置时间片
 - 注释 2：交换两个任务。从就绪队列取出队头，再从运行队列取出队头，交换。新插入队列的结点插入到队尾
 - 注释 3：更新 tss。tss 保存了正在运行的线程的内核栈
-- 注释 4：切换任务。通过 [kern/sched/switch.S](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/switch.S#L7) 定义的接口操作 `%esp` 寄存器，从而切换不同的两个栈，即切换任务
+- 注释 4：切换任务。通过 [kern/sched/switch.S](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/switch.S#L7) 定义的接口操作 `%esp` 寄存器，从而切换不同的两个栈，即切换任务
 
 ## 其他接口
 
-有了运行队列之后，可以通过它 [获取当前线程的 pcb](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L145)：
+有了运行队列之后，可以通过它 [获取当前线程的 pcb](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L145)：
 
 ```c
 pcb_t *

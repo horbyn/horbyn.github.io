@@ -230,7 +230,7 @@ pgtable_addr:
 
 完整代码详见 [kern/entry.c](https://github.com/horbyn/hoo/blob/master/kern/entry.c)
 
-内核入口这部分代码编译得到的二进制会通过链接脚本 [kernel.ld](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kernel.ld#L9) 放在整个内核二进制的最前面，也即最后会被加载到内存 0 处
+内核入口这部分代码编译得到的二进制会通过链接脚本 [kernel.ld](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kernel.ld#L9) 放在整个内核二进制的最前面，也即最后会被加载到内存 0 处
 
 ```ld
 . = 0x80000000;

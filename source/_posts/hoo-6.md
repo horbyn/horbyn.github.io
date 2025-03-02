@@ -44,7 +44,7 @@ ICW4 是杂项设置，只需要关注 AEOI 位，其他不重要。AEOI 的自�
 
 OCW1 用来屏蔽中断信号，就是说不将指定的中断信号上报给处理器。M0 ～ M7 对应 IRQ0 ～ IRQ7，置位的比特位就表示对应的 IRQ 上的中断信号被屏蔽了
 
-而 OCW2 和 OCW3 和非自动结束中断信号有关，`hoo` 使用的是自动结束，所以就略过了，代码详见 [kern/module/driver.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/driver.c#L11)
+而 OCW2 和 OCW3 和非自动结束中断信号有关，`hoo` 使用的是自动结束，所以就略过了，代码详见 [kern/module/driver.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/driver.c#L11)
 
 ```c
 #define ICW1_ICW4 1
@@ -94,7 +94,7 @@ SC 位是选择通道 Select Channel 的缩写，通道 0、1、2 的区别如�
 
 如果使用第一个计数器，初始值需要写入 `0x40` 端口；要使用第二个计数器则是 `0x41`；第三个是 `0x42`
 
-`hoo` 的实现详见 [kern/module/driver.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/driver.c#L57)：
+`hoo` 的实现详见 [kern/module/driver.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/driver.c#L57)：
 
 ```c
 #define SC_CHANNEL0   0
@@ -120,7 +120,7 @@ ATA（Advanced Technology Attachment）是一个电气标准，用来规定 ATA 
 
 ## ATA 设备检测
 
-主要利用 [IDENTIFY 命令](https://wiki.osdev.org/ATA_PIO_Mode#IDENTIFY_command)，该命令会读取出来一个 512 字节的数据，准确来说，这 512 字节数据是一个结构体，该结构体被称为 IDENTIFY DEVICE，详见 [《ATA/ATAPI Command Set - 3 (ACS-3)》，7.12.1 一章表格 45](https://people.freebsd.org/~imp/asiabsdcon2015/works/d2161r5-ATAATAPI_Command_Set_-_3.pdf)。对于一个不太复杂的 ATA 驱动来说，大部分字段都可以忽略，因此 `hoo` 仅定义了部分字段，详见 [kern/driver/ata/ata_identify.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_identify.h#L26)：
+主要利用 [IDENTIFY 命令](https://wiki.osdev.org/ATA_PIO_Mode#IDENTIFY_command)，该命令会读取出来一个 512 字节的数据，准确来说，这 512 字节数据是一个结构体，该结构体被称为 IDENTIFY DEVICE，详见 [《ATA/ATAPI Command Set - 3 (ACS-3)》，7.12.1 一章表格 45](https://people.freebsd.org/~imp/asiabsdcon2015/works/d2161r5-ATAATAPI_Command_Set_-_3.pdf)。对于一个不太复杂的 ATA 驱动来说，大部分字段都可以忽略，因此 `hoo` 仅定义了部分字段，详见 [kern/driver/ata/ata_identify.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_identify.h#L26)：
 
 ```c
 // 序列号
@@ -159,7 +159,7 @@ typedef struct ata_identify_data {
 
 Primary 通道的数据端口为 `0x1f0` ～ `0x1f7`，控制端口为 `0x3f6`；Secondary 通道的数据端口为 `0x170` ～ `0x177`，控制端口为 `0x376`
 
-读取 IDENTIFY DATA 逻辑详见 [kern/driver/ata/ata_device.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_device.c#L123)，以下代码片段有删减，并且仅仅是从 Primary 通道中读取：
+读取 IDENTIFY DATA 逻辑详见 [kern/driver/ata/ata_device.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L123)，以下代码片段有删减，并且仅仅是从 Primary 通道中读取：
 
 ```c
 #define ATA_CMD_IO_IDENTIFY           0xec
@@ -223,7 +223,7 @@ if (inb(port_io + ATA_IO_R_OFFSET_STATUS) != 0x00) {
 - 注释 4：从 Status IO 端口（Primary 是 `0x1f7`）中读取，如果值为 0 则设备不存在，否则设备存在。之后下一步继续从 Status IO 端口轮询状态，需要 Status IO 端口对应寄存器 `bit-7`（BSY） 清位、`bit-3`（DRQ）置位（或者 `bit-0`（ERR）置位）
 - 注释 5：轮询完后，读取 256 次 16 位数据（借助 `insw` 指令单次读取 16 位数据）。当取出 IDENTIFY DATA 之后，从中获取硬盘序列号、硬盘扇区总数等信息
 
-获取完 ATA 设备的基本信息后，`hoo` 会将这些信息保存到 [`ataspc_t` 结构体](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_device.h#L27)：
+获取完 ATA 设备的基本信息后，`hoo` 会将这些信息保存到 [`ataspc_t` 结构体](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L27)：
 
 ```c
 typedef struct ata_space {
@@ -233,7 +233,7 @@ typedef struct ata_space {
 } ataspc_t;
 ```
 
-ATA 设备结构体详见 [kern/driver/ata/ata_driver.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_device.h#L11)，下面代码片段有删减：
+ATA 设备结构体详见 [kern/driver/ata/ata_driver.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L11)，下面代码片段有删减：
 
 ```c
 typedef struct ata_device {
@@ -255,7 +255,7 @@ ATA 对象组织方式如下：
 
 ## ATA 设备读写
 
-`hoo` 使用 [LBA28 方式](https://wiki.osdev.org/LBA) 读写 ATA 设备，读写方式参考 [ATA PIO Mode](https://wiki.osdev.org/ATA_PIO_Mode#28_bit_PIO)，以下是 `hoo` 的实现，详见 [kern/driver/ata/ata_device.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_device.c#L94)：
+`hoo` 使用 [LBA28 方式](https://wiki.osdev.org/LBA) 读写 ATA 设备，读写方式参考 [ATA PIO Mode](https://wiki.osdev.org/ATA_PIO_Mode#28_bit_PIO)，以下是 `hoo` 的实现，详见 [kern/driver/ata/ata_device.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L94)：
 
 ```c
 outb(0xe0 | (uint8_t)((lba >> 24) & 0xf),
@@ -278,7 +278,7 @@ outb((uint8_t)cmd, io_port + ATA_IO_W_OFFSET_COMMAND); // 4
 
 ### Polling
 
-polling 的好处是简单，每次操作 ATA 设备之后，只需要持续读取 Status IO 端口，检查 RDY 是否置位、BSY 是否清位，详见 [kern/driver/ata/ata_device.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_device.c#L34)：
+polling 的好处是简单，每次操作 ATA 设备之后，只需要持续读取 Status IO 端口，检查 RDY 是否置位、BSY 是否清位，详见 [kern/driver/ata/ata_device.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L34)：
 
 ```c
 static void
@@ -290,7 +290,7 @@ ata_wait() {
 }
 ```
 
-polling 实现详见 [kern/driver/ata/ata_polling.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_polling.c#L19)，以下代码片段有删减：
+polling 实现详见 [kern/driver/ata/ata_polling.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_polling.c#L19)，以下代码片段有删减：
 
 ```c
 typedef uint32_t atacmd_t;
@@ -336,7 +336,7 @@ ata_polling_rw(atabuff_t *buff){
 }
 ```
 
-- 注释 1：`hoo` 将读写 ATA 的数据封装成为 [`atabuff_t` 结构体](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_device.h#L36)，其中命令字 `atacmd_t` 本质上是 32 位无符号数，用来接收 `ATA_CMD_IO_READ` 和 `ATA_CMD_IO_WRITE` 两个宏
+- 注释 1：`hoo` 将读写 ATA 的数据封装成为 [`atabuff_t` 结构体](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L36)，其中命令字 `atacmd_t` 本质上是 32 位无符号数，用来接收 `ATA_CMD_IO_READ` 和 `ATA_CMD_IO_WRITE` 两个宏
 - 注释 2：读写 ATA 设备可能涉及多个扇区，通过将读写字节数除以扇区大小计算扇区数量，然后 `for()` 循环一个一个扇区地读写
 - 注释 3：等待 ATA 设备完成
 - 注释 4：读写多个扇区时，最后一个扇区可能是不满一个 `BYTES_SECTOR`（512 字节）的，需要对最后一个扇区作特殊处理
@@ -356,7 +356,7 @@ IRQ 的实现还要借助 sleep() 和 wakeup() 两个系统调用。当 ATA 设�
 
 `hoo` 就是按照这个思路来实现 sleep() 和 wakeup() 的，现在只剩下一个问题，当睡眠队列有多个 pcb 时，唤醒线程时怎么知道这一次的资源到达是对应着哪个 pcb？`hoo` 的解决办法是在线程睡眠的时候，就要给出资源地址，并在 pcb 定义一个字段专门用来记录要等待的资源。这样当唤醒线程的时候（也是要给出资源地址），对比给出的资源和每个 pcb 内记录的资源，就能够找出到底要唤醒哪个线程
 
-睡眠的具体实现详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L207)，以下代码片段有删减：
+睡眠的具体实现详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L207)，以下代码片段有删减：
 
 ```c
 void
@@ -379,7 +379,7 @@ sleep(void *resource, spinlock_t *resource_lock) {
 - 注释 3：立即进行调度。理由前面说了，现在逻辑上没有任何线程在运行
 - 注释 4：重置 pcb 和锁。到了这一步很可能已经过了很久很久了，要等待的资源已经到达，可以恢复执行流了，则 pcb 和锁回到最开始睡眠之前的状态
 
-唤醒的具体实现详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L233)，以下代码片段有删减：
+唤醒的具体实现详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L233)，以下代码片段有删减：
 
 ```c
 void
@@ -407,7 +407,7 @@ wakeup(void *resource) {
 
 `hoo` 引入一个队列来缓存所有正在发生读写的 atabuff。如图所示，所有线程都可以同时发起 ATA 设备读写，读写信息封装到 atabuff，然后将 atabuff 加入 ata 队列。其中 ata 队列是共享资源，访问时通过 spinlock 来保护
 
-具体实现详见 [kern/driver/ata/ata_irq.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_irq.c#L60)，以下代码片段有删减：
+具体实现详见 [kern/driver/ata/ata_irq.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_irq.c#L60)，以下代码片段有删减：
 
 ```c
 typedef uint32_t atacmd_t;
@@ -450,7 +450,7 @@ signal(&__slata);
 
 由于 ata 队列是按照 FIFO 方式组织的，所以总是队头的元素先处理完成，因此处理器每次接收到硬盘中断，只需要处理 ata 队列的队头元素
 
-具体实现详见 [kern/driver/ata/ata_irq.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/ata/ata_irq.c#L31)，以下代码片段有删减：
+具体实现详见 [kern/driver/ata/ata_irq.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_irq.c#L31)，以下代码片段有删减：
 
 ```c
 void
@@ -500,7 +500,7 @@ set_isr_entry(&__isr[ISR46_HARD1], (isr_t)ata_irq_intr);
 - 键盘驱动：用户按下一个键位，触发硬盘中断，将通码 / 断码转换为 ASCII 码，缓存到环形缓冲区
 - 输出设备：如果环形缓冲区有数据，就输出
 
-`hoo` 实现的生产者 - 消费者问题详见 [kern/utilities/circular_buffer.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/circular_buffer.h#L20)，以下代码有删减：
+`hoo` 实现的生产者 - 消费者问题详见 [kern/utilities/circular_buffer.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/circular_buffer.h#L20)，以下代码有删减：
 
 ```c
 // 环形缓冲区
@@ -546,7 +546,7 @@ cclbuff_get(cclbuff_t *cclbuff) {
 - 从数据端口中读取一个通码 / 断码
 - 将通码 / 断码转换为 ASCII 码
 
-详见代码 [kern/driver/8042/8042.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/8042/8042.c#L54)，以下代码片段有删减：
+详见代码 [kern/driver/8042/8042.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/8042/8042.c#L54)，以下代码片段有删减：
 
 ```c
 // 1
@@ -562,7 +562,7 @@ cclbuff_put(kbuff, result);
 ```
 
 - 注释 1：读取通码 / 断码
-- 注释 2：[`get_kb_buff()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/8042/8042.c#L38) 返回一个全局对象，在转换得到最终的 ASCII 码 `result` 后就可以缓存到环形缓冲区了
+- 注释 2：[`get_kb_buff()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/8042/8042.c#L38) 返回一个全局对象，在转换得到最终的 ASCII 码 `result` 后就可以缓存到环形缓冲区了
 
 最后还有一点要注意的是，键盘驱动在每次按下键位的时候就应该被触发了，而这个时候也是处理器接收键盘中断信号的时候，所以键盘驱动在 `hoo` 里面就是键盘中断 ISR，通过 `set_isr_entry()` 接口注册 ISR
 

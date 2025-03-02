@@ -23,12 +23,12 @@ sticky: 100
 
 最后内核运行起来，其最终目标是管理任务。围绕这一点，需要设计一种机制来将某个确切任务记录下来，记录的地方必定是内存，因此，需要实现内存管理模块。其次，还要考虑任务的调度，即怎样中断与怎样继续执行，这便是中断模块和调度模块。在这个过程中，像中断模块是软件硬件结合的，还会涉及设备驱动的实现。完成这些事情之后，后续要考虑的就是将任务保存下来，并提供一些接口来访问任务，即实现文件系统与内置命令，至此内核的模块便划分为如下六个模块：
 
-- [内存管理](https://horbyn.github.io/2025/01/07/hoo-3/)
-- [中断机制](https://horbyn.github.io/2025/01/07/hoo-4/)
-- [调度机制](https://horbyn.github.io/2025/01/07/hoo-5/)
-- [设备驱动](https://horbyn.github.io/2025/01/07/hoo-6/)
-- [文件系统](https://horbyn.github.io/2025/01/07/hoo-7/)
-- [内置命令](https://horbyn.github.io/2025/01/07/hoo-8/)
+- [内存管理](https://horbyn.github.io/2025/01/30/hoo-3/)
+- [中断机制](https://horbyn.github.io/2025/02/01/hoo-4/)
+- [调度机制](https://horbyn.github.io/2025/02/04/hoo-5/)
+- [设备驱动](https://horbyn.github.io/2025/02/05/hoo-6/)
+- [文件系统](https://horbyn.github.io/2025/02/07/hoo-7/)
+- [内置命令](https://horbyn.github.io/2025/02/10/hoo-8/)
 
 因此，这个系列将会分为 7 篇文章
 

@@ -39,7 +39,7 @@ tag: hoo
 
 ## 超级块初始化
 
-超级块定义在 [kern/fs/super_block.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/super_block.h#L11)：
+超级块定义在 [kern/fs/super_block.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/super_block.h#L11)：
 
 ```c
 typedef struct super_block {
@@ -58,7 +58,7 @@ typedef struct super_block {
 以下是一些说明：
 
 - `magic_`：`hoo` 文件系统通过将 `0x1905e14d`（纪念 1905 的爱因斯坦奇迹年）记录在超级块以确认文件系统格式
-- `inode_block_index_max_`：如前文所示，一个 inode 会拥有一个包含了 8 个元素的索引表，`hoo` 的索引表是二级索引。那么，一个 inode 可表示的扇区数量就是（详见 [kern/fs/super_block.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/super_block.c#L41)）：
+- `inode_block_index_max_`：如前文所示，一个 inode 会拥有一个包含了 8 个元素的索引表，`hoo` 的索引表是二级索引。那么，一个 inode 可表示的扇区数量就是（详见 [kern/fs/super_block.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/super_block.c#L41)）：
 	- 前 6 个索引是直接索引，可以表示 6 个扇区
 	- 第 7 个索引是一级索引，可以表示 512 / 4 = 128 个扇区（一级索引指示的扇区有 512 字节，一个扇区号 4 字节，所以一个扇区可以表示 128 个扇区号，也即对应 128 个扇区）
 	- 第 8 个索引是二级索引，可以表示 128 * 128 个扇区（计算过程略，结合前一点和前文示意图可以得到）
@@ -71,7 +71,7 @@ inode 位图每个比特位表示一个 inode 块，置位表示对应的 inode 
 
 inode 位图和 inode 块都有两份，一份 on-disk，一份 in-memory。所有线程的 inode 读写都是面向 in-memory 结构，然后内核会在适当时刻将 in-memory 结构统一写入硬盘
 
-in-memory 结构的 inode 位图借助 [kern/utilities/bitmap.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/bitmap.h#L18) 的接口来操作，对 inode 位图和 inode 块的初始化分两种情况：
+in-memory 结构的 inode 位图借助 [kern/utilities/bitmap.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/bitmap.h#L18) 的接口来操作，对 inode 位图和 inode 块的初始化分两种情况：
 
 - 硬盘已经写入了文件系统
 	- inode 位图（in-memory）从硬盘的对应 LBA 处读取
@@ -80,7 +80,7 @@ in-memory 结构的 inode 位图借助 [kern/utilities/bitmap.h](https://github.
 	- inode 位图（in-memory）全部为 0，写入硬盘对应 LBA 处
 	- inode 块（in-memory）也全部为 0
 
-inode 定义详见 [kern/fs/inodes.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/inodes.h#L20)：
+inode 定义详见 [kern/fs/inodes.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/inodes.h#L20)：
 
 ```c
 #define MAX_INODE_BLOCKS 8
@@ -98,9 +98,9 @@ extern inode_t __fs_inodes[MAX_INODES];
 void inodes_rw_disk(int inode_idx, atacmd_t cmd);
 ```
 
-`__fs_nodes` 对象是 in-memory inodes 数组，整个文件系统最多支持 64 个 inode，换句话说，文件和目录加在一起最多只支持保存 64 个。伴随 inode 出现同时还定义一个读写 inode 的接口，详见 [`kern/fs/inodes.c`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/inodes.c#L100)，实际上是 ATA 读写的一个封装。对于 ATA 读是 on-disk inode 读取到 in-memory inode；对于 ATA 写则是 in-memory inode 写入 on-disk inode
+`__fs_nodes` 对象是 in-memory inodes 数组，整个文件系统最多支持 64 个 inode，换句话说，文件和目录加在一起最多只支持保存 64 个。伴随 inode 出现同时还定义一个读写 inode 的接口，详见 [`kern/fs/inodes.c`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/inodes.c#L100)，实际上是 ATA 读写的一个封装。对于 ATA 读是 on-disk inode 读取到 in-memory inode；对于 ATA 写则是 in-memory inode 写入 on-disk inode
 
-初始化详见 [kern/fs/inodes.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/inodes.c#L20)，以下代码片段有删减：
+初始化详见 [kern/fs/inodes.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/inodes.c#L20)，以下代码片段有删减：
 
 ```c
 #define BYTES_SECTOR 512
@@ -151,7 +151,7 @@ setup_inode(bool is_new) {
 
 通过这种组织方式，当需要检索根目录时，就是遍历最后的目录项数组；当需要在根目录下创建文件或目录时，就是写入最后的目录项数组
 
-`hoo` 在 [kern/fs/dir.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.h#L16) 定义了目录项和目录项数组：
+`hoo` 在 [kern/fs/dir.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.h#L16) 定义了目录项和目录项数组：
 
 ```c
 typedef uint32_t inode_type_t;
@@ -180,10 +180,10 @@ typedef struct dir_block {
 - 目录项数组实际上是一个磁盘块转换而来的，也即数组总长度为 512 字节
 
 因为根目录结构体成员的值是固定的，所以其目录项不保存到硬盘，也就是只有 in-memory 而没有 on-disk 结构。而新盘和旧盘的初始化稍微不同：
-- 新盘：调用 [`diritem_create()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L296) 接口创建根目录的目录项
-- 旧盘：直接为 in-memory 的目录项赋值，详见 [kern/module/fs.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/fs.c#L34)
+- 新盘：调用 [`diritem_create()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L296) 接口创建根目录的目录项
+- 旧盘：直接为 in-memory 的目录项赋值，详见 [kern/module/fs.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/fs.c#L34)
 
-`diritem_create()` 是目录项操作，用来新建一个目录，详细代码见 [kern/fs/dir.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L296)，这里忽略具体实现，下面展示这个函数的功能示意图：
+`diritem_create()` 是目录项操作，用来新建一个目录，详细代码见 [kern/fs/dir.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L296)，这里忽略具体实现，下面展示这个函数的功能示意图：
 
 ![](https://pic1.imgdb.cn/item/67a700f9d0e0a243d4fcf8cf.png)
 
@@ -195,7 +195,7 @@ typedef struct dir_block {
 
 文件是一个软件层面的概念，多个线程可以引用同一个文件，为减少同一个文件创建的副本，`hoo` 引入了全局文件数组。同一个文件是全局唯一的，使用全局文件数组来记录。使用引用计数来管理文件的存留，多个线程引用同一个文件则引用计数增加，当引用计数递减为 0 则释放文件
 
-文件定义详见 [kern/fs/fs_stuff.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/fs_stuff.h#L29)：
+文件定义详见 [kern/fs/fs_stuff.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/fs_stuff.h#L29)：
 
 ```c
 typedef struct files {
@@ -204,7 +204,7 @@ typedef struct files {
 } files_t;
 ```
 
-全局文件数组初始化详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L49)：
+全局文件数组初始化详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L49)：
 
 ```c
 #define MAX_TASKS_AMOUNT    1024
@@ -231,7 +231,7 @@ __fs_files = dyn_alloc(sizeof(files_t) * MAX_OPEN_FILES);
 - 创建文件对应的目录项。前面说过文件包含了文件和目录，所以在文件之上还有一层目录项的抽象，用来统一对文件或目录的操作，在真正操作文件或目录之前需要先操作目录项
 - 将文件对应的目录项写入父目录项
 
-`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L63)，以下代码片段有删减：
+`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L63)，以下代码片段有删减：
 
 ```c
 #define DIRNAME_ROOT_ASCII  47    // 根目录 / 字符的 ASCII 码
@@ -268,11 +268,11 @@ files_create(const char *name) {
 ```
 
 - 注释 1：判断创建文件还是目录。`hoo` 通过判断最后一个字符是否 `/` 来确定，存在为目录，不存在为文件。比如创建 `/bin/abc` 则是创建文件；如果是创建 `/bin/abc/` 则是创建目录
-- 注释 2：查找待创建文件的目录项。如果存在则直接返回，避免重复创建相同的文件。[`diritem_find()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L206) 是目录项接口，用来返回给定文件名的目录项
-- 注释 3：将文件名拆分为父名称和子名称。比如 `/bin/abc`（`/bin/abc/` 也是）会被拆分为父名称 `/bin` 和子名称 `abc`，详见 [kern/utilities/curdir.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/utilities/curdir.c#L119)
+- 注释 2：查找待创建文件的目录项。如果存在则直接返回，避免重复创建相同的文件。[`diritem_find()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L206) 是目录项接口，用来返回给定文件名的目录项
+- 注释 3：将文件名拆分为父名称和子名称。比如 `/bin/abc`（`/bin/abc/` 也是）会被拆分为父名称 `/bin` 和子名称 `abc`，详见 [kern/utilities/curdir.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/curdir.c#L119)
 - 注释 4：查找父目录项
 - 注释 5：创建给定文件的目录项。需要指定待创建文件的文件类型、文件名、父目录的 inode 数组索引，通过这些信息创建一个新的目录项，`diritem_create()` 逻辑在创建根目录一节已经给出，不再赘述
-- 注释 6：上一步创建的新目录项写入父目录项。[`diritem_push()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L333) 也是目录项接口，用来将子目录项写入父目录项
+- 注释 6：上一步创建的新目录项写入父目录项。[`diritem_push()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L333) 也是目录项接口，用来将子目录项写入父目录项
 
 `diritem_push()` 详细代码此处不再展示，下面是该函数的功能示意图：
 
@@ -290,7 +290,7 @@ files_create(const char *name) {
 - 找到待删除文件的目录项
 - 从父目录项中删除给定文件的目录项
 
-`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L107)，以下代码片段有删减：
+`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L107)，以下代码片段有删减：
 
 ```c
 int
@@ -309,7 +309,7 @@ files_remove(const char *name) {
 
 - 注释 1：从待删除文件名中提取出父文件名
 - 注释 2：找到待删除文件的父目录项和自己的目录项
-- 注释 3：从父目录项中删除自己。[`diritem_remove()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/dir.c#L374) 是目录项接口，用来从父目录项中删除给定的子目录项
+- 注释 3：从父目录项中删除自己。[`diritem_remove()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L374) 是目录项接口，用来从父目录项中删除给定的子目录项
 
 同样 `diritem_remove()` 的详细实现此处省略，仅展示其功能示意图：
 
@@ -329,7 +329,7 @@ files_remove(const char *name) {
 - 通过 inode 从全局 in-memory inode 数组中找到 `inode_t` 对象，里面保存了索引表
 - 通过索引表就可以找到磁盘块，进而把整个文件找到
 
-`hoo` 为 pcb 的文件数组实现了一层封装，称为 [文件管理器](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/fmngr.h#L11)，通过位图来记录文件数组哪些元素已分配哪些未分配，提供了一组操作接口：
+`hoo` 为 pcb 的文件数组实现了一层封装，称为 [文件管理器](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/fmngr.h#L11)，通过位图来记录文件数组哪些元素已分配哪些未分配，提供了一组操作接口：
 
 ```c
 typedef struct file_manager {
@@ -353,7 +353,7 @@ fd_t fmngr_files_get(fmngr_t *fmngr, fd_t fd);
 - 从全局文件数组中取出一个未分配的元素索引
 - 从 pcb 文件数组中取出一个未分配的元素索引，上一步的全局索引赋值给该元素
 
-`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L132)，以下代码片段有删减：
+`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L132)，以下代码片段有删减：
 
 ```c
 files_t *__fs_files; // 全局文件数组
@@ -384,7 +384,7 @@ files_open(const char *name) {
 ```
 
 - 注释 1：获取待打开文件的目录项，检查文件类型，不是文件类型返回错误
-- 注释 2：设置全局文件数组。[`fd_global_alloc()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L22) 返回一个未分配的全局文件描述符，该文件描述符作为索引，此时通过索引更新全局文件数组
+- 注释 2：设置全局文件数组。[`fd_global_alloc()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L22) 返回一个未分配的全局文件描述符，该文件描述符作为索引，此时通过索引更新全局文件数组
 - 注释 3：设置线程自己的文件数组。通过文件管理器接口 `fmngr_alloc()` 获取一个未分配的索引，再通过 `fmngr_files_set()` 将全局 fd 写入 pcb 文件数组
 
 ## 关闭文件
@@ -394,7 +394,7 @@ files_open(const char *name) {
 - 从 pcb 文件数组中取出全局文件描述符
 - 全局文件数组取出文件，引用计数减一
 
-`hoo` 的实现很简单，详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L158)，以下代码有删减：
+`hoo` 的实现很简单，详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L158)，以下代码有删减：
 
 ```c
 void
@@ -410,7 +410,7 @@ files_close(fd_t fd) {
 
 - 注释 1：从线程 pcb 的文件数组中取出全局文件描述符
 - 注释 2：先对全局文件的引用计数减一
-- 注释 3：再判断全局文件的引用计数是否减至 0，是则回收该全局文件。[`fd_global_free()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L40) 主要是将全局文件描述符设置为未分配
+- 注释 3：再判断全局文件的引用计数是否减至 0，是则回收该全局文件。[`fd_global_free()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L40) 主要是将全局文件描述符设置为未分配
 
 ## 读取文件
 
@@ -431,7 +431,7 @@ files_close(fd_t fd) {
 - 通过 inode 检索其索引表，发现有两个索引非空，分别（假设）是 LBA 100 和 LBA 200
 - 读取 LBA 100 和 LBA 200，就可以获悉整个文件的内容
 
-`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L178)，以下代码片段有删减：
+`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L178)，以下代码片段有删减：
 
 ```c
 #define MAX_INODES 64
@@ -467,13 +467,13 @@ files_read(fd_t fd, void *buf, uint32_t size) {
 
 - 注释 1：对于标准输入，从全局的键盘环形缓冲区中读取字符，每读取一个字符就保存一个到结果 `buf`
 - 注释 2：从线程 pcb 自己的文件数组中取出全局文件，进而取出文件对应的 inode
-- 注释 3：调用 [`free_rw_disk()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/free.c#L76) 接口循环地从磁盘文件中读取数据，该接口封装了对 ATA 设备的读写，本质上也是从磁盘中读取，此处忽略其细节；后面每读取一个磁盘块（512B）就调用 [`memmove()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/user/lib.c#L72) 将其拷贝到结果 `buf`
+- 注释 3：调用 [`free_rw_disk()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/free.c#L76) 接口循环地从磁盘文件中读取数据，该接口封装了对 ATA 设备的读写，本质上也是从磁盘中读取，此处忽略其细节；后面每读取一个磁盘块（512B）就调用 [`memmove()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/lib.c#L72) 将其拷贝到结果 `buf`
 
 ## 写入文件
 
 和上一节相似，写入文件输出流也有两个：标准输出和文件，前者实际是向输出设备写入，后者则是向磁盘写入
 
-`hoo` 的输出设备实现了 [CGA 标准](https://en.wikipedia.org/wiki/Color_Graphics_Adapter)（CGA 是老标准，相对更新更广泛的是 VGA，当然，VGA 也很老了），对应的基础设施是 `80 * 25` 字符模式的显存输出。`hoo` 的实现详见 [kern/driver/cga/cga.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/driver/cga/cga.h#L8)，主要提供了一个操作接口 —— 写入，写入位置和字符属性等由这个 CGA 模块内部负责：
+`hoo` 的输出设备实现了 [CGA 标准](https://en.wikipedia.org/wiki/Color_Graphics_Adapter)（CGA 是老标准，相对更新更广泛的是 VGA，当然，VGA 也很老了），对应的基础设施是 `80 * 25` 字符模式的显存输出。`hoo` 的实现详见 [kern/driver/cga/cga.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/cga/cga.h#L8)，主要提供了一个操作接口 —— 写入，写入位置和字符属性等由这个 CGA 模块内部负责：
 
 ```c
 void cga_putstr(const char *str, uint32_t len); // 将这个缓冲区的字符写入显存
@@ -494,7 +494,7 @@ void cga_putstr(const char *str, uint32_t len); // 将这个缓冲区的字符�
 - 通过 inode 检索其索引表，发现为空，新分配一个磁盘块，LBA 为 100
 - 将缓冲区写入 LBA 100
 
-`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/files.c#L220)，以下代码片段有删减：
+`hoo` 的具体实现详见 [kern/fs/files.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/files.c#L220)，以下代码片段有删减：
 
 ```c
 void
@@ -525,4 +525,4 @@ files_write(fd_t fd, const char *buf, uint32_t size) {
 - 注释 1：对于标准输出，直接将整个缓冲区写入到 CGA 模块
 - 注释 2：从线程 pcb 自己的文件数组中取出全局文件，进而取出文件对应的 inode 索引
 - 注释 3：循环将缓冲区数据写入 inode 索引表对应的磁盘块
-- 注释 4：更新文件对应的 inode。更新文件大小，然后将 in-memory inode 写入磁盘（同步 on-disk inode），最后更新 inode 位图，因为写入文件就相当于 inode 已分配，因此 inode 位图对应比特位需要置位，接口 [`free_map_update()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/fs/free.c#L63) 就是将整个 in-memory inode 位图写入磁盘（同步 on-disk inode 位图）
+- 注释 4：更新文件对应的 inode。更新文件大小，然后将 in-memory inode 写入磁盘（同步 on-disk inode），最后更新 inode 位图，因为写入文件就相当于 inode 已分配，因此 inode 位图对应比特位需要置位，接口 [`free_map_update()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/free.c#L63) 就是将整个 in-memory inode 位图写入磁盘（同步 on-disk inode 位图）

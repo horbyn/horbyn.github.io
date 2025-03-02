@@ -25,7 +25,7 @@ tag: hoo
 
 至于右图的场景，比如执行内核任务时，时间片耗尽。中断前是内核态，中断时跳转 ISR 依然是内核态。之前使用的栈就是 `ring0` 栈，则跳转 ISR 后依然使用原来的栈，不涉及栈的切换，处理器依然会压栈寄存器环境，只是不会压栈旧 `%ss` 和 `%esp`
 
-上述寄存器环境有一个信息叫做 ["错误码"](http://wiki.osdev.org/Exceptions)，它是一些有关该中断信号的额外信息，比如缺页异常处理器会压栈错误码，这个时候的错误码是 [PDE / PTE 标识位的组合](http://wiki.osdev.org/Exceptions#Error_code)，`hoo` 通过这个错误码实现了 [缺页异常的 COW](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/routine.c#L69)
+上述寄存器环境有一个信息叫做 ["错误码"](http://wiki.osdev.org/Exceptions)，它是一些有关该中断信号的额外信息，比如缺页异常处理器会压栈错误码，这个时候的错误码是 [PDE / PTE 标识位的组合](http://wiki.osdev.org/Exceptions#Error_code)，`hoo` 通过这个错误码实现了 [缺页异常的 COW](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/routine.c#L69)
 
 ## 实现
 
@@ -33,7 +33,7 @@ tag: hoo
 
 如图所示，`hoo` 将 IDT 数组元素视为一个函数地址，这个函数地址就是 ISR 入口。执行流到达 ISR 入口后，结合中断向量会计算得到 ISR 数组的索引，最后跳入 ISR 数组。ISR 数组元素也是一个函数地址
 
-第一步处理器访问 IDT 数组，具体代码详见 [kern/intr/isr.S](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/isr.S#L277)，以下是关键代码片段：
+第一步处理器访问 IDT 数组，具体代码详见 [kern/intr/isr.S](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/isr.S#L277)，以下是关键代码片段：
 
 ```assembly
 # 宏定义
@@ -63,7 +63,7 @@ isr_part1:
 
 借助 [x86 AT&T 风格汇编宏定义](https://wiki.osdev.org/Opcode_syntax#Important_Details)，为 IDT 数组定义函数，这是因为有些中断处理器会入栈错误码，另一些没有错误码的中断就需要手动入栈一个 0 来保持栈格式的统一，方便后面保护现场、恢复现场的操作
 
-第二步定义 ISR 入口，详见 [kern/intr/trampoline.S](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/trampoline.S#L8)：
+第二步定义 ISR 入口，详见 [kern/intr/trampoline.S](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/trampoline.S#L8)：
 
 ```assembly
 # ISR 入口
@@ -100,7 +100,7 @@ isr_part2:
     movl %eax,     %es
 ```
 
-第一个指令是取下标为 2 的 [gdt](https://wiki.osdev.org/GDT_Tutorial)，`hoo` 设置的 gdt 的设置详见 [kern/module/conf.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/conf.c#L11)：
+第一个指令是取下标为 2 的 [gdt](https://wiki.osdev.org/GDT_Tutorial)，`hoo` 设置的 gdt 的设置详见 [kern/module/conf.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/conf.c#L11)：
 
 ```c
 // #0 空表
@@ -125,10 +125,10 @@ isr_part2:
 ![](https://pic1.imgdb.cn/item/679f270ad0e0a243d4f98cfb.png)
 
 - 最开始的时候，处理器刚接收到中断信号，会自动压栈橙色部分的寄存器环境
-- 之后处理器通过 IDTR 找到 IDT 数组，再找到 IDT 元素，即访问到前面汇编宏定义的内容，压栈黄色部分（橙色和黄色部分 `hoo` 定义为处理器中断栈，见 [kern/intr/intr_stack.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/intr_stack.h#L30)）
-- 后续执行流便进入 ISR 入口，压栈绿色部分的寄存器环境（绿色部分 `hoo` 定义为内核中断栈，见 [kern/intr/intr_stack.h](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/intr_stack.h#L11)），最后栈顶停留在图示位置。因此栈顶偏移 48 字节即越过了整个绿色部分，访问到黄色部分的 *中断向量号*。而 ISR 数组的定义见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/do_intr.c#L9)，是一个函数指针数组，对于 `32-bit` 系统，一个指针字是 4 字节，因此中断向量号乘上 4 就是 ISR 数组索引
+- 之后处理器通过 IDTR 找到 IDT 数组，再找到 IDT 元素，即访问到前面汇编宏定义的内容，压栈黄色部分（橙色和黄色部分 `hoo` 定义为处理器中断栈，见 [kern/intr/intr_stack.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/intr_stack.h#L30)）
+- 后续执行流便进入 ISR 入口，压栈绿色部分的寄存器环境（绿色部分 `hoo` 定义为内核中断栈，见 [kern/intr/intr_stack.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/intr_stack.h#L11)），最后栈顶停留在图示位置。因此栈顶偏移 48 字节即越过了整个绿色部分，访问到黄色部分的 *中断向量号*。而 ISR 数组的定义见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/do_intr.c#L9)，是一个函数指针数组，对于 `32-bit` 系统，一个指针字是 4 字节，因此中断向量号乘上 4 就是 ISR 数组索引
 
-整个中断执行流至此完毕，具体的 ISR 会放在「内置命令」一文，现在只提供一个默认的 ISR 赋值给所有的 ISR 数组元素，默认 ISR 定义详见 [kern/intr/routine.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/routine.c#L51)，主要是输出 ISR 名称、输出上下文环境、执行 `hlt` 命令停机。赋值逻辑详见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/module/do_intr.c#L16)：
+整个中断执行流至此完毕，具体的 ISR 会放在「内置命令」一文，现在只提供一个默认的 ISR 赋值给所有的 ISR 数组元素，默认 ISR 定义详见 [kern/intr/routine.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/routine.c#L51)，主要是输出 ISR 名称、输出上下文环境、执行 `hlt` 命令停机。赋值逻辑详见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/do_intr.c#L16)：
 
 ```c
 #define IDT_ENTRIES_NUM     256
@@ -157,7 +157,7 @@ for (uint32_t i = 0; i < IDT_ENTRIES_NUM; ++i)
 	set_idt_entry(&__idt[i], PL_KERN, INTER_GATE, (uint32_t)isr_part1[i]);
 ```
 
-`hoo` 提供了两个接口 [`set_isr_entry()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/intr.c#L34) 和 [`set_idt_entry()`](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/intr.c#L14) 用来设置 ISR 数组和 IDT 数组，前者直接就是给 ISR 数组赋值；后者由于 IDT 表项有 [格式](https://wiki.osdev.org/Interrupt_Descriptor_Table#Gate_Descriptor)，所以需要额外提供 `PL_KERN`、`INTER_GATE` 等属性，但本质也是给 IDT 数组赋值
+`hoo` 提供了两个接口 [`set_isr_entry()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/intr.c#L34) 和 [`set_idt_entry()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/intr.c#L14) 用来设置 ISR 数组和 IDT 数组，前者直接就是给 ISR 数组赋值；后者由于 IDT 表项有 [格式](https://wiki.osdev.org/Interrupt_Descriptor_Table#Gate_Descriptor)，所以需要额外提供 `PL_KERN`、`INTER_GATE` 等属性，但本质也是给 IDT 数组赋值
 
 ```c
 static idtr_t __idtr;
@@ -196,7 +196,7 @@ __asm__  volatile ("lidt %k1\n\t"
 
 写入一个线性地址会让处理器抛出 page fault 的情景是：用户态线程访问 user-mode 线性地址，即 CPL 为 3 的线程访问 paging-structure entry 都是 1 的线性地址
 
-具体实现详见 [kern/intr/routine.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/routine.c#L69)，下面代码片段有删减：
+具体实现详见 [kern/intr/routine.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/routine.c#L69)，下面代码片段有删减：
 
 ```c
 #define PGFLAG_PS  1
@@ -258,7 +258,7 @@ set_isr_entry(&__isr[ISR14_PAGEFAULT], (isr_t)page_fault);
 
 ## 时间片中断
 
-时间片中断会涉及「调度机制」一章实现的 [调度器](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/sched/tasks.c#L161)，可以先把它当成黑盒，详见 [kern/intr/routine.c](https://github.com/horbyn/hoo/blob/0d9ad0a802499095e41830011cbb5634822cad52/kern/intr/routine.c#L103)：
+时间片中断会涉及「调度机制」一章实现的 [调度器](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L161)，可以先把它当成黑盒，详见 [kern/intr/routine.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/routine.c#L103)：
 
 ```c
 // 时间片中断
