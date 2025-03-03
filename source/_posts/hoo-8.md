@@ -170,7 +170,7 @@ syscall_exit:
 14|[`sys_free()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L213)|释放动态分配的内存|[`dyn_free()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/dyn/dynamic.c#L52)
 15|[`sys_workingdir()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/user/user.c#L227)|获取当前目录|[`dir_get_current()`](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/fs/dir.c#L492)
 
-上表细节详见 [kern/syscall/syscall.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/syscall/syscall.c#L18)，其中，`#0` 至 `#5` 和 `#13` 至 `#14` 已经出现在「文件系统」和「内存管理」一文，后文将略过
+上表细节详见 [kern/syscall/syscall.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/syscall/syscall.c#L18)，其中，`#0` 至 `#5` 和 `#13` 至 `#14` 已经出现在「[文件系统](https://horbyn.github.io/2025/02/07/hoo-7/)」和「[内存管理](https://horbyn.github.io/2025/01/30/hoo-3/)」一文，后文将略过
 
 ## 格式化输出
 
@@ -225,7 +225,7 @@ kprintf(const char *fmt, ...) {
 
 ![](https://pic1.imgdb.cn/item/67ac39d4d0e0a243d4fe8aa4.png)
 
-如图所示，拷贝发生在最后一层，最终结果是父子进程所有页表的每个 PTE，都指向同一个物理页，这就是所谓的 *"共享"*。这个过程中，唯一要注意的是 PTE 的属性位，前文「中断机制」一文提及了 `hoo` 在缺页异常中实现了 C.O.W，因此子进程在拷贝 PTE 的时候需要将 `R/W` 清位
+如图所示，拷贝发生在最后一层，最终结果是父子进程所有页表的每个 PTE，都指向同一个物理页，这就是所谓的 *"共享"*。这个过程中，唯一要注意的是 PTE 的属性位，前文「[中断机制](https://horbyn.github.io/2025/02/01/hoo-4/)」一文提及了 `hoo` 在缺页异常中实现了 C.O.W，因此子进程在拷贝 PTE 的时候需要将 `R/W` 清位
 
 详见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L251)，以下代码片段有删减：
 
@@ -363,7 +363,7 @@ tid_t fork(void *entry);
 
 `wait()` 用于调用 `fork()` 之后的父进程等待子进程的执行结束。子进程执行期间父进程可能需要等待，父进程通过睡眠来减少对处理器的占用，子进程执行完毕再将父进程唤醒
 
-借助前文「设备驱动」一文的 `sleep()`，`wait()` 的实现非常简单，见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L323)：
+借助前文「[设备驱动](https://horbyn.github.io/2025/02/05/hoo-6/)」一文的 `sleep()`，`wait()` 的实现非常简单，见 [kern/sched/tasks.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L323)：
 
 ```c
 void
@@ -649,7 +649,7 @@ sys_cd(const char *dir) {
 
 这个过程中有两个很重要的步骤，第一个是重置当前进程的线性空间，第二个是跳转到二进制文件中执行，下面是一些说明
 
-前面「内存管理」一文展示过 `hoo` 进程的线性空间：
+前面「[内存管理](https://horbyn.github.io/2025/01/30/hoo-3/)」一文展示过 `hoo` 进程的线性空间：
 
 ![](https://pic1.imgdb.cn/item/67a1b668d0e0a243d4fbc4cd.png)
 
@@ -759,7 +759,7 @@ exec(const char *filename) {
 - 注释 6：将二进制文件从磁盘读取到内存。通过文件系统接口 `files_read()` 将二进制文件从磁盘读取到内存 0 的位置，这个地方前一步已经重置过线性空间，映射都是全新的
 - 注释 7：切换执行流。这里引入了一个从 `ring0` 进入 `ring3` 的函数 `mode_ring3()`，关于它的详情见后文，只需要知道 `x86` 从高特权级进入低特权级方法只有一个，就是中断返回，具体来说是执行 `iret` 指令。`mode_ring3()` 就是借助了这个指令，对于处理器来说它并不关心执行 `iret` 是否真的要从中断中返回，只关心执行 `iret` 时 `ring0` 和 `ring3` 栈是否正确，因此 `jmp mode_ring3` 之前的汇编指令用来设置 `ring3` 栈，而在 `mode_ring3()` 函数中设置 `ring0` 栈。至于后面的汇编指令，用来处理命令完成后的返回，注意返回时候仍然是 `ring3`，所以不能直接调用内核功能函数，只能通过系统调用接口。这里命令执行返回后需要关闭文件、需要执行 `exit()` 来销毁自己
 
-下面来详细看下内联汇编指令的整过过程：
+下面来详细看下内联汇编指令的整个过程：
 
 ```assembly
 __asm__ ("movl %0, %%eax\n\t"

@@ -10,7 +10,7 @@ tag: hoo
 
 ![](https://pic1.imgdb.cn/item/67a1cae3d0e0a243d4fbc8b7.png)
 
-PIC 全称 Programmable Interrupt Controller，可编程的中断控制器，`x86` 基础设施是 [8259(A) 芯片](https://wiki.osdev.org/8259_PIC)
+PIC 全称 Programmable Interrupt Controller，可编程的中断控制器，`x86` 基础设施是 [8259(A) 芯片](https://wiki.osdev.org/8259_PIC)。另外还有一种控制器是 APIC，专门用于多处理器系统，所以 `hoo` 只是一个单处理器内核
 
 8259A 内部有两组寄存器：
 
@@ -485,7 +485,7 @@ set_isr_entry(&__isr[ISR46_HARD1], (isr_t)ata_irq_intr);
 
 键盘从软件层面来看，也包括两部分，键盘和键盘控制器，`x86` 基础设施是 [8042 芯片](https://wiki.osdev.org/%228042%22_PS/2_Controller)
 
-和键盘有关的有两个方面：[通码 / 断码（`hoo` 使用了第一套）](https://wiki.osdev.org/PS/2_Keyboard#Scan_Code_Set_1) 和 [环形缓冲区](https://en.wikipedia.org/wiki/Circular_buffer)
+和键盘有关的有两个方面：[通码 / 断码](https://wiki.osdev.org/PS/2_Keyboard#Scan_Code_Set_1) （`hoo` 使用了第一套）和 [环形缓冲区](https://en.wikipedia.org/wiki/Circular_buffer)
 
 ## 第一套通码 / 断码
 

@@ -128,7 +128,7 @@ isr_part2:
 - 之后处理器通过 IDTR 找到 IDT 数组，再找到 IDT 元素，即访问到前面汇编宏定义的内容，压栈黄色部分（橙色和黄色部分 `hoo` 定义为处理器中断栈，见 [kern/intr/intr_stack.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/intr_stack.h#L30)）
 - 后续执行流便进入 ISR 入口，压栈绿色部分的寄存器环境（绿色部分 `hoo` 定义为内核中断栈，见 [kern/intr/intr_stack.h](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/intr_stack.h#L11)），最后栈顶停留在图示位置。因此栈顶偏移 48 字节即越过了整个绿色部分，访问到黄色部分的 *中断向量号*。而 ISR 数组的定义见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/do_intr.c#L9)，是一个函数指针数组，对于 `32-bit` 系统，一个指针字是 4 字节，因此中断向量号乘上 4 就是 ISR 数组索引
 
-整个中断执行流至此完毕，具体的 ISR 会放在「内置命令」一文，现在只提供一个默认的 ISR 赋值给所有的 ISR 数组元素，默认 ISR 定义详见 [kern/intr/routine.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/routine.c#L51)，主要是输出 ISR 名称、输出上下文环境、执行 `hlt` 命令停机。赋值逻辑详见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/do_intr.c#L16)：
+整个中断执行流至此完毕，具体的 ISR 会放在「[内置命令](https://horbyn.github.io/2025/02/10/hoo-8/)」一文，现在只提供一个默认的 ISR 赋值给所有的 ISR 数组元素，默认 ISR 定义详见 [kern/intr/routine.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/intr/routine.c#L51)，主要是输出 ISR 名称、输出上下文环境、执行 `hlt` 命令停机。赋值逻辑详见 [kern/module/do_intr.c](https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/do_intr.c#L16)：
 
 ```c
 #define IDT_ENTRIES_NUM     256
@@ -275,7 +275,7 @@ set_isr_entry(&__isr[ISR32_TIMER], (isr_t)timer);
 
 ## 系统调用
 
-由于发起系统调用的整个执行流有一些前置内容，所以具体内容放到「内置命令」一文，这里先把系统调用的函数接口视为一个黑盒
+由于发起系统调用的整个执行流有一些前置内容，所以具体内容放到「[内置命令](https://horbyn.github.io/2025/02/10/hoo-8/)」一文，这里先把系统调用的函数接口视为一个黑盒
 
 ```c
 extern void syscall(void);
