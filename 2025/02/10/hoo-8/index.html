@@ -18,7 +18,7 @@
 <meta property="og:description" content="内置命令是整个系统的集大成者，它的实现要基于其他内核模块基础之上。内置命令本质上是磁盘上的一个二进制文件，通过系统调用一步步从磁盘加载到内存上，并最终执行流跳转到对应的内存地址开始执行">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-02-10T03:26:41.000Z">
-<meta property="article:modified_time" content="2025-03-02T02:57:06.822Z">
+<meta property="article:modified_time" content="2025-03-03T13:36:33.428Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="hoo">
 <meta name="twitter:card" content="summary">
@@ -707,7 +707,9 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
 <p>上表细节详见 <a
 target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/syscall/syscall.c#L18">kern/syscall/syscall.c</a>，其中，<code>#0</code>
 至 <code>#5</code> 和 <code>#13</code> 至 <code>#14</code>
-已经出现在「文件系统」和「内存管理」一文，后文将略过</p>
+已经出现在「<a
+href="https://horbyn.github.io/2025/02/07/hoo-7/">文件系统</a>」和「<a
+href="https://horbyn.github.io/2025/01/30/hoo-3/">内存管理</a>」一文，后文将略过</p>
 <h2 id="格式化输出">格式化输出</h2>
 <p>用户侧和前文例子一样，只是准备上下文环境，然后借助
 <code>syscall_entry()</code> 陷入内核态，进而调用内核功能函数</p>
@@ -747,9 +749,10 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
 src="https://pic1.imgdb.cn/item/67ac39d4d0e0a243d4fe8aa4.png" /></p>
 <p>如图所示，拷贝发生在最后一层，最终结果是父子进程所有页表的每个
 PTE，都指向同一个物理页，这就是所谓的
-<em>"共享"</em>。这个过程中，唯一要注意的是 PTE
-的属性位，前文「中断机制」一文提及了 <code>hoo</code> 在缺页异常中实现了
-C.O.W，因此子进程在拷贝 PTE 的时候需要将 <code>R/W</code> 清位</p>
+<em>"共享"</em>。这个过程中，唯一要注意的是 PTE 的属性位，前文「<a
+href="https://horbyn.github.io/2025/02/01/hoo-4/">中断机制</a>」一文提及了
+<code>hoo</code> 在缺页异常中实现了 C.O.W，因此子进程在拷贝 PTE
+的时候需要将 <code>R/W</code> 清位</p>
 <p>详见 <a
 target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L251">kern/sched/tasks.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> PG_DIR_VA  0xfffff000 <span class="comment">// 页目录表对应的线性地址</span></span></span><br><span class="line"><span class="keyword">typedef</span> <span class="type">uint32_t</span> <span class="type">pgelem_t</span>;    <span class="comment">// paging-structure 结构</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// copy_beg：高地址 0x8000_0000 对应的页目录表索引</span></span><br><span class="line"><span class="comment">// copy_end：页目录表最后一个索引</span></span><br><span class="line"><span class="comment">// new_pgdir_va：新进程（即子进程）的页目录表线性地址</span></span><br><span class="line"><span class="comment">// new_pgdir_pa：子进程的页目录表物理地址</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 1</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; copy_beg; ++i) &#123;</span><br><span class="line">	<span class="type">pgelem_t</span> *pde = (<span class="type">pgelem_t</span> *)PG_DIR_VA + i;</span><br><span class="line">	<span class="keyword">if</span> (*pde) &#123;</span><br><span class="line">		<span class="type">void</span> *new_page_table = phy_alloc_page();</span><br><span class="line">		<span class="type">pgelem_t</span> *new_page_table_va = vir_alloc_pages();</span><br><span class="line">		set_mapping(new_page_table_va, new_page_table, flags);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 2</span></span><br><span class="line">		<span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">4096</span> / <span class="keyword">sizeof</span>(<span class="type">pgelem_t</span>); ++j) &#123;</span><br><span class="line">			<span class="type">pgelem_t</span> *pte = (<span class="type">pgelem_t</span> *)(</span><br><span class="line">				((<span class="type">uint32_t</span>)pde &lt;&lt; <span class="number">10</span>) | (j * <span class="keyword">sizeof</span>(<span class="type">uint32_t</span>)));</span><br><span class="line">			<span class="keyword">if</span> (*pte)    new_page_table_va[j] = *pte &amp; ~((<span class="type">pgelem_t</span>)PGFLAG_RW);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		new_pgdir_va[i] = (<span class="type">pgelem_t</span>)new_page_table | flags;</span><br><span class="line">	&#125; <span class="keyword">else</span>    new_pgdir_va[i] = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 3</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">uint32_t</span> i = copy_beg; i &lt; copy_end; ++i)</span><br><span class="line">	new_pgdir_va[i] = *((<span class="type">pgelem_t</span> *)PG_DIR_VA + i);</span><br><span class="line"><span class="comment">// 4</span></span><br><span class="line">new_pgdir_va[copy_end] = (<span class="type">pgelem_t</span>)new_pgdir_pa | flags;</span><br></pre></td></tr></table></figure>
@@ -809,8 +812,9 @@ src="https://pic1.imgdb.cn/item/67ad875dd0e0a243d4fec574.png" /></p>
 <h2 id="wait">wait</h2>
 <p><code>wait()</code> 用于调用 <code>fork()</code>
 之后的父进程等待子进程的执行结束。子进程执行期间父进程可能需要等待，父进程通过睡眠来减少对处理器的占用，子进程执行完毕再将父进程唤醒</p>
-<p>借助前文「设备驱动」一文的 <code>sleep()</code>，<code>wait()</code>
-的实现非常简单，见 <a
+<p>借助前文「<a
+href="https://horbyn.github.io/2025/02/05/hoo-6/">设备驱动</a>」一文的
+<code>sleep()</code>，<code>wait()</code> 的实现非常简单，见 <a
 target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L323">kern/sched/tasks.c</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">wait_child</span><span class="params">(<span class="type">spinlock_t</span> *sl)</span> &#123;</span><br><span class="line">    wait(sl);</span><br><span class="line">    sleep(sl, sl);</span><br><span class="line">    signal(sl);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>由于睡眠需要提供一个等待就绪的资源，所以这里直接把 spinlock
@@ -930,7 +934,9 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
 <h2 id="切换执行流">切换执行流</h2>
 <p>跳转执行流是指，从文件系统中打开一个二进制文件，然后重置当前进程的线性空间，将二进制文件加载到内存，最后跳转到二进制文件中执行</p>
 <p>这个过程中有两个很重要的步骤，第一个是重置当前进程的线性空间，第二个是跳转到二进制文件中执行，下面是一些说明</p>
-<p>前面「内存管理」一文展示过 <code>hoo</code> 进程的线性空间：</p>
+<p>前面「<a
+href="https://horbyn.github.io/2025/01/30/hoo-3/">内存管理</a>」一文展示过
+<code>hoo</code> 进程的线性空间：</p>
 <p><img
 src="https://pic1.imgdb.cn/item/67a1b668d0e0a243d4fbc4cd.png" /></p>
 <p>暂时把执行新执行流的进程称为新进程，那么新进程的二进制数据边界很可能和当前进程（现在还没开始切换）是不一样的，新进程的二进制数据边界在前一步读取二进制文件时获取。现在以新进程二进制边界为基准，在边界前面的所有
@@ -994,7 +1000,7 @@ PDE</li>
 <code>ring3</code>，所以不能直接调用内核功能函数，只能通过系统调用接口。这里命令执行返回后需要关闭文件、需要执行
 <code>exit()</code> 来销毁自己</li>
 </ul>
-<p>下面来详细看下内联汇编指令的整过过程：</p>
+<p>下面来详细看下内联汇编指令的整个过程：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">__asm__ (&quot;movl %0, %%eax\n\t&quot;</span><br><span class="line">    &quot;movl %2, -0x4(%%eax)\n\t&quot;</span><br><span class="line">    &quot;movl %3, -0x8(%%eax)\n\t&quot;</span><br><span class="line">    &quot;movl %4, -0xc(%%eax)\n\t&quot;</span><br><span class="line">    &quot;movl $next_insc, -0x10(%%eax)\n\t&quot;</span><br><span class="line">    &quot;subl $0x10, %%eax\n\t&quot;</span><br><span class="line">    : : &quot;c&quot;(cur_pcb-&gt;stack3_), &quot;d&quot;(program), &quot;b&quot;(fd), &quot;S&quot;(argv), &quot;D&quot;(argc));</span><br></pre></td></tr></table></figure>
 <p>变量 <code>cur_pcb-&gt;stack3_</code> 表示 <code>ring3</code>
 栈的栈顶，被赋值给 <code>%eax</code> 寄存器，然后变量 <code>fd</code>
@@ -1260,8 +1266,8 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
         <div class="license-wrapper">
             <p>Author：<a href="https://horbyn.github.io">Horbyn</a>
             <p>Link：<a href="https://horbyn.github.io/2025/02/10/hoo-8/">https://horbyn.github.io/2025/02/10/hoo-8/</a>
-            <p>Publish date：<a href="https://horbyn.github.io/2025/02/10/hoo-8/">February 10th 2025, 3:26:41 am</a>
-            <p>Update date：<a href="https://horbyn.github.io/2025/02/10/hoo-8/">March 2nd 2025, 2:57:06 am</a>
+            <p>Publish date：<a href="https://horbyn.github.io/2025/02/10/hoo-8/">February 10th 2025, 11:26:41 am</a>
+            <p>Update date：<a href="https://horbyn.github.io/2025/02/10/hoo-8/">March 3rd 2025, 9:36:33 pm</a>
             <p>License：本文采用<a rel="license noopener" target="_blank" href="http://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可</p>
         </div>
     <!-- paginator -->
@@ -1379,7 +1385,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
             <div class="archive-year"> 2025 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">03/03</span>
+            <span class="archive-post-date">03/02</span>
             <a class="archive-post-title" href="/2025/03/02/github-index/">美化 Github 主页</a>
         </li>
         <li class="archive-post-item">
@@ -1387,7 +1393,7 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
             <a class="archive-post-title" href="/2025/02/10/hoo-8/">「从零到一」内置命令</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/08</span>
+            <span class="archive-post-date">02/07</span>
             <a class="archive-post-title" href="/2025/02/07/hoo-7/">「从零到一」文件系统</a>
         </li>
         <li class="archive-post-item">
@@ -1418,25 +1424,25 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
             <div class="archive-year"> 2024 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">10/24</span>
+            <span class="archive-post-date">10/23</span>
             <a class="archive-post-title" href="/2024/10/23/privilege/">关于 x86 特权级这种保护机制</a>
         </li>
                 </ul>
             <div class="archive-year"> 2023 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">11/02</span>
+            <span class="archive-post-date">11/01</span>
             <a class="archive-post-title" href="/2023/11/01/live-1/">ARM 模拟 x86 环境不能直接使用 gdb 调试的解决方案</a>
         </li>
                 </ul>
             <div class="archive-year"> 2022 </div>
             <ul class="year-list">
         <li class="archive-post-item">
-            <span class="archive-post-date">05/29</span>
+            <span class="archive-post-date">05/28</span>
             <a class="archive-post-title" href="/2022/05/28/trans-2/">x86 AT&T 汇编快速入门（译文）</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/22</span>
+            <span class="archive-post-date">04/21</span>
             <a class="archive-post-title" href="/2022/04/21/xv6-11/">⌈xv6-fall2021⌋ MIT 6.828 巡礼</a>
         </li>
         <li class="archive-post-item">
@@ -1444,35 +1450,35 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
             <a class="archive-post-title" href="/2022/04/21/xv6-10/">⌈xv6-fall2021⌋ lab 10：mmap</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/18</span>
+            <span class="archive-post-date">04/17</span>
             <a class="archive-post-title" href="/2022/04/17/xv6-9/">⌈xv6-fall2021⌋ lab 9：file system</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/16</span>
+            <span class="archive-post-date">04/15</span>
             <a class="archive-post-title" href="/2022/04/15/xv6-8/">⌈xv6-fall2021⌋ lab 8：locks</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/12</span>
+            <span class="archive-post-date">04/11</span>
             <a class="archive-post-title" href="/2022/04/11/xv6-7/">⌈xv6-fall2021⌋ lab 7：networking</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/06</span>
+            <span class="archive-post-date">04/05</span>
             <a class="archive-post-title" href="/2022/04/05/xv6-6/">⌈xv6-fall2021⌋ lab 6：Multithreading</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">04/05</span>
+            <span class="archive-post-date">04/04</span>
             <a class="archive-post-title" href="/2022/04/04/xv6-5/">⌈xv6-fall2021⌋ lab 5：COW</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/30</span>
+            <span class="archive-post-date">03/29</span>
             <a class="archive-post-title" href="/2022/03/29/trans-1/">RISC-V 调用约定（译文）</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/30</span>
+            <span class="archive-post-date">03/29</span>
             <a class="archive-post-title" href="/2022/03/29/xv6-4/">⌈xv6-fall2021⌋ lab 4：Traps</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/26</span>
+            <span class="archive-post-date">03/25</span>
             <a class="archive-post-title" href="/2022/03/25/xv6-3/">⌈xv6-fall2021⌋ lab 3：Page tables</a>
         </li>
         <li class="archive-post-item">
@@ -1480,19 +1486,19 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
             <a class="archive-post-title" href="/2022/03/16/xv6-2/">⌈xv6-fall2021⌋ lab 2：System calls</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/15</span>
+            <span class="archive-post-date">03/14</span>
             <a class="archive-post-title" href="/2022/03/14/winsock/">Winsock 实现一个端到端通信软件</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">03/01</span>
+            <span class="archive-post-date">02/28</span>
             <a class="archive-post-title" href="/2022/02/28/xv6-1/">⌈xv6-fall2021⌋ lab 1：Xv6 and Unix utilities</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/26</span>
+            <span class="archive-post-date">02/25</span>
             <a class="archive-post-title" href="/2022/02/25/xv6-0/">⌈xv6-fall2021⌋ MIT 6.828 环境配置</a>
         </li>
         <li class="archive-post-item">
-            <span class="archive-post-date">02/23</span>
+            <span class="archive-post-date">02/22</span>
             <a class="archive-post-title" href="/2022/02/22/hello-world/">Hello world</a>
         </li>
             </ul>
@@ -1513,13 +1519,13 @@ target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3
                 <span class="iconfont-archer">&#xe606;</span>
                 translation
             </span>
+            <span class="sidebar-tag-name" data-tags="mit6.828">
+                <span class="iconfont-archer">&#xe606;</span>
+                mit6.828
+            </span>
             <span class="sidebar-tag-name" data-tags="winsock">
                 <span class="iconfont-archer">&#xe606;</span>
                 winsock
-            </span>
-            <span class="sidebar-tag-name" data-tags="xv6">
-                <span class="iconfont-archer">&#xe606;</span>
-                xv6
             </span>
     </div>
     <div class="iconfont-archer sidebar-tags-empty">&#xe678;</div>
