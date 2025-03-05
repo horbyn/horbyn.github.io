@@ -34,7 +34,7 @@ set_idt_entry(&__idt[ISR128_SYSCALL], PL_USER, TRAP_GATE,
 ```
 
 - 注释 1：将 128 号 ISR 设置为 `syscall()`，其定义详见后文，这里先忽略，只需要知道 `syscall()` 用来将执行流改变为内核的功能函数就行了
-- 注释 2：设置中断向量表，将中断向量号 0-127 ISR 设置为 `isr_part1` 数组中对应的函数，特权级为 `ring0`
+- 注释 2：设置中断向量表，将中断向量号 0-255 ISR 设置为 `isr_part1` 数组中对应的函数，特权级为 `ring0`
 - 注释 3：修改 128 号 ISR 属性为 `ring3` 和 [trap gate](https://wiki.osdev.org/Interrupt_Descriptor_Table#Trap_Gate)，和 interrupt gate 的区别是，trap gate 在执行期间是开中断的
 
 现在，当程序执行 `int $0x80` 指令时：
@@ -84,7 +84,7 @@ syscall_entry(int syscall_number, void *retval) {
 
 假设用户线程通过 `sys_open()` 发起系统调用，则后续会进入 `syscall_entry()`，这个过程中整个 `ring3` 栈如下图所示：
 
-![](https://pic1.imgdb.cn/item/67aafe19d0e0a243d4fe4f16.png)
+![](https://pic1.imgdb.cn/item/67c67b6bd0e0a243d40b3406.png)
 
 黄色部分是 `sys_open()` 栈帧的调用约定，绿色部分是 `sys_open()` 栈帧，白色部分是 `syscall_entry()` 栈帧，而当前执行流停留在 `syscall_entry()` 栈帧上
 
