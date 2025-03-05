@@ -442,13 +442,10 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="引子">引子</h2>
-<p>从一个问题开始，假设在逻辑上函数 <code>ring0_thread()</code>
-只让内核调用，而函数 <code>ring3_thread()</code>
-让用户进程调用。那么想一想，当在 <code>ring3_thread()</code> 中调用
-<code>ring0_thread()</code>，会抛出 <code>#GP</code> 异常吗？</p>
+        <h2 id="引子"><a class="header-anchor" href="#引子"></a>引子</h2>
+<p>从一个问题开始，假设在逻辑上函数 <code>ring0_thread()</code> 只让内核调用，而函数 <code>ring3_thread()</code> 让用户进程调用。那么想一想，当在 <code>ring3_thread()</code> 中调用 <code>ring0_thread()</code>，会抛出 <code>#GP</code> 异常吗？</p>
 <p>下面把问题变具体点，来看看特权级是个什么东西</p>
-<h2 id="内核背景">内核背景</h2>
+<h2 id="内核背景"><a class="header-anchor" href="#内核背景"></a>内核背景</h2>
 <p>首先为内核定义一些东西，下面是 <code>GDT</code> 的定义：</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="language-bash">0</span></span><br><span class="line"><span class="meta">#</span><span class="language-bash">1 内核代码段：DPL=0，基址=0，段界限=0xf_ffff</span></span><br><span class="line"><span class="meta">#</span><span class="language-bash">2 内核数据段：DPL=0，基址=0，段界限=0xf_ffff</span></span><br><span class="line"><span class="meta">#</span><span class="language-bash">3 用户代码段：DPL=3，基址=0，段界限=0xf_ffff</span></span><br><span class="line"><span class="meta">#</span><span class="language-bash">4 用户数据段：DPL=3，基址=0，段界限=0xf_ffff</span></span><br></pre></td></tr></table></figure>
 <p>并且需要实现一个方法跳入 <code>ring3</code>，如下：</p>
@@ -457,71 +454,38 @@
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">ring3_thread</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">  <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">    ring0_thread(); <span class="comment">// 调用 ring0 线程</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>这里请注意，函数只有在我们用户视角才是函数，而在处理器眼中，仅仅是一个地址。假设页表映射以及这两个函数的地址如下：</p>
 <figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">// .map 文件</span><br><span class="line">.text</span><br><span class="line">    0xc000_1000  ring0_thread</span><br><span class="line">    0xc000_1800  ring3_thread</span><br><span class="line"></span><br><span class="line">// 页表映射</span><br><span class="line">0xc000_1000 -&gt; 0x1000</span><br></pre></td></tr></table></figure>
-<p>那么实际上，在平坦模式下（也即是所有段描述符表示的地址空间都是 0 ～
-0xffff_ffff）只要用户进程给出
-<code>CS : EIP = (3*8)|3 : 0xc000_1000</code> 就可以访问到
-<code>ring0_thread()</code> 这个内核函数了，但这样便会抛出
-<code>#GP</code> 吗？分情况讨论</p>
-<h2 id="情况一内核函数是普通函数">情况一：内核函数是普通函数</h2>
-<p>假设的 <code>ring0_thread()</code>
-定义如下，来分析下这个过程看看会不会抛 <code>#GP</code>：</p>
+<p>那么实际上，在平坦模式下（也即是所有段描述符表示的地址空间都是 0 ～ 0xffff_ffff）只要用户进程给出 <code>CS : EIP = (3*8)|3 : 0xc000_1000</code> 就可以访问到 <code>ring0_thread()</code> 这个内核函数了，但这样便会抛出 <code>#GP</code> 吗？分情况讨论</p>
+<h2 id="情况一：内核函数是普通函数"><a class="header-anchor" href="#情况一：内核函数是普通函数"></a>情况一：内核函数是普通函数</h2>
+<p>假设的 <code>ring0_thread()</code> 定义如下，来分析下这个过程看看会不会抛 <code>#GP</code>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">ring0_thread</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">  <span class="type">int</span> data = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">    ++data;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>首先，<code>ring3_thread()</code> 调用 <code>ring0_thread()</code>
-对处理器来说本质上是调用一个地址，也即
-<code>call 0xc000_1000</code>。让先来回顾下 <code>call</code> 指令：</p>
+<p>首先，<code>ring3_thread()</code> 调用 <code>ring0_thread()</code> 对处理器来说本质上是调用一个地址，也即 <code>call 0xc000_1000</code>。让先来回顾下 <code>call</code> 指令：</p>
 <ul>
 <li>近跳转：只会进行段界限检查而不会进行特权级检查</li>
 <li>远跳转：有两种方式
 <ul>
 <li><code>call 段描述符</code>：这个段需要带上可执行属性</li>
 <li><code>call 门描述符</code>：调用门</li>
-</ul></li>
 </ul>
-<p>现在先忽略特权级检查规则，先来看整个过程，很明显在平坦模式下
-<code>call 线性地址</code> 是近跳转，而当前代码段是用户代码段，界限为
-<code>0xf_ffff</code>，所以通过，能直接跳转过去</p>
-<p>进入 <code>ring0_thread()</code>
-像这种定义局部变量、读写，不需要特权，用户进程确实可以独自完成，所以不会抛
-<code>#GP</code></p>
-<h2
-id="情况二内核函数需要写入内核数据">情况二：内核函数需要写入内核数据</h2>
-<p>那么，如果需要读写内核数据，比如内核的页目录表呢，修改下
-<code>ring0_thread()</code>，再来看下这个过程：</p>
+</li>
+</ul>
+<p>现在先忽略特权级检查规则，先来看整个过程，很明显在平坦模式下 <code>call 线性地址</code> 是近跳转，而当前代码段是用户代码段，界限为 <code>0xf_ffff</code>，所以通过，能直接跳转过去</p>
+<p>进入 <code>ring0_thread()</code> 像这种定义局部变量、读写，不需要特权，用户进程确实可以独自完成，所以不会抛 <code>#GP</code></p>
+<h2 id="情况二：内核函数需要写入内核数据"><a class="header-anchor" href="#情况二：内核函数需要写入内核数据"></a>情况二：内核函数需要写入内核数据</h2>
+<p>那么，如果需要读写内核数据，比如内核的页目录表呢，修改下 <code>ring0_thread()</code>，再来看下这个过程：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="type">uint32_t</span> _kernel_page_dir[<span class="number">1024</span>];</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">ring0_thread</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">  <span class="type">int</span> data = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">    _kernel_page_dir[(data++) % <span class="number">1024</span>] = <span class="number">0x12345678</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>同样也是从处理器视角去看问题，赋值操作大多数都是调用诸如
-<code>mov</code>
-这一类指令。这里内核页目录表本质也是个地址，所以最终大概会是类似于
-<code>movl $0x12345678, (地址)</code>
-这样的赋值。读写一个内存地址自然是不需要特权的（假设用户进程在共享内核线性空间时，拥有
-PDE / PTE
-读写属性均允许），所以用户进程也可以独立完成（在良好的内核设计中肯定不希望这么做，这里只是举个例子），因此也不会抛
-<code>#GP</code></p>
-<h2 id="情况三内核函数是打印函数">情况三：内核函数是打印函数</h2>
-<p>现在来看最后一种情况。假设的 <code>ring0_thread()</code>
-负责打印功能，并且它访问显存时需要使用 <code>in</code> 和
-<code>out</code> 指令读取光标之类的东西。那么此时
-<code>ring3_thread()</code> 调用 <code>ring0_thread()</code> 就会抛出
-<code>#GP</code>，来分析下这个过程</p>
-<p>前面流程同理，区别是 <code>in</code> 或 <code>out</code>
-指令，关于这些 <code>IO</code> 指令，以下是一些补充：</p>
+<p>同样也是从处理器视角去看问题，赋值操作大多数都是调用诸如 <code>mov</code> 这一类指令。这里内核页目录表本质也是个地址，所以最终大概会是类似于 <code>movl $0x12345678, (地址)</code> 这样的赋值。读写一个内存地址自然是不需要特权的（假设用户进程在共享内核线性空间时，拥有 PDE / PTE 读写属性均允许），所以用户进程也可以独立完成（在良好的内核设计中肯定不希望这么做，这里只是举个例子），因此也不会抛 <code>#GP</code></p>
+<h2 id="情况三：内核函数是打印函数"><a class="header-anchor" href="#情况三：内核函数是打印函数"></a>情况三：内核函数是打印函数</h2>
+<p>现在来看最后一种情况。假设的 <code>ring0_thread()</code> 负责打印功能，并且它访问显存时需要使用 <code>in</code> 和 <code>out</code> 指令读取光标之类的东西。那么此时 <code>ring3_thread()</code> 调用 <code>ring0_thread()</code> 就会抛出 <code>#GP</code>，来分析下这个过程</p>
+<p>前面流程同理，区别是 <code>in</code> 或 <code>out</code> 指令，关于这些 <code>IO</code> 指令，以下是一些补充：</p>
 <ul>
-<li><code>IO</code>
-指令也被称为敏感指令（<code>Sensitive Instructions</code>），和特权指令（<code>Privileged Instructions</code>）一样有特权级检查规则。<code>IO</code>
-指令受到 <code>EFLAGS</code> 的 <code>IOPL</code>
-字段的限制，只有在数值上 <code>CPL &lt;= IOPL</code> 才被允许执行</li>
+<li><code>IO</code> 指令也被称为敏感指令（<code>Sensitive Instructions</code>），和特权指令（<code>Privileged Instructions</code>）一样有特权级检查规则。<code>IO</code> 指令受到 <code>EFLAGS</code> 的 <code>IOPL</code> 字段的限制，只有在数值上 <code>CPL &lt;= IOPL</code> 才被允许执行</li>
 </ul>
-<p>默认情况下，如果你不使用 <a
-target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2005/readings/i386/POPF.htm"><code>POPF/POPFD</code></a>
-指令将特定的值从栈顶弹出到 <code>EFLAGS</code> 的 <code>IOPL</code>
-字段，则它为零。那么此时由于 <code>CPL=3</code>，默认的
-<code>IOPL=0</code>，自然不满足特权级检查而抛出 <code>#GP</code></p>
-<h2 id="结论">结论</h2>
+<p>默认情况下，如果你不使用 <a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2005/readings/i386/POPF.htm"><code>POPF/POPFD</code></a> 指令将特定的值从栈顶弹出到 <code>EFLAGS</code> 的 <code>IOPL</code> 字段，则它为零。那么此时由于 <code>CPL=3</code>，默认的 <code>IOPL=0</code>，自然不满足特权级检查而抛出 <code>#GP</code></p>
+<h2 id="结论"><a class="header-anchor" href="#结论"></a>结论</h2>
 <p>所以，特权级的保护机制不在于你执行了什么代码，读写了什么数据。关键是要意识到特权级检查发生的时刻，因为只要这个时刻通过了，后续的代码执行、数据读写就和特权级检查无关</p>
 <ul>
 <li>对于数据段的特权级检查：总是发生在加载段寄存器那一刻</li>
-<li>对于代码段的特权级检查，情况会更复杂，因为还有一种是依从属性（段描述符中的
-<code>conforming</code>
-字段）要考虑，不在本文讨论范围内，本文仅涉及加载可执行段的段寄存器和特权指令、敏感指令</li>
+<li>对于代码段的特权级检查，情况会更复杂，因为还有一种是依从属性（段描述符中的 <code>conforming</code> 字段）要考虑，不在本文讨论范围内，本文仅涉及加载可执行段的段寄存器和特权指令、敏感指令</li>
 </ul>
 
     </article>
@@ -599,7 +563,7 @@ target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2005/readi
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E5%AD%90"><span class="toc-number">1.</span> <span class="toc-text">引子</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%85%E6%A0%B8%E8%83%8C%E6%99%AF"><span class="toc-number">2.</span> <span class="toc-text">内核背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%83%85%E5%86%B5%E4%B8%80%E5%86%85%E6%A0%B8%E5%87%BD%E6%95%B0%E6%98%AF%E6%99%AE%E9%80%9A%E5%87%BD%E6%95%B0"><span class="toc-number">3.</span> <span class="toc-text">情况一：内核函数是普通函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%83%85%E5%86%B5%E4%BA%8C%E5%86%85%E6%A0%B8%E5%87%BD%E6%95%B0%E9%9C%80%E8%A6%81%E5%86%99%E5%85%A5%E5%86%85%E6%A0%B8%E6%95%B0%E6%8D%AE"><span class="toc-number">4.</span> <span class="toc-text">情况二：内核函数需要写入内核数据</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%83%85%E5%86%B5%E4%B8%89%E5%86%85%E6%A0%B8%E5%87%BD%E6%95%B0%E6%98%AF%E6%89%93%E5%8D%B0%E5%87%BD%E6%95%B0"><span class="toc-number">5.</span> <span class="toc-text">情况三：内核函数是打印函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA"><span class="toc-number">6.</span> <span class="toc-text">结论</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%95%E5%AD%90"><span class="toc-number">1.</span> <span class="toc-text">引子</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%85%E6%A0%B8%E8%83%8C%E6%99%AF"><span class="toc-number">2.</span> <span class="toc-text">内核背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%83%85%E5%86%B5%E4%B8%80%EF%BC%9A%E5%86%85%E6%A0%B8%E5%87%BD%E6%95%B0%E6%98%AF%E6%99%AE%E9%80%9A%E5%87%BD%E6%95%B0"><span class="toc-number">3.</span> <span class="toc-text">情况一：内核函数是普通函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%83%85%E5%86%B5%E4%BA%8C%EF%BC%9A%E5%86%85%E6%A0%B8%E5%87%BD%E6%95%B0%E9%9C%80%E8%A6%81%E5%86%99%E5%85%A5%E5%86%85%E6%A0%B8%E6%95%B0%E6%8D%AE"><span class="toc-number">4.</span> <span class="toc-text">情况二：内核函数需要写入内核数据</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%83%85%E5%86%B5%E4%B8%89%EF%BC%9A%E5%86%85%E6%A0%B8%E5%87%BD%E6%95%B0%E6%98%AF%E6%89%93%E5%8D%B0%E5%87%BD%E6%95%B0"><span class="toc-number">5.</span> <span class="toc-text">情况三：内核函数是打印函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA"><span class="toc-number">6.</span> <span class="toc-text">结论</span></a></li></ol>
             </div>
         <!-- sidebar -->
         <div class="sidebar sidebar-hide">
@@ -770,13 +734,13 @@ target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2005/readi
 
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
-            <span class="sidebar-tag-name" data-tags="Blogs">
-                <span class="iconfont-archer">&#xe606;</span>
-                Blogs
-            </span>
             <span class="sidebar-tag-name" data-tags="hoo">
                 <span class="iconfont-archer">&#xe606;</span>
                 hoo
+            </span>
+            <span class="sidebar-tag-name" data-tags="Blogs">
+                <span class="iconfont-archer">&#xe606;</span>
+                Blogs
             </span>
             <span class="sidebar-tag-name" data-tags="translation">
                 <span class="iconfont-archer">&#xe606;</span>

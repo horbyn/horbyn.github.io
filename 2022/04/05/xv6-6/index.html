@@ -17,11 +17,14 @@
 <meta property="og:site_name">
 <meta property="og:description" content="本次 lab 对应三个 moderate 难度的任务，关系线程调度、如何加锁等原理">
 <meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://pic.imgdb.cn/item/624be6fd239250f7c547ef17.jpg">
+<meta property="og:image" content="https://pic.imgdb.cn/item/624bed84239250f7c554c190.jpg">
 <meta property="article:published_time" content="2022-04-05T13:55:42.000Z">
 <meta property="article:modified_time" content="2025-03-03T12:16:52.052Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="mit6.828">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pic.imgdb.cn/item/624be6fd239250f7c547ef17.jpg">
     <meta http-equiv="Cache-control" content="no-cache">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <link rel="icon" href="/avatar/link.PNG">
@@ -444,15 +447,11 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="lab">LAB</h2>
-<p>传送门：<a
-target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/thread.html">Lab:
-Multithreading</a></p>
-<p><br></p>
-<h2 id="intro">INTRO</h2>
-<p>读 <a
-target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf">xv6-handout-fall
-2021, chapter 7</a> 有感，以下是 xv6 线程（进程）切换过程</p>
+        <h2 id="LAB-v6"><a class="header-anchor" href="#LAB-v6"></a>LAB</h2>
+<p>传送门：<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/thread.html">Lab: Multithreading</a></p>
+<br>
+<h2 id="INTRO-v4"><a class="header-anchor" href="#INTRO-v4"></a>INTRO</h2>
+<p>读 <a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf">xv6-handout-fall 2021, chapter 7</a> 有感，以下是 xv6 线程（进程）切换过程</p>
 <p>如何标识一个线程？</p>
 <ul>
 <li>PC</li>
@@ -460,43 +459,29 @@ target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/xv6/b
 <li>线程的栈</li>
 </ul>
 <p>xv6 如何组织线程？如图所示：</p>
-<p><img
-src="https://pic.imgdb.cn/item/624be6fd239250f7c547ef17.jpg" /></p>
+<p><img src="https://pic.imgdb.cn/item/624be6fd239250f7c547ef17.jpg" alt=""></p>
 <ul>
 <li>每个用户进程都有其对应的内核线程。相当于每个用户进程都有两个线程，第一个位于用户空间，有独立的地址；第二个位于内核空间，使用共享的内存地址</li>
-<li>所谓对应的内核线程，其实并没有具体的代码文件。我的理解是
-trampoline()、usertrap()、usertropret() 这些和 trap
-相关的函数（线程切换这个故事也是开始于陷入 trap
-！），只不过不同线程执行速度不一样，即上下文不一样，所以才属于不同的线程</li>
+<li>所谓对应的内核线程，其实并没有具体的代码文件。我的理解是 trampoline()、usertrap()、usertropret() 这些和 trap 相关的函数（线程切换这个故事也是开始于陷入 trap ！），只不过不同线程执行速度不一样，即上下文不一样，所以才属于不同的线程</li>
 </ul>
 <p>一个线程切换的例子，从 CC 命令切换到 LS 命令：</p>
-<p><img
-src="https://pic.imgdb.cn/item/624bed84239250f7c554c190.jpg" /></p>
-<ol type="1">
-<li>从 CC 用户线程陷入 CC 内核线程（CC<sub>k</sub>），陷入过程中在
-trampoline() 内将用户线程上下文保存到 trapframe</li>
-<li>CC<sub>k</sub> 要让出 CPU，进入 swtch() 上半场的处理。先保护
-CC<sub>k</sub> 现场，存入 context 对象（context
-结构体总是保存了内核线程在执行 swtch() 时的状态；而 trapframe
-栈帧总是保存了用户线程在执行 trampoline() 时的状态）</li>
-<li>swtch() 恢复当前 CPU 调度器的上下文和栈，之后用这个环境执行
-scheduler()</li>
-<li>scheduler() 先将 CC<sub>k</sub> 状态改为
-RUNNABLE，然后在进程表中找到 LS<sub>k</sub>，最后又调用
-swtch()（只不过此时的 swtch() 不是刚才进入的那个）</li>
+<p><img src="https://pic.imgdb.cn/item/624bed84239250f7c554c190.jpg" alt=""></p>
+<ol>
+<li>从 CC 用户线程陷入 CC 内核线程（CC<sub>k</sub>），陷入过程中在 trampoline() 内将用户线程上下文保存到 trapframe</li>
+<li>CC<sub>k</sub> 要让出 CPU，进入 swtch() 上半场的处理。先保护 CC<sub>k</sub> 现场，存入 context 对象（context 结构体总是保存了内核线程在执行 swtch() 时的状态；而 trapframe 栈帧总是保存了用户线程在执行 trampoline() 时的状态）</li>
+<li>swtch() 恢复当前 CPU 调度器的上下文和栈，之后用这个环境执行 scheduler()</li>
+<li>scheduler() 先将 CC<sub>k</sub> 状态改为 RUNNABLE，然后在进程表中找到 LS<sub>k</sub>，最后又调用 swtch()（只不过此时的 swtch() 不是刚才进入的那个）</li>
 <li>进入 swtch() 下半场：
 <ul>
 <li>先将调度器的上下文和栈保存到自己的 context 对象</li>
-<li>再将 LS<sub>k</sub> 的 context 对象恢复，即加载为当前 CPU
-寄存器组，从而恢复上次被打断的 swtch()</li>
-</ul></li>
+<li>再将 LS<sub>k</sub> 的 context 对象恢复，即加载为当前 CPU 寄存器组，从而恢复上次被打断的 swtch()</li>
+</ul>
+</li>
 <li>返回到 LS<sub>k</sub> 的 trampoline，恢复 trapframe</li>
 <li>恢复 LS 用户线程</li>
 </ol>
-<p>值得注意的是，这里的两个 swtch() 调用实际不是同一个。进入调度器的是
-sched() 的 swtch()；而调度器返回的却是 scheduler() 的
-swtch()。上述例子对应的程序流如下：</p>
-<ol type="1">
+<p>值得注意的是，这里的两个 swtch() 调用实际不是同一个。进入调度器的是 sched() 的 swtch()；而调度器返回的却是 scheduler() 的 swtch()。上述例子对应的程序流如下：</p>
+<ol>
 <li>陷入：trampoline() -&gt; usertrap() -&gt; devintr()</li>
 <li>让出 CPU：-&gt; yield() -&gt; sched()</li>
 <li>保护现场并切换至调度器：-&gt; swtch()</li>
@@ -504,277 +489,151 @@ swtch()。上述例子对应的程序流如下：</p>
 <li>另一个线程登场：-&gt; swtch()</li>
 </ol>
 <p>xv6 总共包含三种类型的上下文信息：</p>
-<ol type="1">
+<ol>
 <li>用户上下文：由 trapframe 结构体保存</li>
 <li>内核上下文：由 context 结构体保存</li>
-<li>调度器上下文：由 cpu 结构体保存（cpu 结构体包含 context
-成员，所以最终也是保存在 context
-对象上。只不过区分不同的调度器线程是依据 cpu 是否相同，只有 cpu
-寄存器环境才标识一个调度器）</li>
+<li>调度器上下文：由 cpu 结构体保存（cpu 结构体包含 context 成员，所以最终也是保存在 context 对象上。只不过区分不同的调度器线程是依据 cpu 是否相同，只有 cpu 寄存器环境才标识一个调度器）</li>
 </ol>
-<p><br></p>
-<h2 id="uthread-switching-between-threads-moderate">Uthread: switching
-between threads (MODERATE)</h2>
-<h3 id="要求">要求</h3>
+<br>
+<h2 id="Uthread-switching-between-threads-MODERATE"><a class="header-anchor" href="#Uthread-switching-between-threads-MODERATE"></a>Uthread: switching between threads (MODERATE)</h2>
+<h3 id="要求-v14"><a class="header-anchor" href="#要求-v14"></a>要求</h3>
 <blockquote>
-<p>In this exercise you will design the context switch mechanism for a
-user-level threading system, and then implement it.</p>
+<p>In this exercise you will design the context switch mechanism for a user-level threading system, and then implement it.</p>
 </blockquote>
-<p>"在这个练习中，你将为一个用户级线程系统设计上下文切换机制，并且实现"</p>
+<p>“在这个练习中，你将为一个用户级线程系统设计上下文切换机制，并且实现”</p>
 <blockquote>
-<p>The threading package is missing some of the code to create a thread
-and to switch between threads.</p>
+<p>The threading package is missing some of the code to create a thread and to switch between threads.</p>
 </blockquote>
-<p>"线程库缺乏一些创建线程和在不同线程间切换的代码"</p>
+<p>“线程库缺乏一些创建线程和在不同线程间切换的代码”</p>
 <blockquote>
-<p>Your job is to come up with a plan to create threads and save/restore
-registers to switch between threads, and implement that plan. When
-you're done, make grade should say that your solution passes the uthread
-test.</p>
+<p>Your job is to come up with a plan to create threads and save/restore registers to switch between threads, and implement that plan. When you’re done, make grade should say that your solution passes the uthread test.</p>
 </blockquote>
-<p>"你的工作是想出一个策略，用以创建线程、在线程切换间保存和恢复现场，并且实现。当你完成后，<code>make grade</code>
-会提示你的解决方案通过了 uthread test"</p>
+<p>“你的工作是想出一个策略，用以创建线程、在线程切换间保存和恢复现场，并且实现。当你完成后，<code>make grade</code> 会提示你的解决方案通过了 uthread test”</p>
 <blockquote>
-<p>One goal is ensure that when thread_schedule() runs a given thread
-for the first time, the thread executes the function passed to
-thread_create(), on its own stack. Another goal is to ensure that
-thread_switch saves the registers of the thread being switched away
-from, restores the registers of the thread being switched to, and
-returns to the point in the latter thread's instructions where it last
-left off.</p>
+<p>One goal is ensure that when thread_schedule() runs a given thread for the first time, the thread executes the function passed to thread_create(), on its own stack. Another goal is to ensure that thread_switch saves the registers of the thread being switched away from, restores the registers of the thread being switched to, and returns to the point in the latter thread’s instructions where it last left off.</p>
 </blockquote>
-<p>"第一个目标是确保在 thread_schedule()
-第一次运行时，可以在自己的栈上执行 thread_create()
-传递的参数。第二个目标是确保 thread_switch()
-保存了将要切换走的线程的寄存器组，同时恢复将要切换过去的线程的寄存器组，最后返回到后一个线程上次停止的地方"</p>
+<p>“第一个目标是确保在 thread_schedule() 第一次运行时，可以在自己的栈上执行 thread_create() 传递的参数。第二个目标是确保 thread_switch() 保存了将要切换走的线程的寄存器组，同时恢复将要切换过去的线程的寄存器组，最后返回到后一个线程上次停止的地方”</p>
 <blockquote>
-<p>You'll need to add a call to thread_switch in thread_schedule; you
-can pass whatever arguments you need to thread_switch, but the intent is
-to switch from thread t to next_thread.</p>
+<p>You’ll need to add a call to thread_switch in thread_schedule; you can pass whatever arguments you need to thread_switch, but the intent is to switch from thread t to next_thread.</p>
 </blockquote>
-<p>"你需要在 thread_schedule() 中调用
-thread_switch()；传递任何你需要的参数给
-thread_switch，只要保证能够从线程 t 切换至 next_thread"</p>
-<p><br></p>
-<h3 id="提示">提示</h3>
-<p>这次提示很简单，就是切换过程中只需要保存 callee 的上下文，并且阅读
-<code>user/uthread.asm</code> 对 debugging 非常有参考意义</p>
-<p><br></p>
-<h3 id="summary">Summary</h3>
-<p>主要参考 xv6 线程调度的程序流就行，对比这里，试想当前场景是从线程 t
-切换为 next_thread，那么：</p>
+<p>“你需要在 thread_schedule() 中调用 thread_switch()；传递任何你需要的参数给 thread_switch，只要保证能够从线程 t 切换至 next_thread”</p>
+<br>
+<h3 id="提示-v14"><a class="header-anchor" href="#提示-v14"></a>提示</h3>
+<p>这次提示很简单，就是切换过程中只需要保存 callee 的上下文，并且阅读 <code>user/uthread.asm</code> 对 debugging 非常有参考意义</p>
+<br>
+<h3 id="Summary-v14"><a class="header-anchor" href="#Summary-v14"></a>Summary</h3>
+<p>主要参考 xv6 线程调度的程序流就行，对比这里，试想当前场景是从线程 t 切换为 next_thread，那么：</p>
 <ul>
-<li>核心任务是保存线程 t 的上下文，然后恢复 next_thread
-的上下文，最后返回地址改为 next_thread 上次中断处</li>
-<li>首先要保存的上下文只有 callee 负责的那些寄存器，这和
-<code>kernel/proc.h</code> 的 context 结构体是一样的</li>
-<li>然后考虑保存在哪？既然文件给了 thread
-结构体，那自然是新增一个上下文字段更方便</li>
+<li>核心任务是保存线程 t 的上下文，然后恢复 next_thread 的上下文，最后返回地址改为 next_thread 上次中断处</li>
+<li>首先要保存的上下文只有 callee 负责的那些寄存器，这和 <code>kernel/proc.h</code> 的 context 结构体是一样的</li>
+<li>然后考虑保存在哪？既然文件给了 thread 结构体，那自然是新增一个上下文字段更方便</li>
 </ul>
 <p>这里面还有个小细节要注意：</p>
 <ul>
-<li>每个线程在执行时都需要自己的栈，但栈是往低处长的（grow
-downwards），所以保存栈地址应该是高地址</li>
+<li>每个线程在执行时都需要自己的栈，但栈是往低处长的（grow downwards），所以保存栈地址应该是高地址</li>
 </ul>
-<p><br></p>
-<h3 id="solution">Solution</h3>
+<br>
+<h3 id="Solution-v16"><a class="header-anchor" href="#Solution-v16"></a>Solution</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: user/uthread.c</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">context</span> &#123;</span><br><span class="line">  uint64 ra;</span><br><span class="line">  uint64 sp;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// callee-saved</span></span><br><span class="line">  uint64 s0;</span><br><span class="line">  uint64 s1;</span><br><span class="line">  uint64 s2;</span><br><span class="line">  uint64 s3;</span><br><span class="line">  uint64 s4;</span><br><span class="line">  uint64 s5;</span><br><span class="line">  uint64 s6;</span><br><span class="line">  uint64 s7;</span><br><span class="line">  uint64 s8;</span><br><span class="line">  uint64 s9;</span><br><span class="line">  uint64 s10;</span><br><span class="line">  uint64 s11;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">thread</span> &#123;</span><br><span class="line">  <span class="type">char</span>       stack[STACK_SIZE]; <span class="comment">/* the thread&#x27;s stack */</span></span><br><span class="line">  <span class="type">int</span>        state;             <span class="comment">/* FREE, RUNNING, RUNNABLE */</span></span><br><span class="line">  <span class="keyword">struct</span> <span class="title class_">context</span> cont;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">thread_schedule</span><span class="params">(<span class="type">void</span>)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (current_thread != next_thread) &#123;         <span class="comment">/* switch threads?  */</span></span><br><span class="line">        ...</span><br><span class="line">        <span class="comment">/* YOUR CODE HERE</span></span><br><span class="line"><span class="comment">         * Invoke thread_switch to switch from t to next_thread:</span></span><br><span class="line"><span class="comment">         * thread_switch(??, ??);</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="built_in">thread_switch</span>((uint64)&amp;t-&gt;cont, (uint64)&amp;next_thread-&gt;cont);</span><br><span class="line">    &#125; <span class="keyword">else</span></span><br><span class="line">        next_thread = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">thread_create</span><span class="params">(<span class="type">void</span> (*func)())</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// YOUR CODE HERE</span></span><br><span class="line">    t-&gt;cont.ra = (uint64)func;</span><br><span class="line">    t-&gt;cont.sp = (uint64)&amp;t-&gt;stack[STACK_SIZE - <span class="number">1</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">	.text</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">     * save the old thread&#x27;s registers,</span><br><span class="line">     * restore the new thread&#x27;s registers.</span><br><span class="line">     */</span><br><span class="line"></span><br><span class="line">	.globl thread_switch</span><br><span class="line">thread_switch:</span><br><span class="line">	/* YOUR CODE HERE */</span><br><span class="line">	sd ra, 0(a0)</span><br><span class="line">	sd sp, 8(a0)</span><br><span class="line">	sd s0, 16(a0)</span><br><span class="line">	sd s1, 24(a0)</span><br><span class="line">	sd s2, 32(a0)</span><br><span class="line">	sd s3, 40(a0)</span><br><span class="line">	sd s4, 48(a0)</span><br><span class="line">	sd s5, 56(a0)</span><br><span class="line">	sd s6, 64(a0)</span><br><span class="line">	sd s7, 72(a0)</span><br><span class="line">	sd s8, 80(a0)</span><br><span class="line">	sd s9, 88(a0)</span><br><span class="line">	sd s10, 96(a0)</span><br><span class="line">	sd s11, 104(a0)</span><br><span class="line"></span><br><span class="line">	ld ra, 0(a1)</span><br><span class="line">	ld sp, 8(a1)</span><br><span class="line">	ld s0, 16(a1)</span><br><span class="line">	ld s1, 24(a1)</span><br><span class="line">	ld s2, 32(a1)</span><br><span class="line">	ld s3, 40(a1)</span><br><span class="line">	ld s4, 48(a1)</span><br><span class="line">	ld s5, 56(a1)</span><br><span class="line">	ld s6, 64(a1)</span><br><span class="line">	ld s7, 72(a1)</span><br><span class="line">	ld s8, 80(a1)</span><br><span class="line">	ld s9, 88(a1)</span><br><span class="line">	ld s10, 96(a1)</span><br><span class="line">	ld s11, 104(a1)</span><br><span class="line"></span><br><span class="line">	ret    /* return to ra */</span><br></pre></td></tr></table></figure>
-<p><br></p>
-<h2 id="using-threads-moderate">Using threads (MODERATE)</h2>
-<h3 id="要求-1">要求</h3>
+<br>
+<h2 id="Using-threads-MODERATE"><a class="header-anchor" href="#Using-threads-MODERATE"></a>Using threads (MODERATE)</h2>
+<h3 id="要求-v15"><a class="header-anchor" href="#要求-v15"></a>要求</h3>
 <blockquote>
-<p>The file notxv6/ph.c contains a simple hash table that is correct if
-used from a single thread, but incorrect when used from multiple
-threads. In your main xv6 directory (perhaps ~/xv6-labs-2021), type
-this:</p>
+<p>The file notxv6/ph.c contains a simple hash table that is correct if used from a single thread, but incorrect when used from multiple threads. In your main xv6 directory (perhaps ~/xv6-labs-2021), type this:</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$ </span><span class="language-bash">make ph</span></span><br><span class="line"><span class="meta">$ </span><span class="language-bash">./ph 1</span></span><br></pre></td></tr></table></figure>
 </blockquote>
-<p>"文件 <code>notxv6/ph.c</code>
-包含一个简单的哈希表，如果用在单线程上是正确的，但使用多线程却不正确。在你的
-xv6 主目录下（可能如 <code>~/xv6-labs-2021</code>），输入上面命令"</p>
+<p>“文件 <code>notxv6/ph.c</code> 包含一个简单的哈希表，如果用在单线程上是正确的，但使用多线程却不正确。在你的 xv6 主目录下（可能如 <code>~/xv6-labs-2021</code>），输入上面命令”</p>
 <blockquote>
-<p>The argument to ph specifies the number of threads that execute put
-and get operations on the the hash table. After running for a little
-while, ph 1 will produce output similar to this:</p>
+<p>The argument to ph specifies the number of threads that execute put and get operations on the the hash table. After running for a little while, ph 1 will produce output similar to this:</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">100000 puts, 3.991 seconds, 25056 puts/second</span><br><span class="line">0: 0 keys missing</span><br><span class="line">100000 gets, 3.981 seconds, 25118 gets/second</span><br></pre></td></tr></table></figure>
 </blockquote>
-<p>"ph 的参数指出在哈希表上执行 put 和 get
-操作的线程数量。运行一段时间后，<code>ph 1</code>
-会产生上面那样的输出"</p>
+<p>“ph 的参数指出在哈希表上执行 put 和 get 操作的线程数量。运行一段时间后，<code>ph 1</code> 会产生上面那样的输出”</p>
 <blockquote>
-<p>ph runs two benchmarks. First it adds lots of keys to the hash table
-by calling put(), and prints the achieved rate in puts per second. The
-it fetches keys from the hash table with get(). It prints the number
-keys that should have been in the hash table as a result of the puts but
-are missing (zero in this case), and it prints the number of gets per
-second it achieved.</p>
+<p>ph runs two benchmarks. First it adds lots of keys to the hash table by calling put(), and prints the achieved rate in puts per second. The it fetches keys from the hash table with get(). It prints the number keys that should have been in the hash table as a result of the puts but are missing (zero in this case), and it prints the number of gets per second it achieved.</p>
 </blockquote>
-<p>"ph 运行两种基准。第一种是通过 put() 往哈希表里增加大量的
-key，并且每秒都会打印在 put() 里增加 key 的配置速度；第二种是通过 get()
-从哈希表里取出 key。ph 还会打印因 put() 本应在哈希表中存在，实际却丢失的
-key 的数量（在上面例子中是 0），并且也会打印 get() 的每秒配置速度"</p>
+<p>“ph 运行两种基准。第一种是通过 put() 往哈希表里增加大量的 key，并且每秒都会打印在 put() 里增加 key 的配置速度；第二种是通过 get() 从哈希表里取出 key。ph 还会打印因 put() 本应在哈希表中存在，实际却丢失的 key 的数量（在上面例子中是 0），并且也会打印 get() 的每秒配置速度”</p>
 <blockquote>
-<p>You can tell ph to use its hash table from multiple threads at the
-same time by giving it an argument greater than one. Try ph 2:
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$ </span><span class="language-bash">./ph 2</span></span><br><span class="line">100000 puts, 1.885 seconds, 53044 puts/second</span><br><span class="line">1: 16579 keys missing</span><br><span class="line">0: 16579 keys missing</span><br><span class="line">200000 gets, 4.322 seconds, 46274 gets/second</span><br></pre></td></tr></table></figure></p>
+<p>You can tell ph to use its hash table from multiple threads at the same time by giving it an argument greater than one. Try ph 2:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$ </span><span class="language-bash">./ph 2</span></span><br><span class="line">100000 puts, 1.885 seconds, 53044 puts/second</span><br><span class="line">1: 16579 keys missing</span><br><span class="line">0: 16579 keys missing</span><br><span class="line">200000 gets, 4.322 seconds, 46274 gets/second</span><br></pre></td></tr></table></figure>
 </blockquote>
-<p>"你可以传入一个大于 1 的参数，让 ph 使用多线程操作哈希表。输入
-<code>ph 2</code> 如上面所示"</p>
+<p>“你可以传入一个大于 1 的参数，让 ph 使用多线程操作哈希表。输入 <code>ph 2</code> 如上面所示”</p>
 <blockquote>
-<p>The first line of this ph 2 output indicates that when two threads
-concurrently add entries to the hash table, they achieve a total rate of
-53,044 inserts per second. That's about twice the rate of the single
-thread from running ph 1.</p>
+<p>The first line of this ph 2 output indicates that when two threads concurrently add entries to the hash table, they achieve a total rate of 53,044 inserts per second. That’s about twice the rate of the single thread from running ph 1.</p>
 </blockquote>
-<p>"<code>ph 2</code>
-输出的第一行，指出并发执行两个线程向哈希表增加条目时，插入总速率达到
-53044 项每秒。这大概是 <code>ph 1</code> 运行单线程的两倍"</p>
+<p>“<code>ph 2</code> 输出的第一行，指出并发执行两个线程向哈希表增加条目时，插入总速率达到 53044 项每秒。这大概是 <code>ph 1</code> 运行单线程的两倍”</p>
 <blockquote>
-<p>However, the two lines saying 16579 keys missing indicate that a
-large number of keys that should have been in the hash table are not
-there. That is, the puts were supposed to add those keys to the hash
-table, but something went wrong. Have a look at notxv6/ph.c,
-particularly at put() and insert().</p>
+<p>However, the two lines saying 16579 keys missing indicate that a large number of keys that should have been in the hash table are not there. That is, the puts were supposed to add those keys to the hash table, but something went wrong. Have a look at notxv6/ph.c, particularly at put() and insert().</p>
 </blockquote>
-<p>"然而，（接下来的）丢失 16579 个 key 这两行指出有大量 key
-本应在哈希表内但实际却丢失了。即 put() 将这些 key
-加入了哈希表，但发生了一些错误。阅读 <code>notxv6/ph.c</code> 特别是
-put() 和 insert()"</p>
+<p>“然而，（接下来的）丢失 16579 个 key 这两行指出有大量 key 本应在哈希表内但实际却丢失了。即 put() 将这些 key 加入了哈希表，但发生了一些错误。阅读 <code>notxv6/ph.c</code> 特别是 put() 和 insert()”</p>
 <blockquote>
-<p>Why are there missing keys with 2 threads, but not with 1 thread?
-Identify a sequence of events with 2 threads that can lead to a key
-being missing. Submit your sequence with a short explanation in
-answers-thread.txt</p>
+<p>Why are there missing keys with 2 threads, but not with 1 thread? Identify a sequence of events with 2 threads that can lead to a key being missing. Submit your sequence with a short explanation in answers-thread.txt</p>
 </blockquote>
-<p>"为什么用 2 个线程会丢失 key？而 1 个线程不会？想想导致 key 丢失的 2
-个线程的事件发生次序，在 answers-thread.txt 写下简要的解释并提交"</p>
+<p>“为什么用 2 个线程会丢失 key？而 1 个线程不会？想想导致 key 丢失的 2 个线程的事件发生次序，在 answers-thread.txt 写下简要的解释并提交”</p>
 <blockquote>
-<p>Modify your code so that some put operations run in parallel while
-maintaining correctness. You're done when make grade says your code
-passes both the ph_safe and ph_fast tests. The ph_fast test requires
-that two threads yield at least 1.25 times as many puts/second as one
-thread.</p>
+<p>Modify your code so that some put operations run in parallel while maintaining correctness. You’re done when make grade says your code passes both the ph_safe and ph_fast tests. The ph_fast test requires that two threads yield at least 1.25 times as many puts/second as one thread.</p>
 </blockquote>
-<p>"修改你的代码以便 put 操作在正确的前提下能并行运行，当
-<code>make grade</code> 提示你的代码均通过 ph_safe 和 ph_fast
-两个测试时才算完成。其中 ph_fast 测试要求两个线程运行速度至少是单个 put
-线程的 1.25 倍"</p>
-<p><br></p>
-<h3 id="summary-1">Summary</h3>
+<p>“修改你的代码以便 put 操作在正确的前提下能并行运行，当 <code>make grade</code> 提示你的代码均通过 ph_safe 和 ph_fast 两个测试时才算完成。其中 ph_fast 测试要求两个线程运行速度至少是单个 put 线程的 1.25 倍”</p>
+<br>
+<h3 id="Summary-v15"><a class="header-anchor" href="#Summary-v15"></a>Summary</h3>
 <p>首先阅读 main()，可以发现逻辑大约如此：</p>
 <ul>
 <li>创建 put 操作线程</li>
 <li>put 线程主要调用 put() 和 insert() 两个函数</li>
-<li>put() 遍历 table[]，找出和形参 key
-相同的一项。之后判断这一项元素是否存在，若存在直接覆盖原值，否则调用
-insert() 头插法链入链表</li>
+<li>put() 遍历 table[]，找出和形参 key 相同的一项。之后判断这一项元素是否存在，若存在直接覆盖原值，否则调用 insert() 头插法链入链表</li>
 <li>get 操作不会对并行操作造成影响所以不考虑</li>
 </ul>
-<p>然后要考虑的一个问题是，为什么多线程场景会出问题？既然是链表，所以可以参考
-<a
-target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf">xv6-handout-fall
-2021, section 6.1</a> 这个链表双线程的并发执行例子，大概如此：</p>
+<p>然后要考虑的一个问题是，为什么多线程场景会出问题？既然是链表，所以可以参考 <a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/xv6/book-riscv-rev2.pdf">xv6-handout-fall 2021, section 6.1</a> 这个链表双线程的并发执行例子，大概如此：</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[thread 0] 在 put() 中发现是新结点，正准备调用 insert()</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 1] 在 put() 也发现是新结点，也准备调用 insert()</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 0] 调用 insert() 结束后，在原本结点 i 这个地方新增了一个 &#123;key, value&#125; 键值对的结点</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 1] 已经通过了 if(e) 的条件判断，走入了 else() 分支，但实际上 thread 0 已经改变了条件的情况，</span><br><span class="line">            此时 thread 1 理应走 if() 分支。可惜，thread 1 不知道情况仍在相同地址上调用 insert() ，</span><br><span class="line">            最终覆盖了 thread 0 刚才新增的键值对，从而丢失 key</span><br></pre></td></tr></table></figure>
-<p>一句话总结就是，共享的数据没有锁保护所以出问题了。这里 table[]
-就是共享数据，多个线程都对这块数据写入，那么先写入的数据必然被覆盖（丢失）</p>
-<p>所以最简单的想法就是在写入操作，也即是 insert()
-头插法执行前后加锁，但如果这么加锁是有问题的：</p>
+<p>一句话总结就是，共享的数据没有锁保护所以出问题了。这里 table[] 就是共享数据，多个线程都对这块数据写入，那么先写入的数据必然被覆盖（丢失）</p>
+<p>所以最简单的想法就是在写入操作，也即是 insert() 头插法执行前后加锁，但如果这么加锁是有问题的：</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 错误的</span></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">insert</span><span class="params">(<span class="type">int</span> key, <span class="type">int</span> value, <span class="keyword">struct</span> entry **p, <span class="keyword">struct</span> entry *n)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">pthread_mutex_lock</span>(&amp;lock);</span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">entry</span> *e = <span class="built_in">malloc</span>(<span class="built_in">sizeof</span>(<span class="keyword">struct</span> entry));</span><br><span class="line">    e-&gt;key = key;</span><br><span class="line">    e-&gt;value = value;</span><br><span class="line">    e-&gt;next = n;</span><br><span class="line">    *p = e;</span><br><span class="line">    <span class="built_in">pthread_mutex_unlock</span>(&amp;lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>理由如下：</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[thread 0] 当前索引匹配 table[0]，并检查到不存在结点，所以进入了 insert()，正准备执行</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 1] 在 put() 循环中也找到 table[0]，也检测到结点不存在，正准备调用 insert()</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 0] 调用 insert() 结束后，在原本结点 i 这个地方新增了一个 &#123;key, value&#125; 键值对的结点</span><br><span class="line">-------- schedule() ----------</span><br><span class="line">[thread 1] 调用 insert() 最终覆盖了 thread 0 新追加的结点</span><br></pre></td></tr></table></figure>
 <p>所以锁的请求应该往回调用，放在循环结束后而判断前比较合适</p>
-<p><br></p>
-<h3 id="solution-1">Solution</h3>
+<br>
+<h3 id="Solution-v17"><a class="header-anchor" href="#Solution-v17"></a>Solution</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// notxv6/ph.c</span></span><br><span class="line"><span class="type">pthread_mutex_t</span> lock;</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">insert</span><span class="params">(<span class="type">int</span> key, <span class="type">int</span> value, <span class="keyword">struct</span> entry **p, <span class="keyword">struct</span> entry *n)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    *p = e;</span><br><span class="line">    <span class="built_in">pthread_mutex_unlock</span>(&amp;lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">static</span> </span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">put</span><span class="params">(<span class="type">int</span> key, <span class="type">int</span> value)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">for</span> (e = table[i]; e != <span class="number">0</span>; e = e-&gt;next) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// lab multithreading</span></span><br><span class="line">    <span class="built_in">pthread_mutex_lock</span>(&amp;lock);</span><br><span class="line">    <span class="keyword">if</span>(e) &#123;</span><br><span class="line">        <span class="comment">// update the existing key.</span></span><br><span class="line">        e-&gt;value = value;</span><br><span class="line">        <span class="built_in">pthread_mutex_unlock</span>(&amp;lock);</span><br><span class="line">    &#125; <span class="keyword">else</span> ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span></span><br><span class="line"><span class="built_in">main</span>(<span class="type">int</span> argc, <span class="type">char</span> *argv[]) &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; NKEYS; i++) &#123;</span><br><span class="line">        keys[i] = <span class="built_in">random</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// lab multithreading</span></span><br><span class="line">    <span class="built_in">pthread_mutex_init</span>(&amp;lock, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// first the puts</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    t0 = <span class="built_in">now</span>();</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
-<p><br></p>
-<h2 id="barrier-moderate">Barrier (MODERATE)</h2>
-<h3 id="要求-2">要求</h3>
+<br>
+<h2 id="Barrier-MODERATE"><a class="header-anchor" href="#Barrier-MODERATE"></a>Barrier (MODERATE)</h2>
+<h3 id="要求-v16"><a class="header-anchor" href="#要求-v16"></a>要求</h3>
 <blockquote>
-<p>In this assignment you'll implement a barrier: a point in an
-application at which all participating threads must wait until all other
-participating threads reach that point too. You'll use pthread condition
-variables, which are a sequence coordination technique similar to xv6's
-sleep and wakeup.</p>
+<p>In this assignment you’ll implement a barrier: a point in an application at which all participating threads must wait until all other participating threads reach that point too. You’ll use pthread condition variables, which are a sequence coordination technique similar to xv6’s sleep and wakeup.</p>
 </blockquote>
-<p>"在这个任务中，你将要实现一个
-barrier：是一个指针，作用是使得所有参与执行的线程必须等，直到其他线程全部到达
-barrier 这个指针的地址处才能继续执行。你还需要使用 pthread
-条件变量，这是和 xv6 的 sleep() 和 wakeup() 差不多的时序配合机制"</p>
+<p>“在这个任务中，你将要实现一个 barrier：是一个指针，作用是使得所有参与执行的线程必须等，直到其他线程全部到达 barrier 这个指针的地址处才能继续执行。你还需要使用 pthread 条件变量，这是和 xv6 的 sleep() 和 wakeup() 差不多的时序配合机制”</p>
 <blockquote>
-<p>The file notxv6/barrier.c contains a broken barrier.
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$ </span><span class="language-bash">make barrier</span></span><br><span class="line"><span class="meta">$ </span><span class="language-bash">./barrier 2</span></span><br><span class="line">barrier: notxv6/barrier.c:42: thread: Assertion `i == t&#x27; failed.</span><br></pre></td></tr></table></figure></p>
+<p>The file notxv6/barrier.c contains a broken barrier.</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$ </span><span class="language-bash">make barrier</span></span><br><span class="line"><span class="meta">$ </span><span class="language-bash">./barrier 2</span></span><br><span class="line">barrier: notxv6/barrier.c:42: thread: Assertion `i == t&#x27; failed.</span><br></pre></td></tr></table></figure>
 </blockquote>
-<p>"文件 <code>notxv6/barrier.c</code> 包含了一个未完成的 barrier
-程序，像上面那样"</p>
+<p>“文件 <code>notxv6/barrier.c</code> 包含了一个未完成的 barrier 程序，像上面那样”</p>
 <blockquote>
-<p>The 2 specifies the number of threads that synchronize on the barrier
-( nthread in barrier.c). Each thread executes a loop. In each loop
-iteration a thread calls barrier() and then sleeps for a random number
-of microseconds. The assert triggers, because one thread leaves the
-barrier before the other thread has reached the barrier. The desired
-behavior is that each thread blocks in barrier() until all nthreads of
-them have called barrier().</p>
+<p>The 2 specifies the number of threads that synchronize on the barrier ( nthread in barrier.c). Each thread executes a loop. In each loop iteration a thread calls barrier() and then sleeps for a random number of microseconds. The assert triggers, because one thread leaves the barrier before the other thread has reached the barrier. The desired behavior is that each thread blocks in barrier() until all nthreads of them have called barrier().</p>
 </blockquote>
-<p>"参数 2 指定在 barrier()（在 barrier.c 里面的
-nthread）程序中同步的线程数量。每个线程执行一个循环。每个循环的一次迭代中，线程调用
-barrier() 然后沉睡一个随机微秒。assert 命中是因为一个线程在其他线程到达
-barrier() 之前离开了。一个可采取的策略是每个线程阻塞在 barrier()
-直到所有这些线程的都调用了 barrier()"</p>
+<p>“参数 2 指定在 barrier()（在 barrier.c 里面的 nthread）程序中同步的线程数量。每个线程执行一个循环。每个循环的一次迭代中，线程调用 barrier() 然后沉睡一个随机微秒。assert 命中是因为一个线程在其他线程到达 barrier() 之前离开了。一个可采取的策略是每个线程阻塞在 barrier() 直到所有这些线程的都调用了 barrier()”</p>
 <blockquote>
-<p>You have to deal with a succession of barrier calls, each of which
-we'll call a round. bstate.round records the current round. You should
-increment bstate.round each time all threads have reached the
-barrier.</p>
+<p>You have to deal with a succession of barrier calls, each of which we’ll call a round. bstate.round records the current round. You should increment bstate.round each time all threads have reached the barrier.</p>
 </blockquote>
-<p>"你需要解决如何将一个线程的调用组织成一个连续的循环，每个循环称为一个
-'round'。<code>bstate.round</code> 记录了当前的
-round。你需要在所有线程到达 barrier() 时自增
-<code>bstate.round</code>"</p>
-<p>———— 这里的循环我是这么理解的：一个线程进入 for() 之后会撞上
-barrier，然后停住。这之后一段时间其他线程会发生很多事，但对于我们这个线程来说都无视，直到它被某种条件唤醒，退出
-barrier 后又回到 for() 新一次迭代。这便是一个循环，即一个 round</p>
+<p>“你需要解决如何将一个线程的调用组织成一个连续的循环，每个循环称为一个 ‘round’。<code>bstate.round</code> 记录了当前的 round。你需要在所有线程到达 barrier() 时自增 <code>bstate.round</code>”</p>
+<p>———— 这里的循环我是这么理解的：一个线程进入 for() 之后会撞上 barrier，然后停住。这之后一段时间其他线程会发生很多事，但对于我们这个线程来说都无视，直到它被某种条件唤醒，退出 barrier 后又回到 for() 新一次迭代。这便是一个循环，即一个 round</p>
 <blockquote>
-<p>You have to handle the case in which one thread races around the loop
-before the others have exited the barrier. In particular, you are
-re-using the bstate.nthread variable from one round to the next. Make
-sure that a thread that leaves the barrier and races around the loop
-doesn't increase bstate.nthread while a previous round is still using
-it.</p>
+<p>You have to handle the case in which one thread races around the loop before the others have exited the barrier. In particular, you are re-using the bstate.nthread variable from one round to the next. Make sure that a thread that leaves the barrier and races around the loop doesn’t increase bstate.nthread while a previous round is still using it.</p>
 </blockquote>
-<p>"你必须处理其他线程退出 barrier()
-之前，某一个线程在循环中产生的竞争情况。特别需要注意的是，程序流正在从这一轮到下一轮中重复使用
-<code>bstate.nthread</code> 变量的情况。确保离开 barrier()
-并在循环中出现竞争情况的一个线程在前一个循环仍然使用
-<code>bstate.nthread</code> 变量的时候，不要自增这个变量"</p>
-<p>———— 这里的竞争情况我理解为 lost wakeup：即线程 0
-正检查条件以进入沉睡（此时可能外界看起来状态为
-SLEEPING，但实际还未完全切换过去），却发生了调度。后来其他线程唤醒了线程
-0。之后调度又回到线程 0，但是线程 0
-先执行的仍然是进入沉睡的检查，最终丢失了唤醒信号从而死锁</p>
-<p>————
-回到这个场景里，前半句说的竞争情况，应该是让我们注意不要丢失线程在
-barrier() 的 lost wakeup；后半句说的重复使用
-<code>bstate.nthread</code>，应该是让我们注意到这是一个共享数据，第二个线程访问的时候，就算
-re-using，这需要通过锁来保护</p>
-<p><br></p>
-<h3 id="summary-2">Summary</h3>
+<p>“你必须处理其他线程退出 barrier() 之前，某一个线程在循环中产生的竞争情况。特别需要注意的是，程序流正在从这一轮到下一轮中重复使用 <code>bstate.nthread</code> 变量的情况。确保离开 barrier() 并在循环中出现竞争情况的一个线程在前一个循环仍然使用 <code>bstate.nthread</code> 变量的时候，不要自增这个变量”</p>
+<p>———— 这里的竞争情况我理解为 lost wakeup：即线程 0 正检查条件以进入沉睡（此时可能外界看起来状态为 SLEEPING，但实际还未完全切换过去），却发生了调度。后来其他线程唤醒了线程 0。之后调度又回到线程 0，但是线程 0 先执行的仍然是进入沉睡的检查，最终丢失了唤醒信号从而死锁</p>
+<p>———— 回到这个场景里，前半句说的竞争情况，应该是让我们注意不要丢失线程在 barrier() 的 lost wakeup；后半句说的重复使用 <code>bstate.nthread</code>，应该是让我们注意到这是一个共享数据，第二个线程访问的时候，就算 re-using，这需要通过锁来保护</p>
+<br>
+<h3 id="Summary-v16"><a class="header-anchor" href="#Summary-v16"></a>Summary</h3>
 <p>现在总结以下思路：</p>
 <ul>
-<li>根据题意，核心思想是每个线程都需要撞上
-barrier，即停在这里。什么时候可以重新继续？答案是所有线程到达的时候。所以
-barrier() 里面的逻辑最直接的想法是：当前撞上 barrier
-的线程数量未够，就在 condition variables 上挂起；直到所有线程到达</li>
-<li>访问 <code>bstate.nthread</code>
-需要加锁，理由是上面说的这是一个共享数据</li>
-<li>同时需要在 condition variables 释放时，变量 round
-自增，同时当前循环的线程数归零</li>
+<li>根据题意，核心思想是每个线程都需要撞上 barrier，即停在这里。什么时候可以重新继续？答案是所有线程到达的时候。所以 barrier() 里面的逻辑最直接的想法是：当前撞上 barrier 的线程数量未够，就在 condition variables 上挂起；直到所有线程到达</li>
+<li>访问 <code>bstate.nthread</code> 需要加锁，理由是上面说的这是一个共享数据</li>
+<li>同时需要在 condition variables 释放时，变量 round 自增，同时当前循环的线程数归零</li>
 </ul>
-<p><br></p>
-<h3 id="solution-2">Solution</h3>
+<br>
+<h3 id="Solution-v18"><a class="header-anchor" href="#Solution-v18"></a>Solution</h3>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: notxv6/barrier.c</span></span><br><span class="line"><span class="function"><span class="type">static</span> <span class="type">void</span> </span></span><br><span class="line"><span class="function"><span class="title">barrier</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">// YOUR CODE HERE</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">// Block until all threads have called barrier() and</span></span><br><span class="line">    <span class="comment">// then increment bstate.round.</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="built_in">pthread_mutex_lock</span>(&amp;bstate.barrier_mutex);</span><br><span class="line">    ++bstate.nthread;</span><br><span class="line">    <span class="keyword">if</span> (bstate.nthread != nthread) &#123;</span><br><span class="line">        <span class="built_in">pthread_cond_wait</span>(&amp;bstate.barrier_cond, &amp;bstate.barrier_mutex);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        bstate.round++;</span><br><span class="line">        bstate.nthread = <span class="number">0</span>;</span><br><span class="line">        <span class="built_in">pthread_cond_broadcast</span>(&amp;bstate.barrier_cond);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">pthread_mutex_unlock</span>(&amp;bstate.barrier_mutex);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><br></p>
-<h2 id="写在最后">写在最后</h2>
+<br>
+<h2 id="写在最后-v7"><a class="header-anchor" href="#写在最后-v7"></a>写在最后</h2>
 <p>耗时 11h25m</p>
 
     </article>
@@ -852,8 +711,7 @@ barrier() 里面的逻辑最直接的想法是：当前撞上 barrier
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#lab"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#intro"><span class="toc-number">2.</span> <span class="toc-text">INTRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#uthread-switching-between-threads-moderate"><span class="toc-number">3.</span> <span class="toc-text">Uthread: switching
-between threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary"><span class="toc-number">3.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution"><span class="toc-number">3.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#using-threads-moderate"><span class="toc-number">4.</span> <span class="toc-text">Using threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-1"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary-1"><span class="toc-number">4.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-1"><span class="toc-number">4.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#barrier-moderate"><span class="toc-number">5.</span> <span class="toc-text">Barrier (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-2"><span class="toc-number">5.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#summary-2"><span class="toc-number">5.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-2"><span class="toc-number">5.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="toc-number">6.</span> <span class="toc-text">写在最后</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#LAB-v6"><span class="toc-number">1.</span> <span class="toc-text">LAB</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INTRO-v4"><span class="toc-number">2.</span> <span class="toc-text">INTRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Uthread-switching-between-threads-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">Uthread: switching between threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v14"><span class="toc-number">3.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8F%90%E7%A4%BA-v14"><span class="toc-number">3.2.</span> <span class="toc-text">提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v14"><span class="toc-number">3.3.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v16"><span class="toc-number">3.4.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Using-threads-MODERATE"><span class="toc-number">4.</span> <span class="toc-text">Using threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v15"><span class="toc-number">4.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v15"><span class="toc-number">4.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v17"><span class="toc-number">4.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Barrier-MODERATE"><span class="toc-number">5.</span> <span class="toc-text">Barrier (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A6%81%E6%B1%82-v16"><span class="toc-number">5.1.</span> <span class="toc-text">要求</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Summary-v16"><span class="toc-number">5.2.</span> <span class="toc-text">Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v18"><span class="toc-number">5.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-v7"><span class="toc-number">6.</span> <span class="toc-text">写在最后</span></a></li></ol>
             </div>
         <!-- sidebar -->
         <div class="sidebar sidebar-hide">
@@ -1024,13 +882,13 @@ between threads (MODERATE)</span></a><ol class="toc-child"><li class="toc-item t
 
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
-            <span class="sidebar-tag-name" data-tags="Blogs">
-                <span class="iconfont-archer">&#xe606;</span>
-                Blogs
-            </span>
             <span class="sidebar-tag-name" data-tags="hoo">
                 <span class="iconfont-archer">&#xe606;</span>
                 hoo
+            </span>
+            <span class="sidebar-tag-name" data-tags="Blogs">
+                <span class="iconfont-archer">&#xe606;</span>
+                Blogs
             </span>
             <span class="sidebar-tag-name" data-tags="translation">
                 <span class="iconfont-archer">&#xe606;</span>
