@@ -17,16 +17,11 @@
 <meta property="og:site_name">
 <meta property="og:description" content="整个 x86 内核故事的序幕，引导与加载被称为 bootloader，用于初始化内核执行环境、加载内核到内存并将控制权交给内核">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67763757d0e0a243d4edc38f.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67740b61d0e0a243d4ed3e79.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67763996d0e0a243d4edc445.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/677953c4d0e0a243d4ef0582.png">
 <meta property="article:published_time" content="2025-01-07T05:13:41.000Z">
 <meta property="article:modified_time" content="2025-03-03T06:01:28.000Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="hoo">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://pic1.imgdb.cn/item/67763757d0e0a243d4edc38f.png">
     <meta http-equiv="Cache-control" content="no-cache">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <link rel="icon" href="/avatar/link.PNG">
@@ -449,15 +444,26 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h1>引导这个阶段会发生什么</h1>
-<p>x86 的故事开始于 <code>0x7c00</code>，即 <code>%cs</code> 和 <code>%ip</code> 两个寄存器的组合指向了这个地址，从这里执行第一条指令。因此，OS 开发者就要想办法在内存 <code>0x7c00</code> 处安排上自己的软件。最简单的做法是将自己软件的纯二进制文件写入到磁盘的 0 面 0 道 1 扇区，这个扇区被称为 MBR，BIOS 会负责将这个位置的扇区读入内存 <code>0x7c00</code>，这就是引导阶段发生的事情</p>
-<h1>引导阶段</h1>
-<p>传统上，不会直接把内核放在 MBR，也即内核不会一开始就送上 <code>0x7c00</code>。因为：</p>
+        <h1 id="引导这个阶段会发生什么">引导这个阶段会发生什么</h1>
+<p>x86 的故事开始于 <code>0x7c00</code>，即 <code>%cs</code> 和
+<code>%ip</code>
+两个寄存器的组合指向了这个地址，从这里执行第一条指令。因此，OS
+开发者就要想办法在内存 <code>0x7c00</code>
+处安排上自己的软件。最简单的做法是将自己软件的纯二进制文件写入到磁盘的 0
+面 0 道 1 扇区，这个扇区被称为 MBR，BIOS 会负责将这个位置的扇区读入内存
+<code>0x7c00</code>，这就是引导阶段发生的事情</p>
+<h1 id="引导阶段">引导阶段</h1>
+<p>传统上，不会直接把内核放在 MBR，也即内核不会一开始就送上
+<code>0x7c00</code>。因为：</p>
 <ul>
-<li>MBR 的空间太小，一般只有 <code>512</code> 字节，不足够实现太多复杂功能</li>
-<li>即使 MBR 空间足够，但 x86 内核由于兼容性需要切换保护模式，切换需要一些额外工作（可以称为初始化工作），这些工作需要在真正进入内核之前完成</li>
+<li>MBR 的空间太小，一般只有 <code>512</code>
+字节，不足够实现太多复杂功能</li>
+<li>即使 MBR 空间足够，但 x86
+内核由于兼容性需要切换保护模式，切换需要一些额外工作（可以称为初始化工作），这些工作需要在真正进入内核之前完成</li>
 </ul>
-<p>因此，在内核真正运行在内存之前，会先运行另一个程序 —— <code>bootloader</code>。实际上这里有两个步骤，第一步引导（<code>boot</code>），第二步加载（<code>loader</code>），前者负责加载 MBR；后者负责把内核从磁盘加载到内存中，以及设置内核运行的环境</p>
+<p>因此，在内核真正运行在内存之前，会先运行另一个程序 ——
+<code>bootloader</code>。实际上这里有两个步骤，第一步引导（<code>boot</code>），第二步加载（<code>loader</code>），前者负责加载
+MBR；后者负责把内核从磁盘加载到内存中，以及设置内核运行的环境</p>
 <p>大致上，引导和加载需要完成以下事情：</p>
 <ul>
 <li>借助 <code>BIOS</code> 获取内存信息</li>
@@ -466,29 +472,70 @@
 <li>开启分页机制</li>
 <li>跳入保护模式</li>
 </ul>
-<p>在进入保护模式之前（实模式阶段），只能使用可怜的 <code>1MB</code> 寻址空间，这个阶段由于需要读取到硬件信息（从 <code>BIOS</code> 中获取信息），以供后续进入内核使用。所以这个阶段需要规划一个内存布局，规定硬件信息应该写入哪个内存地址</p>
+<p>在进入保护模式之前（实模式阶段），只能使用可怜的 <code>1MB</code>
+寻址空间，这个阶段由于需要读取到硬件信息（从 <code>BIOS</code>
+中获取信息），以供后续进入内核使用。所以这个阶段需要规划一个内存布局，规定硬件信息应该写入哪个内存地址</p>
 <p>在规划之前先来看看实模式的 <code>1MB</code> 布局：</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 0      0x500            0x80000   0xa0000        0xc0000          0x100000</span></span><br><span class="line"><span class="comment"> * ├──────┼────────────────┼─────────┼──────────────┼────────────────┤</span></span><br><span class="line"><span class="comment"> * │IVT   │                │EBIOS    │VIDEO MEMORY  │ROM &amp; MAPPING   │</span></span><br><span class="line"><span class="comment"> * ├──────┼────────────────┼─────────┼──────────────┼────────────────┤</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure>
-<p>其中 IVT 是 BIOS 安装的，一是保护模式内核不需要使用 BIOS，二是中断例程内核自己会实现，所以这块空间在引导阶段结束就可以覆盖。再往后从 <code>0x8_0000</code> 开始都是硬件保留的，这里也不动它，所以内核可以覆盖的就是前面 <code>0x8_0000</code> 的空间</p>
+<p>其中 IVT 是 BIOS 安装的，一是保护模式内核不需要使用
+BIOS，二是中断例程内核自己会实现，所以这块空间在引导阶段结束就可以覆盖。再往后从
+<code>0x8_0000</code>
+开始都是硬件保留的，这里也不动它，所以内核可以覆盖的就是前面
+<code>0x8_0000</code> 的空间</p>
 <p><code>hoo</code> 的规划如下：</p>
-<p><img src="https://pic1.imgdb.cn/item/67763757d0e0a243d4edc38f.png" alt=""></p>
-<p>整体来看，内核占用 <code>[0, 0x7_8000)</code> 内存空间，内核栈占用 <code>[0x7_a000, 0x8_0000)</code>。其中，内核的 <code>0x7_7fc</code> 地址处放置了一条 <code>DIED</code> 指令（其实就是 <code>jmp .</code>），在引导阶段跳入内核之前设置，当内核返回的时候，这条指令会从栈中弹出，防止内核返回时去到未知的地方。其次，<code>hoo</code> 在引导阶段产生或获取到的所有数据都放在内核栈增长的方向，后面结束引导阶段就可以随便覆盖掉了</p>
-<h1>具体实现</h1>
-<p>完整代码详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/master/boot/bootsect.S">boot/bootsect.S</a></p>
-<p><img src="https://pic1.imgdb.cn/item/67740b61d0e0a243d4ed3e79.png" alt=""></p>
-<p>这里参考 <code>Linux 0.11</code> 的思路，内核未来放在内存 <code>0</code> 地址往上，所以位于 <code>0x7c00</code> 的 MBR 自然需要先挪位置到高地址。挪到高地址后，调用 BIOS 读磁盘功能，将内核读到 <code>0x1000</code>，这是因为此时不能覆盖 BIOS 的 IVT。当完全使用完 BIOS 功能后，再将内核移动到 <code>0</code> 地址处，最后跳入内核</p>
-<p>需要注意的是，在进入保护模式之前，x86 机器字长都是 <code>16-bit</code> 的，意味着保护模式之前使用的栈、或者执行一些既可以用 <code>%eax</code>，又可以用 <code>%ax</code> 的指令（如乘法指令），长度是 <code>16-bit</code>。但是使用寄存器没有这个限制，实模式下是可以使用 <code>32-bit</code> 寄存器的（比如 <code>mov</code> 一个数据到 <code>%eax</code>）</p>
-<h2 id="MBR-移动到高地址"><a class="header-anchor" href="#MBR-移动到高地址"></a>MBR 移动到高地址</h2>
+<p><img
+src="https://pic1.imgdb.cn/item/67763757d0e0a243d4edc38f.png" /></p>
+<p>整体来看，内核占用 <code>[0, 0x7_8000)</code> 内存空间，内核栈占用
+<code>[0x7_a000, 0x8_0000)</code>。其中，内核的 <code>0x7_7fc</code>
+地址处放置了一条 <code>DIED</code> 指令（其实就是
+<code>jmp .</code>），在引导阶段跳入内核之前设置，当内核返回的时候，这条指令会从栈中弹出，防止内核返回时去到未知的地方。其次，<code>hoo</code>
+在引导阶段产生或获取到的所有数据都放在内核栈增长的方向，后面结束引导阶段就可以随便覆盖掉了</p>
+<h1 id="具体实现">具体实现</h1>
+<p>完整代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/master/boot/bootsect.S">boot/bootsect.S</a></p>
+<p><img
+src="https://pic1.imgdb.cn/item/67740b61d0e0a243d4ed3e79.png" /></p>
+<p>这里参考 <code>Linux 0.11</code> 的思路，内核未来放在内存
+<code>0</code> 地址往上，所以位于 <code>0x7c00</code> 的 MBR
+自然需要先挪位置到高地址。挪到高地址后，调用 BIOS 读磁盘功能，将内核读到
+<code>0x1000</code>，这是因为此时不能覆盖 BIOS 的 IVT。当完全使用完 BIOS
+功能后，再将内核移动到 <code>0</code> 地址处，最后跳入内核</p>
+<p>需要注意的是，在进入保护模式之前，x86 机器字长都是
+<code>16-bit</code> 的，意味着保护模式之前使用的栈、或者执行一些既可以用
+<code>%eax</code>，又可以用 <code>%ax</code>
+的指令（如乘法指令），长度是
+<code>16-bit</code>。但是使用寄存器没有这个限制，实模式下是可以使用
+<code>32-bit</code> 寄存器的（比如 <code>mov</code> 一个数据到
+<code>%eax</code>）</p>
+<h2 id="mbr-移动到高地址">MBR 移动到高地址</h2>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">    .set SEG_MBR,       0x7240</span><br><span class="line">    cld                     # 地址递增</span><br><span class="line">    xorw %ax,           %ax</span><br><span class="line">    movw %ax,           %ds</span><br><span class="line">    movw $0x7c00,       %si</span><br><span class="line">    movw $SEG_MBR,      %ax</span><br><span class="line">    movw %ax,           %es</span><br><span class="line">    movw $0x7c00,       %di</span><br><span class="line">    movw $1&lt;&lt;7,         %cx</span><br><span class="line">    rep movsd               # 0:0x7c00 -&gt; 0x7240:0x7c00</span><br><span class="line"></span><br><span class="line">    jmp $SEG_MBR,       $still</span><br><span class="line">still:</span><br></pre></td></tr></table></figure>
-<p>移动使用 <code>rep movsd</code> 指令进行，<code>ds:si</code> 指向源地址，<code>es:di</code> 指向目标地址，<code>cx</code> 指向移动的次数。这里将 <code>0x7c00</code> 处的 <code>512</code> 字节（一个扇区）移动到 <code>0x7_a000</code>，所以目的地址的段寄存器拆成了 <code>0x7240</code>。最后执行长跳转刷新 <code>%cs</code> 和 <code>%ip</code></p>
-<h2 id="获取内存容量"><a class="header-anchor" href="#获取内存容量"></a>获取内存容量</h2>
-<p>直接借助 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15,_EAX_=_0xE820">BIOS 的功能</a>，<code>int $0x15, %eax = 0xe820</code> 来获取内存容量</p>
-<p>这个功能会返回一个数组，数组元素是一个 20 字节的结构体（ARDS 结构体），如前面内存布局所示，将会保存到内存 <code>0x7_a204</code> 处；另外还会把数组大小保存到内存 <code>0x7_a200</code> 处</p>
-<h2 id="读取磁盘的内核，并移动到内存地址-0"><a class="header-anchor" href="#读取磁盘的内核，并移动到内存地址-0"></a>读取磁盘的内核，并移动到内存地址 0</h2>
-<p>读取磁盘也是直接借助 BIOS 功能，<code>int $0x13, %ah = 2</code>。当读取完成后，也是执行 <code>rep movsd</code> 来移动数据</p>
-<p>该 BIOS 功能中，<code>%es:%bx</code> 是目的地址。需要注意的一点是，<code>%bx</code> 是 <code>16-bit</code> 的，最大值 <code>0xffff</code> 即 <code>64KB</code>，当读取的磁盘扇区累计超过 <code>64KB</code> 时，就需要增加 <code>%es</code> 的值</p>
+<p>移动使用 <code>rep movsd</code> 指令进行，<code>ds:si</code>
+指向源地址，<code>es:di</code> 指向目标地址，<code>cx</code>
+指向移动的次数。这里将 <code>0x7c00</code> 处的 <code>512</code>
+字节（一个扇区）移动到
+<code>0x7_a000</code>，所以目的地址的段寄存器拆成了
+<code>0x7240</code>。最后执行长跳转刷新 <code>%cs</code> 和
+<code>%ip</code></p>
+<h2 id="获取内存容量">获取内存容量</h2>
+<p>直接借助 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15,_EAX_=_0xE820">BIOS
+的功能</a>，<code>int $0x15, %eax = 0xe820</code> 来获取内存容量</p>
+<p>这个功能会返回一个数组，数组元素是一个 20 字节的结构体（ARDS
+结构体），如前面内存布局所示，将会保存到内存 <code>0x7_a204</code>
+处；另外还会把数组大小保存到内存 <code>0x7_a200</code> 处</p>
+<h2
+id="读取磁盘的内核并移动到内存地址-0">读取磁盘的内核，并移动到内存地址
+0</h2>
+<p>读取磁盘也是直接借助 BIOS
+功能，<code>int $0x13, %ah = 2</code>。当读取完成后，也是执行
+<code>rep movsd</code> 来移动数据</p>
+<p>该 BIOS 功能中，<code>%es:%bx</code>
+是目的地址。需要注意的一点是，<code>%bx</code> 是 <code>16-bit</code>
+的，最大值 <code>0xffff</code> 即
+<code>64KB</code>，当读取的磁盘扇区累计超过 <code>64KB</code>
+时，就需要增加 <code>%es</code> 的值</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">    # 常规情况下每次增加一个扇区</span><br><span class="line">    addw $0x200,        %bx</span><br><span class="line">    # 但是当增加到 64 KB 后 %bx 回滚为 0</span><br><span class="line">    cmpw $0,            %bx</span><br><span class="line">    jnz  4f</span><br><span class="line">    # 此时需要为 %es 增加 64KB</span><br><span class="line">    movw %es,           %bx</span><br><span class="line">    addw $0x1000,       %bx</span><br><span class="line">    movw %bx,           %es</span><br><span class="line">    xorw %bx,           %bx</span><br><span class="line">4:</span><br><span class="line">    jmp  continue_read</span><br></pre></td></tr></table></figure>
-<h2 id="进入保护模式"><a class="header-anchor" href="#进入保护模式"></a>进入保护模式</h2>
+<h2 id="进入保护模式">进入保护模式</h2>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">    cli</span><br><span class="line">    movw %cs,           %ax</span><br><span class="line">    movw %ax,           %ds</span><br><span class="line">    inb  $0x92,         %al     # open A20</span><br><span class="line">    orb  $2,            %al</span><br><span class="line">    outb %al,           $0x92</span><br><span class="line"></span><br><span class="line">    lgdt gdt_48</span><br><span class="line"></span><br><span class="line">    movl %cr0,          %eax    # enable p.m.</span><br><span class="line">    orl  $1,            %eax</span><br><span class="line">    movl %eax,          %cr0</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">boot_gdt:</span><br><span class="line">	.quad 0x0000000000000000</span><br><span class="line">	.quad 0x00cf9a000000ffff # exe, no-readable, no-conform</span><br><span class="line">	.quad 0x00cf92000000ffff # no-exe, no-writable, down</span><br><span class="line">gdt_48:</span><br><span class="line">	.word .-boot_gdt</span><br><span class="line">	.long SEG_MBR&lt;&lt;4 + 0x7c00 + (boot_gdt - _start)</span><br></pre></td></tr></table></figure>
 <p>具体来说分三步：</p>
 <ul>
@@ -496,49 +543,126 @@
 <li>加载 <code>GDT</code></li>
 <li>设置 <code>CR0</code> 的 <code>PE</code> 位</li>
 </ul>
-<p><code>GDB</code> 的格式参考 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/Global_Descriptor_Table">OSDev GDT</a>，<code>hoo</code> 将引导阶段和内核阶段使用的 <code>GDT</code> 分开维护了。在这个阶段，<code>GDT</code> 是写死的，代码段和数据段各自临时使用一个 <code>GDT</code> 来进入保护模式而已</p>
-<p><code>lgdt</code> 指令的操作数是一个 <code>48-bit</code> 的内存地址，前 <code>16-bit</code> 通过将当前地址减去 <code>boot_gdt</code> 标号，得到的是 <code>GDT</code> 的长度。后 <code>32-bit</code> 表示的是内存中放置 <code>GDT</code> 的地址，由于 <code>MBR</code> 一开始就移动到了高地址 <code>0x7_a000</code>，所以这边的计算是围绕高地址进行的，<code>_start</code> 标号放在 <code>MBR</code> 最开头，最终表达式得到的是高地址的 <code>GDT</code></p>
-<h2 id="启用分页机制"><a class="header-anchor" href="#启用分页机制"></a>启用分页机制</h2>
-<p>一个页目录表可以表示 <code>4GB</code>，所以整个内核线性空间使用一个页目录表就够了。一个页表可以表示 <code>4MB</code>，所以整个内核线性空间需要使用 1024 个页表</p>
-<p><img src="https://pic1.imgdb.cn/item/67763996d0e0a243d4edc445.png" alt=""></p>
-<p>上面是内核进程的线性空间，每个 <code>PDE</code> 各指示 <code>4MB</code> 并依次递增，但实际上最后一个 <code>PDE</code> 不会使用，这使得内核（其实所有进程也是这个设计思路）的线性空间会损失最高的 <code>[0xffc0_0000, 0xffff_ffff]</code> 这 <code>4MB</code> 空间。但最后一个 <code>PDE</code> 通过指向页目录表自身，使得内核（每个进程）通过虚拟地址访问自己的页目录表成为可能。比如，进程通过访问 <code>0xffff_f000</code> 可以访问页目录表的 <code>PDE #0</code>；通过访问 <code>0xffc0_0000</code> 可以访问第一个页表的 <code>PTE #0</code></p>
-<p><code>hoo</code> 的规划是将页目录表放置在 <code>0x7_8000</code>，第一个页表放置在 <code>0x7_9000</code></p>
-<p><img src="https://pic1.imgdb.cn/item/677953c4d0e0a243d4ef0582.png" alt=""></p>
+<p><code>GDB</code> 的格式参考 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Global_Descriptor_Table">OSDev
+GDT</a>，<code>hoo</code> 将引导阶段和内核阶段使用的 <code>GDT</code>
+分开维护了。在这个阶段，<code>GDT</code>
+是写死的，代码段和数据段各自临时使用一个 <code>GDT</code>
+来进入保护模式而已</p>
+<p><code>lgdt</code> 指令的操作数是一个 <code>48-bit</code>
+的内存地址，前 <code>16-bit</code> 通过将当前地址减去
+<code>boot_gdt</code> 标号，得到的是 <code>GDT</code> 的长度。后
+<code>32-bit</code> 表示的是内存中放置 <code>GDT</code> 的地址，由于
+<code>MBR</code> 一开始就移动到了高地址
+<code>0x7_a000</code>，所以这边的计算是围绕高地址进行的，<code>_start</code>
+标号放在 <code>MBR</code> 最开头，最终表达式得到的是高地址的
+<code>GDT</code></p>
+<h2 id="启用分页机制">启用分页机制</h2>
+<p>一个页目录表可以表示
+<code>4GB</code>，所以整个内核线性空间使用一个页目录表就够了。一个页表可以表示
+<code>4MB</code>，所以整个内核线性空间需要使用 1024 个页表</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67763996d0e0a243d4edc445.png" /></p>
+<p>上面是内核进程的线性空间，每个 <code>PDE</code> 各指示
+<code>4MB</code> 并依次递增，但实际上最后一个 <code>PDE</code>
+不会使用，这使得内核（其实所有进程也是这个设计思路）的线性空间会损失最高的
+<code>[0xffc0_0000, 0xffff_ffff]</code> 这 <code>4MB</code>
+空间。但最后一个 <code>PDE</code>
+通过指向页目录表自身，使得内核（每个进程）通过虚拟地址访问自己的页目录表成为可能。比如，进程通过访问
+<code>0xffff_f000</code> 可以访问页目录表的
+<code>PDE #0</code>；通过访问 <code>0xffc0_0000</code>
+可以访问第一个页表的 <code>PTE #0</code></p>
+<p><code>hoo</code> 的规划是将页目录表放置在
+<code>0x7_8000</code>，第一个页表放置在 <code>0x7_9000</code></p>
+<p><img
+src="https://pic1.imgdb.cn/item/677953c4d0e0a243d4ef0582.png" /></p>
 <p>上面给出是页目录表和第一个页表的具体数值：</p>
 <p>引导阶段页目录表会使用三个 <code>PDE</code>：</p>
 <ul>
-<li><code>PDE #0</code>：指向第一个页表，表示 <code>[0x0, 0x40_0000)</code>，主要是为了包含最开始实模式的线性空间</li>
-<li><code>PDE #512</code>：也是指向第一个页表，但因为使用了更高地址的 <code>PDE</code>，表示 <code>[0x8000_0000, 0x8040_0000)</code>，所以可以通过这部分线性地址访问实模式的线性空间 —— 也即内核。<code>hoo</code> 的规划中，会把 <code>[0x8000_0000, 0xffff_ffff]</code> 这部分高地址映射到内核，这使得所有进程都可以共享内核 —— 换句话说，普通进程能够使用的只有低地址 <code>[0, 0x8000_0000)</code></li>
+<li><code>PDE #0</code>：指向第一个页表，表示
+<code>[0x0, 0x40_0000)</code>，主要是为了包含最开始实模式的线性空间</li>
+<li><code>PDE #512</code>：也是指向第一个页表，但因为使用了更高地址的
+<code>PDE</code>，表示
+<code>[0x8000_0000, 0x8040_0000)</code>，所以可以通过这部分线性地址访问实模式的线性空间
+—— 也即内核。<code>hoo</code> 的规划中，会把
+<code>[0x8000_0000, 0xffff_ffff]</code>
+这部分高地址映射到内核，这使得所有进程都可以共享内核 ——
+换句话说，普通进程能够使用的只有低地址
+<code>[0, 0x8000_0000)</code></li>
 <li><code>PDE #1023</code>：指向页目录，一个后门用于通过线性地址访问页目录表</li>
 </ul>
-<p>第一个页表初始化是为了做实模式 <code>1MB</code> 的映射，这部分映射可以通过顺序映射的方式完成 —— 即上面给出的方式。这里只包含了实模式的 <code>1MB</code>，但直接做整个 <code>4MB</code> 映射也是没问题</p>
+<p>第一个页表初始化是为了做实模式 <code>1MB</code>
+的映射，这部分映射可以通过顺序映射的方式完成 ——
+即上面给出的方式。这里只包含了实模式的 <code>1MB</code>，但直接做整个
+<code>4MB</code> 映射也是没问题</p>
 <p>下面是赋值页目录表的代码，准确的说是赋值三个 PDE：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">    .set SEG_PDTABLE,     0x7800</span><br><span class="line">    .set SEG_PGTABLE,     0x7900</span><br><span class="line">    .set KERN_MAPPING,    0x80000000</span><br><span class="line">    .set PDE_HIGH_OFF,    (KERN_MAPPING &gt;&gt; 20)</span><br><span class="line">    .set PDE_LAST_OFF,    (0xffc - PDE_HIGH_OFF)</span><br><span class="line"></span><br><span class="line">    movl $SEG_PGTABLE&lt;&lt;4, %eax</span><br><span class="line">    orl  $7,              %eax</span><br><span class="line">    movl pdtable_addr,    %ebx</span><br><span class="line">    movl %eax,            (%ebx)</span><br><span class="line">    addl $PDE_HIGH_OFF,   %ebx</span><br><span class="line">    movl %eax,            (%ebx)</span><br><span class="line">    movl $SEG_PDTABLE&lt;&lt;4, %eax</span><br><span class="line">    orl  $7,              %eax</span><br><span class="line">    addl $PDE_LAST_OFF,   %ebx</span><br><span class="line">    movl %eax,            (%ebx)</span><br><span class="line"></span><br><span class="line">pdtable_addr:</span><br><span class="line">    # .long 移动 MBR 到高地址后，%ds 会改变，访问页目录表的内存地址要重新计算</span><br></pre></td></tr></table></figure>
-<p><code>%eax</code> 保存 PDE 的值，<code>%ebx</code> 保存 PDE 的内存地址。<code>PDE#0</code> 通过标号 <code>pdtable_addr</code> 计算，在此基础上加上 <code>PDE_HIGH_OFF</code> 就是 <code>PDE#512</code>，再加上 <code>PDE_LAST_OFF</code> 就是 <code>PDE#1023</code></p>
+<p><code>%eax</code> 保存 PDE 的值，<code>%ebx</code> 保存 PDE
+的内存地址。<code>PDE#0</code> 通过标号 <code>pdtable_addr</code>
+计算，在此基础上加上 <code>PDE_HIGH_OFF</code> 就是
+<code>PDE#512</code>，再加上 <code>PDE_LAST_OFF</code> 就是
+<code>PDE#1023</code></p>
 <p>下面是赋值第一个页表的代码：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">    movl $0x100,        %ecx</span><br><span class="line">    movl $0,            %eax</span><br><span class="line">    movl pgtable_addr,  %ebx</span><br><span class="line">pgtable:</span><br><span class="line">    movl %eax,          %edx</span><br><span class="line">    orl  $7,            %edx</span><br><span class="line">    movl %edx,          (%ebx)</span><br><span class="line">    addl $0x1000,       %eax</span><br><span class="line">    addl $4,            %ebx</span><br><span class="line">    loop pgtable</span><br><span class="line"></span><br><span class="line">pgtable_addr:</span><br><span class="line">    # .long 移动 MBR 到高地址后，%ds 会改变，访问第一个页表的内存地址要重新计算</span><br></pre></td></tr></table></figure>
-<p>借助 x86 <code>loop</code> 指令，循环次数 <code>%ecx</code> 设置为 256，每次循环通过 <code>%eax</code> 和 <code>%edx</code> 计算出 PTE 的值，然后写入第一个页表所在的内存地址。这个内存地址通过 <code>movl pgtable_addr, %ebx</code> 得到，<code>AT&amp;T</code> 语法将标号移动到寄存器是指将标号处定义的数值移动到寄存器；另一种相似的语法是 <code>movl $symbol, %ebx</code>，多了 <code>$</code> 表示将标号处的内存地址移动到寄存器，是两种不一样的语法</p>
-<h2 id="跳入内核"><a class="header-anchor" href="#跳入内核"></a>跳入内核</h2>
+<p>借助 x86 <code>loop</code> 指令，循环次数 <code>%ecx</code> 设置为
+256，每次循环通过 <code>%eax</code> 和 <code>%edx</code> 计算出 PTE
+的值，然后写入第一个页表所在的内存地址。这个内存地址通过
+<code>movl pgtable_addr, %ebx</code> 得到，<code>AT&amp;T</code>
+语法将标号移动到寄存器是指将标号处定义的数值移动到寄存器；另一种相似的语法是
+<code>movl $symbol, %ebx</code>，多了 <code>$</code>
+表示将标号处的内存地址移动到寄存器，是两种不一样的语法</p>
+<h2 id="跳入内核">跳入内核</h2>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">.set SEG_PDTABLE,     0x7800</span><br><span class="line"></span><br><span class="line">movl $SEG_PDTABLE&lt;&lt;4, %eax</span><br><span class="line">movl %eax,            %cr3</span><br><span class="line">movl %cr0,            %eax</span><br><span class="line">orl  $0x80000000,     %eax</span><br><span class="line">movl %eax,            %cr0</span><br><span class="line"></span><br><span class="line">ljmp $0x08,           $0</span><br></pre></td></tr></table></figure>
-<p>跳入保护模式是很简单的一件事，将控制寄存器 <code>%cr3</code> 赋值页目录表地址，将 <code>%cr0</code> 开启分页（Paging）标识位就够了。最后执行长跳转刷新段寄存器，刷新 CPU 流水线，并将执行流重定向到内存 0 地址处。在这个地方，MBR 前面的逻辑已经把内核放在这里了。换句话说，跳转到内存地址 0，即是跳入了内核</p>
-<h1>内核入口</h1>
-<p>完整代码详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/master/kern/entry.c">kern/entry.c</a></p>
-<p>内核入口这部分代码编译得到的二进制会通过链接脚本 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kernel.ld#L9">kernel.ld</a> 放在整个内核二进制的最前面，也即最后会被加载到内存 0 处</p>
+<p>跳入保护模式是很简单的一件事，将控制寄存器 <code>%cr3</code>
+赋值页目录表地址，将 <code>%cr0</code>
+开启分页（Paging）标识位就够了。最后执行长跳转刷新段寄存器，刷新 CPU
+流水线，并将执行流重定向到内存 0 地址处。在这个地方，MBR
+前面的逻辑已经把内核放在这里了。换句话说，跳转到内存地址
+0，即是跳入了内核</p>
+<h1 id="内核入口">内核入口</h1>
+<p>完整代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/master/kern/entry.c">kern/entry.c</a></p>
+<p>内核入口这部分代码编译得到的二进制会通过链接脚本 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kernel.ld#L9">kernel.ld</a>
+放在整个内核二进制的最前面，也即最后会被加载到内存 0 处</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">. = 0x80000000;</span><br><span class="line">.text : AT(ADDR(.text) - 0x80000000) /*1*/ &#123; </span><br><span class="line">    kern/entry.o(.text)              /*2*/</span><br><span class="line">    *(.text)                         /*3*/</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>关于链接脚本更详细的内容这里略过，上面代码片段的几处注释解释如下：</p>
 <ul>
-<li>链接脚本分为 VMA（Virtual Memory Address）和 LMA（Load Memory Address），前者是二进制文件编译、链接之后得到的地址；后者是最终加载到内存的地址</li>
-<li>注释 1 处是规定 <code>.text</code> 段的 VMA 为 <code>0x8000_0000</code>（通过 <code>. = 0x80000000;</code> 设定），LMA 为 0（通过 <code>AT(0)</code> 设定，其中的 0 是通过 <code>ADDR(.text) - 0x80000000</code> 计算得到的）</li>
-<li>注释 2 处是将 <code>kern/entry.o</code> 二进制文件放在 <code>.text</code> 段第一位</li>
-<li>注释 3 处是将剩余的 <code>.text</code> 节放在 <code>.text</code> 段后面（段 Segments 和节 Sections 的区别略）</li>
+<li>链接脚本分为 VMA（Virtual Memory Address）和 LMA（Load Memory
+Address），前者是二进制文件编译、链接之后得到的地址；后者是最终加载到内存的地址</li>
+<li>注释 1 处是规定 <code>.text</code> 段的 VMA 为
+<code>0x8000_0000</code>（通过 <code>. = 0x80000000;</code> 设定），LMA
+为 0（通过 <code>AT(0)</code> 设定，其中的 0 是通过
+<code>ADDR(.text) - 0x80000000</code> 计算得到的）</li>
+<li>注释 2 处是将 <code>kern/entry.o</code> 二进制文件放在
+<code>.text</code> 段第一位</li>
+<li>注释 3 处是将剩余的 <code>.text</code> 节放在 <code>.text</code>
+段后面（段 Segments 和节 Sections 的区别略）</li>
 </ul>
 <p>在 <code>entry()</code> 最开始，有一段内联汇编代码：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"># 1. 重置上下文</span><br><span class="line">movw $0x10,    %ax</span><br><span class="line">movw %ax,      %ds</span><br><span class="line">movw %ax,      %es</span><br><span class="line">movw %ax,      %fs</span><br><span class="line">movw %ax,      %gs</span><br><span class="line">movw %ax,      %ss</span><br><span class="line">movl $0x80000, %esp</span><br><span class="line"></span><br><span class="line"># 2. 伪造调用约定</span><br><span class="line">pushl $0x77ffc</span><br><span class="line">pushl $0</span><br><span class="line">movl %esp,     %ebp</span><br><span class="line"></span><br><span class="line"># 3. 跳入高地址</span><br><span class="line">pushl $go</span><br><span class="line">ret</span><br><span class="line">go:</span><br></pre></td></tr></table></figure>
 <p>解释如下：</p>
-<ol>
-<li>重置上下文。此处 <code>hoo</code> 刚从引导阶段的临时上下文进入内核，重新设置一个上下文环境。其实主要是重置栈，因为对于 C 语言来说，设置了栈就可以使用了</li>
-<li>伪造调用约定。由前面内存布局可以知道，内存 <code>0x7_7ffc</code> 放置了一条 <code>jmp .</code> 指令，所以第一个指令就是把指令地址入栈。第二个指令是入栈 0，第三个指令是将 <code>%ebp</code> 赋值为与 <code>%esp</code> 一样。这三条指令就对应于 x86 调用约定的（1）入栈返回地址；（2）入栈上一个栈帧的 <code>%ebp</code>；（3）调用 <code>call</code> 指令切换指令流（当然这里没有）；（4）切换执行流后将当前栈帧的栈底重置</li>
-<li>跳入高地址。在引导阶段最后一条指令 <code>ljmp $0x08, $0</code> 执行后，<code>%eip</code> 会变成 0。但是逻辑上，执行流在内核的时候，应该是高地址。对于 <code>entry.c</code> 源文件来说，链接脚本可以保证其对应的二进制的符号都是 <code>0x8000_0000</code> 以上，自然标号 go 也会是高地址。x86 有两条可以改变 <code>%eip</code> 的指令：<code>call</code> 和 <code>ret</code>，都是从栈顶取出数值，前者会改变 <code>%cs</code> 和 <code>%eip</code>，后者只会改变 <code>%eip</code></li>
+<ol type="1">
+<li>重置上下文。此处 <code>hoo</code>
+刚从引导阶段的临时上下文进入内核，重新设置一个上下文环境。其实主要是重置栈，因为对于
+C 语言来说，设置了栈就可以使用了</li>
+<li>伪造调用约定。由前面内存布局可以知道，内存 <code>0x7_7ffc</code>
+放置了一条 <code>jmp .</code>
+指令，所以第一个指令就是把指令地址入栈。第二个指令是入栈
+0，第三个指令是将 <code>%ebp</code> 赋值为与 <code>%esp</code>
+一样。这三条指令就对应于 x86
+调用约定的（1）入栈返回地址；（2）入栈上一个栈帧的
+<code>%ebp</code>；（3）调用 <code>call</code>
+指令切换指令流（当然这里没有）；（4）切换执行流后将当前栈帧的栈底重置</li>
+<li>跳入高地址。在引导阶段最后一条指令 <code>ljmp $0x08, $0</code>
+执行后，<code>%eip</code> 会变成
+0。但是逻辑上，执行流在内核的时候，应该是高地址。对于
+<code>entry.c</code>
+源文件来说，链接脚本可以保证其对应的二进制的符号都是
+<code>0x8000_0000</code> 以上，自然标号 go 也会是高地址。x86
+有两条可以改变 <code>%eip</code> 的指令：<code>call</code> 和
+<code>ret</code>，都是从栈顶取出数值，前者会改变 <code>%cs</code> 和
+<code>%eip</code>，后者只会改变 <code>%eip</code></li>
 </ol>
 <p>后面的代码</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">entry</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    kern_init();</span><br><span class="line">    kern_exec();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -619,7 +743,8 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">1.</span> <span class="toc-text">引导这个阶段会发生什么</span></a></li><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">2.</span> <span class="toc-text">引导阶段</span></a></li><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">3.</span> <span class="toc-text">具体实现</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#MBR-%E7%A7%BB%E5%8A%A8%E5%88%B0%E9%AB%98%E5%9C%B0%E5%9D%80"><span class="toc-number">3.1.</span> <span class="toc-text">MBR 移动到高地址</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%8E%B7%E5%8F%96%E5%86%85%E5%AD%98%E5%AE%B9%E9%87%8F"><span class="toc-number">3.2.</span> <span class="toc-text">获取内存容量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BB%E5%8F%96%E7%A3%81%E7%9B%98%E7%9A%84%E5%86%85%E6%A0%B8%EF%BC%8C%E5%B9%B6%E7%A7%BB%E5%8A%A8%E5%88%B0%E5%86%85%E5%AD%98%E5%9C%B0%E5%9D%80-0"><span class="toc-number">3.3.</span> <span class="toc-text">读取磁盘的内核，并移动到内存地址 0</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%9B%E5%85%A5%E4%BF%9D%E6%8A%A4%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.4.</span> <span class="toc-text">进入保护模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%90%AF%E7%94%A8%E5%88%86%E9%A1%B5%E6%9C%BA%E5%88%B6"><span class="toc-number">3.5.</span> <span class="toc-text">启用分页机制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%B3%E5%85%A5%E5%86%85%E6%A0%B8"><span class="toc-number">3.6.</span> <span class="toc-text">跳入内核</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">4.</span> <span class="toc-text">内核入口</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%BC%95%E5%AF%BC%E8%BF%99%E4%B8%AA%E9%98%B6%E6%AE%B5%E4%BC%9A%E5%8F%91%E7%94%9F%E4%BB%80%E4%B9%88"><span class="toc-number">1.</span> <span class="toc-text">引导这个阶段会发生什么</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%BC%95%E5%AF%BC%E9%98%B6%E6%AE%B5"><span class="toc-number">2.</span> <span class="toc-text">引导阶段</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"><span class="toc-number">3.</span> <span class="toc-text">具体实现</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#mbr-%E7%A7%BB%E5%8A%A8%E5%88%B0%E9%AB%98%E5%9C%B0%E5%9D%80"><span class="toc-number">3.1.</span> <span class="toc-text">MBR 移动到高地址</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%8E%B7%E5%8F%96%E5%86%85%E5%AD%98%E5%AE%B9%E9%87%8F"><span class="toc-number">3.2.</span> <span class="toc-text">获取内存容量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BB%E5%8F%96%E7%A3%81%E7%9B%98%E7%9A%84%E5%86%85%E6%A0%B8%E5%B9%B6%E7%A7%BB%E5%8A%A8%E5%88%B0%E5%86%85%E5%AD%98%E5%9C%B0%E5%9D%80-0"><span class="toc-number">3.3.</span> <span class="toc-text">读取磁盘的内核，并移动到内存地址
+0</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%9B%E5%85%A5%E4%BF%9D%E6%8A%A4%E6%A8%A1%E5%BC%8F"><span class="toc-number">3.4.</span> <span class="toc-text">进入保护模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%90%AF%E7%94%A8%E5%88%86%E9%A1%B5%E6%9C%BA%E5%88%B6"><span class="toc-number">3.5.</span> <span class="toc-text">启用分页机制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B7%B3%E5%85%A5%E5%86%85%E6%A0%B8"><span class="toc-number">3.6.</span> <span class="toc-text">跳入内核</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%86%85%E6%A0%B8%E5%85%A5%E5%8F%A3"><span class="toc-number">4.</span> <span class="toc-text">内核入口</span></a></li></ol>
             </div>
         <!-- sidebar -->
         <div class="sidebar sidebar-hide">
@@ -658,15 +783,20 @@
         
         
         
+        
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 27
+        Total : 28
         </div>
         <!-- search  -->
     </div>
     <div class="post-archive">
             <div class="archive-year"> 2025 </div>
             <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2025/06/14/ebpf-1/">通过 libbpf-bootstrap 创建 CO-RE eBPF 项目</a>
+        </li>
         <li class="archive-post-item">
             <span class="archive-post-date">03/02</span>
             <a class="archive-post-title" href="/2025/03/02/github-index/">美化 Github 主页</a>
@@ -790,13 +920,17 @@
 
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
-            <span class="sidebar-tag-name" data-tags="hoo">
+            <span class="sidebar-tag-name" data-tags="eBPF">
                 <span class="iconfont-archer">&#xe606;</span>
-                hoo
+                eBPF
             </span>
             <span class="sidebar-tag-name" data-tags="Blogs">
                 <span class="iconfont-archer">&#xe606;</span>
                 Blogs
+            </span>
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
             </span>
             <span class="sidebar-tag-name" data-tags="translation">
                 <span class="iconfont-archer">&#xe606;</span>

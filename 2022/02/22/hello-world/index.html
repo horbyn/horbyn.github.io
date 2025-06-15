@@ -444,8 +444,10 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="首次部署"><a class="header-anchor" href="#首次部署"></a>首次部署</h2>
-<p>在 Github 网页创建一个新仓库，Github Pages 一定是 <code>github.io</code> 结尾的，创建之后在本地将这个仓库 <code>clone</code> 下来：</p>
+        <h2 id="首次部署">首次部署</h2>
+<p>在 Github 网页创建一个新仓库，Github Pages 一定是
+<code>github.io</code> 结尾的，创建之后在本地将这个仓库
+<code>clone</code> 下来：</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta"># </span><span class="language-bash">Windows（在 D 盘创建 Blogs\ 目录，举个例子）</span></span><br><span class="line">D:</span><br><span class="line">cd Blogs\</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta"># </span><span class="language-bash">MacOS</span></span><br><span class="line">cd /Users/Myname/Blogs</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta"># </span><span class="language-bash">Windows / MacOS</span></span><br><span class="line">git clone https://github.com/username/username.github.io.git</span><br></pre></td></tr></table></figure>
 <p>环境用 <code>Docker</code> 部署，暴露端口 4000</p>
 <figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> node:hydrogen-slim</span><br><span class="line"></span><br><span class="line"><span class="keyword">ENV</span> LC_ALL=zh_CN.UTF-<span class="number">8</span></span><br><span class="line"><span class="keyword">ENV</span> LANG=zh_CN.UTF-<span class="number">8</span></span><br><span class="line"><span class="keyword">ENV</span> LANGUAGE=zh_CN.UTF-<span class="number">8</span></span><br><span class="line"><span class="keyword">ENV</span> HEXO_SERVER_PORT=<span class="number">4000</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> apt-get update &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    apt-get install -yqq --no-install-recommends ca-certificates &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    <span class="comment"># 更新源</span></span></span><br><span class="line">    cp /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.bak &amp;&amp; \</span><br><span class="line">    sed -i <span class="string">&#x27;s/deb.debian.org/mirrors.ustc.edu.cn/g&#x27;</span> /etc/apt/sources.list.d/debian.sources &amp;&amp; \</span><br><span class="line">    apt-get clean &amp;&amp; apt-get update &amp;&amp; apt-get install -yqq --no-install-recommends \</span><br><span class="line">        git git-lfs curl gpg vim net-tools lsof procps locales openssl openssh-client jq \</span><br><span class="line">        yarn nasm wget dos2unix build-essential autoconf automake gettext libtool \</span><br><span class="line">        pkg-config gettext libpng-dev gh zsh &amp;&amp; \</span><br><span class="line">    <span class="comment"># 删除包管理器缓存以缩小镜像体积，参考 https://docs.docker.com/develop/develop-images/instructions/#run</span></span><br><span class="line">    rm -rf /var/lib/apt/lists/* &amp;&amp; \</span><br><span class="line">    apt-get clean &amp;&amp; \</span><br><span class="line">    yarn global <span class="keyword">add</span><span class="language-bash"> gulp &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    npm config <span class="built_in">set</span> registry https://registry.npmmirror.com &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    npm install -g pm2 nrm npm-check &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    npm install -g hexo-cli &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    npm install -g cnpm --registry=https://registry.npmmirror.com &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    apt-get clean &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    yarn cache clean &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    npm cache clean --force &amp;&amp; \</span></span><br><span class="line"><span class="language-bash">    <span class="comment"># mac 全局忽略 .DS_Store 配置文件</span></span></span><br><span class="line">    <span class="comment"># ref to: https://orianna-zzo.github.io/sci-tech/2018-01/mac%E4%B8%ADgit%E5%BF%BD%E7%95%A5.ds_store%E6%96%87%E4%BB%B6/</span></span><br><span class="line">    echo <span class="string">&quot;# Mac OS specified&quot;</span> &gt; ~/.gitignore_global &amp;&amp; \</span><br><span class="line">    echo <span class="string">&quot;**/.DS_Store&quot;</span> &gt; ~/.gitignore_global &amp;&amp; \</span><br><span class="line">    git config --global core.excludesfile ~/.gitignore_global &amp;&amp; \</span><br><span class="line">    <span class="comment"># 配置 zsh</span></span><br><span class="line">    git clone https://github.com/ohmyzsh/ohmyzsh.git /root/.oh-my-zsh &amp;&amp; \</span><br><span class="line">    cp /root/.oh-my-zsh/templates/zshrc.zsh-template /root/.zshrc &amp;&amp; \</span><br><span class="line">    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.oh-my-zsh/plugins/zsh-syntax-highlighting &amp;&amp; \</span><br><span class="line">    git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/plugins/zsh-autosuggestions &amp;&amp; \</span><br><span class="line">    chsh -s $(which zsh) &amp;&amp; \</span><br><span class="line">    sed -i <span class="string">&#x27;s/^plugins=(git)$/plugins=(git wd zsh-syntax-highlighting zsh-autosuggestions)/&#x27;</span> ~/.zshrc &amp;&amp; \</span><br><span class="line">    <span class="comment"># 中文</span></span><br><span class="line">    sed -i -e <span class="string">&#x27;s/# zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/&#x27;</span> /etc/locale.gen &amp;&amp; \</span><br><span class="line">    dpkg-reconfigure --frontend=noninteractive locales</span><br><span class="line"></span><br><span class="line"><span class="keyword">WORKDIR</span><span class="language-bash"> /blogs</span></span><br><span class="line"><span class="keyword">EXPOSE</span> $&#123;HEXO_SERVER_PORT&#125;</span><br><span class="line"><span class="keyword">CMD</span><span class="language-bash"> [<span class="string">&quot;/usr/bin/zsh&quot;</span>]</span></span><br></pre></td></tr></table></figure>
@@ -458,18 +460,29 @@
 <li>宿主电脑的博客目录（先创建）映射到容器（<code>/blogs</code>）里面</li>
 <li>容器监听的端口映射到宿主电脑上</li>
 </ul>
-<p>然后进入容器，在 <code>/blogs</code> 目录，这个仓库是空的，新建一个分支 <code>hexo</code>，安排如下：</p>
+<p>然后进入容器，在 <code>/blogs</code>
+目录，这个仓库是空的，新建一个分支 <code>hexo</code>，安排如下：</p>
 <ul>
 <li><code>master</code>：用来保存博客本身</li>
 <li><code>hexo</code>：用来保存 Hexo 的静态部署</li>
 </ul>
-<p>要注意的是：<strong>这两个分支是完全不一样的，博客的内容（<code>Markdown</code> 写的东西）放在 <code>master</code>，<code>hexo</code> 分支不是我们自己主动更新的，是后面执行 <code>hexo d</code> 由 Hexo 自动推送的</strong>，可以参考 <a target="_blank" rel="noopener" href="https://github.com/horbyn/horbyn.github.io">我的个人博客</a>。为了别让自己的博客被弄乱或丢失，<code>master</code> 分支的推送一定要很小心，建议通过其他形式额外备份</p>
-<p>这样设置分支有一点很麻烦的是，当你从 <code>master</code> 切换到 <code>hexo</code> 分支，由于两个分支完全不一样，所以会有很多不一样的文件弄乱 git 工作区，处理起来很麻烦，解决办法是 <strong>永远不要切换到 <code>hexo</code> 分支</strong> 😅</p>
+<p>要注意的是：<strong>这两个分支是完全不一样的，博客的内容（<code>Markdown</code>
+写的东西）放在 <code>master</code>，<code>hexo</code>
+分支不是我们自己主动更新的，是后面执行 <code>hexo d</code> 由 Hexo
+自动推送的</strong>，可以参考 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/horbyn.github.io">我的个人博客</a>。为了别让自己的博客被弄乱或丢失，<code>master</code>
+分支的推送一定要很小心，建议通过其他形式额外备份</p>
+<p>这样设置分支有一点很麻烦的是，当你从 <code>master</code> 切换到
+<code>hexo</code>
+分支，由于两个分支完全不一样，所以会有很多不一样的文件弄乱 git
+工作区，处理起来很麻烦，解决办法是 <strong>永远不要切换到
+<code>hexo</code> 分支</strong> 😅</p>
 <p>回到 <code>/blogs</code> 目录，执行：</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo init</span><br></pre></td></tr></table></figure>
 <p>让 Hexo 初始化目录，后面就可以更新博客了，下面是一些命令：</p>
 <ul>
-<li>新增博客之后重新生成静态文件：<code>hexo generate</code> 或 <code>hexo g</code></li>
+<li>新增博客之后重新生成静态文件：<code>hexo generate</code> 或
+<code>hexo g</code></li>
 <li>启动本地服务：<code>hexo server</code> 或 <code>hexo s</code></li>
 <li>部署到远端：<code>hexo deploy</code> 或 <code>hexo d</code></li>
 </ul>
@@ -480,13 +493,27 @@
 </ul>
 <p>在部署 github 之前先设置好：</p>
 <ul>
-<li><a target="_blank" rel="noopener" href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/checking-for-existing-ssh-keys">SSH 连接</a>：通过 <code>ssh -T git@github.com</code> 验证，输出 <code>... successfully ...</code> 才成功</li>
-<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/401978754">Token 验证</a>：输入 <code>git remote set-url origin https://&lt;your_token&gt;@github.com/&lt;USERNAME&gt;/&lt;REPO&gt;.git</code> 添加令牌至远程仓库</li>
-<li>博客目录根目录下的 <code>_config.yml</code> 修改 <code>deploy</code> 字段，如下</li>
+<li><a
+target="_blank" rel="noopener" href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/checking-for-existing-ssh-keys">SSH
+连接</a>：通过 <code>ssh -T git@github.com</code> 验证，输出
+<code>... successfully ...</code> 才成功</li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/401978754">Token
+验证</a>：输入
+<code>git remote set-url origin https://&lt;your_token&gt;@github.com/&lt;USERNAME&gt;/&lt;REPO&gt;.git</code>
+添加令牌至远程仓库</li>
+<li>博客目录根目录下的 <code>_config.yml</code> 修改 <code>deploy</code>
+字段，如下</li>
 </ul>
 <figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">deploy:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">git</span></span><br><span class="line">  <span class="attr">repo:</span> <span class="string">git@github.com:username/username.github.io.git</span></span><br><span class="line">  <span class="attr">branch:</span> <span class="string">hexo</span> <span class="comment"># 这里分支一定要写 hexo，不要写 master，否则会弄乱所有博客</span></span><br></pre></td></tr></table></figure>
-<p>每次更新博客之后通过 <code>push master</code> 来备份，下面表格给出了博客目录中什么东西是需要备份的，参考 <a target="_blank" rel="noopener" href="https://wzw21.cn/2023/10/22/hexo-blog-migration/">Hexo博客迁移步骤</a>：</p>
+<p>每次更新博客之后通过 <code>push master</code>
+来备份，下面表格给出了博客目录中什么东西是需要备份的，参考 <a
+target="_blank" rel="noopener" href="https://wzw21.cn/2023/10/22/hexo-blog-migration/">Hexo博客迁移步骤</a>：</p>
 <table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 22%" />
+<col style="width: 55%" />
+</colgroup>
 <thead>
 <tr>
 <th>目录 / 文件名</th>
@@ -498,7 +525,12 @@
 <tr>
 <td><code>.deploy_git</code></td>
 <td>看情况</td>
-<td>执行 <code>hexo d</code> 之后才会生成，如果不备份，即使你的博客内容是两三年前的，但以后你每次 <code>hexo d</code> 推送到 <code>hexo</code> 分支的提交记录都是全新的。但对你博客的创建时间没有影响，无非是每次部署都从第一个 commit 开始而已。如果你希望 <code>hexo</code> 分支保留 commit 记录就备份这个目录，否则可以不备份</td>
+<td>执行 <code>hexo d</code>
+之后才会生成，如果不备份，即使你的博客内容是两三年前的，但以后你每次
+<code>hexo d</code> 推送到 <code>hexo</code>
+分支的提交记录都是全新的。但对你博客的创建时间没有影响，无非是每次部署都从第一个
+commit 开始而已。如果你希望 <code>hexo</code> 分支保留 commit
+记录就备份这个目录，否则可以不备份</td>
 </tr>
 <tr>
 <td><code>node_modules</code></td>
@@ -562,16 +594,21 @@
 </tr>
 </tbody>
 </table>
-<h2 id="恢复博客"><a class="header-anchor" href="#恢复博客"></a>恢复博客</h2>
+<h2 id="恢复博客">恢复博客</h2>
 <p>这一章适用于：</p>
 <ul>
-<li>有两台电脑：家里的电脑刚完成首次 Hexo 部署；现在另外一个电脑也要部署 Hexo 并将博客同步过来</li>
+<li>有两台电脑：家里的电脑刚完成首次 Hexo 部署；现在另外一个电脑也要部署
+Hexo 并将博客同步过来</li>
 <li>只有一台电脑，但太旧已经换新了</li>
 </ul>
-<p>直接将 <code>username/username.github.io</code> 仓库 <code>clone</code> 下来，切换 <code>master</code> 博客目录：</p>
+<p>直接将 <code>username/username.github.io</code> 仓库
+<code>clone</code> 下来，切换 <code>master</code> 博客目录：</p>
 <ul>
-<li>安装依赖：根据你使用的 Hexo 主题的 <code>README</code> 安装相应的依赖，如果依赖很多建议一开始就写个脚本记录下来</li>
-<li>执行 <code>hexo g</code> 尝试生成 Hexo 项目（<strong>因为这个时候已经不是空的 Hexo 项目了，所以不要执行 <code>hexo init</code> 了</strong>）</li>
+<li>安装依赖：根据你使用的 Hexo 主题的 <code>README</code>
+安装相应的依赖，如果依赖很多建议一开始就写个脚本记录下来</li>
+<li>执行 <code>hexo g</code> 尝试生成 Hexo
+项目（<strong>因为这个时候已经不是空的 Hexo 项目了，所以不要执行
+<code>hexo init</code> 了</strong>）</li>
 <li>执行 <code>hexo s</code> 尝试启动服务</li>
 </ul>
 <p>如果像前一章那样处理，到这一步就恢复起来了，否则只能根据出错信息找原因了</p>
@@ -686,15 +723,20 @@
         
         
         
+        
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 27
+        Total : 28
         </div>
         <!-- search  -->
     </div>
     <div class="post-archive">
             <div class="archive-year"> 2025 </div>
             <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2025/06/14/ebpf-1/">通过 libbpf-bootstrap 创建 CO-RE eBPF 项目</a>
+        </li>
         <li class="archive-post-item">
             <span class="archive-post-date">03/02</span>
             <a class="archive-post-title" href="/2025/03/02/github-index/">美化 Github 主页</a>
@@ -818,13 +860,17 @@
 
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
-            <span class="sidebar-tag-name" data-tags="hoo">
+            <span class="sidebar-tag-name" data-tags="eBPF">
                 <span class="iconfont-archer">&#xe606;</span>
-                hoo
+                eBPF
             </span>
             <span class="sidebar-tag-name" data-tags="Blogs">
                 <span class="iconfont-archer">&#xe606;</span>
                 Blogs
+            </span>
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
             </span>
             <span class="sidebar-tag-name" data-tags="translation">
                 <span class="iconfont-archer">&#xe606;</span>

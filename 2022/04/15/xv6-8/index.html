@@ -17,22 +17,11 @@
 <meta property="og:site_name">
 <meta property="og:description" content="这很可能是最难的一个 lab，不止难在锁机制（这个 lab 一个很重要的思想是 &quot;大锁低效率，小锁易死锁&quot;）上，还有一个题目没有指出的坑点，这个坑点可能导致 out of blocks 的 panic">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://pic.imgdb.cn/item/6256cb9b239250f7c58e9ae2.jpg">
-<meta property="og:image" content="https://pic.imgdb.cn/item/6256d727239250f7c5a33585.jpg">
-<meta property="og:image" content="https://pic.imgdb.cn/item/6256db0c239250f7c5aa7e82.jpg">
-<meta property="og:image" content="https://pic.imgdb.cn/item/6256e282239250f7c5b7ba14.jpg">
-<meta property="og:image" content="https://pic.imgdb.cn/item/6256e419239250f7c5bab3b2.png">
-<meta property="og:image" content="https://pic.imgdb.cn/item/6256e975239250f7c5c40b3d.jpg">
-<meta property="og:image" content="https://pic.imgdb.cn/item/625764f4239250f7c5323f5b.jpg">
-<meta property="og:image" content="https://pic.imgdb.cn/item/62576bb9239250f7c5385105.jpg">
-<meta property="og:image" content="https://pic.imgdb.cn/item/62577393239250f7c5401b15.jpg">
-<meta property="og:image" content="https://pic.imgdb.cn/item/62577512239250f7c541bdfb.jpg">
 <meta property="article:published_time" content="2022-04-15T10:36:59.000Z">
 <meta property="article:modified_time" content="2025-03-03T12:16:57.342Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="mit6.828">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://pic.imgdb.cn/item/6256cb9b239250f7c58e9ae2.jpg">
     <meta http-equiv="Cache-control" content="no-cache">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <link rel="icon" href="/avatar/link.PNG">
@@ -455,162 +444,394 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h2 id="ABOUT-v3"><a class="header-anchor" href="#ABOUT-v3"></a>ABOUT</h2>
-<p>实验地址：<a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/lock.html">Lab: locks</a></p>
-<br>
-<h2 id="INTRO-v5"><a class="header-anchor" href="#INTRO-v5"></a>INTRO</h2>
-<p>这次 lab 难度非常大，主要是第二个 assignment，除去实验要求没有提到的一个踩坑点外，涉及 “大锁低效率，小锁易死锁” 的思想，除此之外还要考虑的是死锁问题，当然如果你坚持用大锁的话可能可以避免。至于死锁，我觉得，从代码的角度来调试真的很困难，我个人检查死锁的方法是设想一个死锁场景，然后跟着自己代码的逻辑看能不能走到。总之，这个 lab 难度确实不小，极具挑战性！</p>
-<br>
-<h2 id="Memory-allocator-MODERATE"><a class="header-anchor" href="#Memory-allocator-MODERATE"></a>Memory allocator (MODERATE)</h2>
-<h3 id="实验要求（译）（节选）-v2"><a class="header-anchor" href="#实验要求（译）（节选）-v2"></a>实验要求（译）（节选）</h3>
+        <h2 id="about">ABOUT</h2>
+<p>实验地址：<a
+target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.828/2021/labs/lock.html">Lab:
+locks</a></p>
+<p><br></p>
+<h2 id="intro">INTRO</h2>
+<p>这次 lab 难度非常大，主要是第二个
+assignment，除去实验要求没有提到的一个踩坑点外，涉及
+"大锁低效率，小锁易死锁"
+的思想，除此之外还要考虑的是死锁问题，当然如果你坚持用大锁的话可能可以避免。至于死锁，我觉得，从代码的角度来调试真的很困难，我个人检查死锁的方法是设想一个死锁场景，然后跟着自己代码的逻辑看能不能走到。总之，这个
+lab 难度确实不小，极具挑战性！</p>
+<p><br></p>
+<h2 id="memory-allocator-moderate">Memory allocator (MODERATE)</h2>
+<h3 id="实验要求译节选">实验要求（译）（节选）</h3>
 <blockquote>
-<p>The program user/kalloctest stresses xv6’s memory allocator: three processes grow and shrink their address spaces, resulting in many calls to kalloc and kfree. kalloc and kfree obtain kmem.lock. kalloctest prints (as “#fetch-and-add”) the number of loop iterations in acquire due to attempts to acquire a lock that another core already holds, for the kmem lock and a few other locks. The number of loop iterations in acquire is a rough measure of lock contention.</p>
+<p>The program user/kalloctest stresses xv6's memory allocator: three
+processes grow and shrink their address spaces, resulting in many calls
+to kalloc and kfree. kalloc and kfree obtain kmem.lock. kalloctest
+prints (as "#fetch-and-add") the number of loop iterations in acquire
+due to attempts to acquire a lock that another core already holds, for
+the kmem lock and a few other locks. The number of loop iterations in
+acquire is a rough measure of lock contention.</p>
 </blockquote>
-<p>“程序 <code>user/kalloctest</code> 加重了 xv6 内存分配器的压力：三个进程增加或减少它们的地址空间，这导致大量的 <code>kalloc()</code> 和 <code>kfree()</code> 调用，而这两个函数的调用又涉及 <code>kmem.lock</code> 的获取。<code>kalloctest</code> 打印了试图获得其他进程拥有的锁而调用 <code>acquire()</code> 的次数（像 ‘#fetch-and-add’ 这样），包括 <code>kmem</code> 和一些其他锁”</p>
+<p>"程序 <code>user/kalloctest</code> 加重了 xv6
+内存分配器的压力：三个进程增加或减少它们的地址空间，这导致大量的
+<code>kalloc()</code> 和 <code>kfree()</code>
+调用，而这两个函数的调用又涉及 <code>kmem.lock</code>
+的获取。<code>kalloctest</code> 打印了试图获得其他进程拥有的锁而调用
+<code>acquire()</code> 的次数（像 '#fetch-and-add' 这样），包括
+<code>kmem</code> 和一些其他锁"</p>
 <blockquote>
-<p>acquire maintains, for each lock, the count of calls to acquire for that lock, and the number of times the loop in acquire tried but failed to set the lock. kalloctest calls a system call that causes the kernel to print those counts for the kmem and bcache locks (which are the focus of this lab) and for the 5 most contended locks. If there is lock contention the number of acquire loop iterations will be large. The system call returns the sum of the number of loop iterations for the kmem and bcache locks.</p>
+<p>acquire maintains, for each lock, the count of calls to acquire for
+that lock, and the number of times the loop in acquire tried but failed
+to set the lock. kalloctest calls a system call that causes the kernel
+to print those counts for the kmem and bcache locks (which are the focus
+of this lab) and for the 5 most contended locks. If there is lock
+contention the number of acquire loop iterations will be large. The
+system call returns the sum of the number of loop iterations for the
+kmem and bcache locks.</p>
 </blockquote>
-<p>“<code>acquire()</code> 为每个锁维持对该锁的调用次数，以及维持 acquire() 尝试立即获取锁但失败的次数。<code>kalloctest</code> 调用一个导致内核打印 <code>kmem</code> 和 <code>bcache</code> 以及其他 5 个被争用的锁数量的系统调用。如果有锁竞争，那么 <code>acquire()</code> 循环数量会非常大。这个系统调用返回 <code>kmem</code> 和 <code>bcache</code> 锁的调用总数”</p>
+<p>"<code>acquire()</code> 为每个锁维持对该锁的调用次数，以及维持
+acquire() 尝试立即获取锁但失败的次数。<code>kalloctest</code>
+调用一个导致内核打印 <code>kmem</code> 和 <code>bcache</code> 以及其他 5
+个被争用的锁数量的系统调用。如果有锁竞争，那么 <code>acquire()</code>
+循环数量会非常大。这个系统调用返回 <code>kmem</code> 和
+<code>bcache</code> 锁的调用总数"</p>
 <blockquote>
-<p>The root cause of lock contention in kalloctest is that kalloc() has a single free list, protected by a single lock. To remove lock contention, you will have to redesign the memory allocator to avoid a single lock and list. The basic idea is to maintain a free list per CPU, each list with its own lock. Allocations and frees on different CPUs can run in parallel, because each CPU will operate on a different list. The main challenge will be to deal with the case in which one CPU’s free list is empty, but another CPU’s list has free memory; in that case, the one CPU must “steal” part of the other CPU’s free list. Stealing may introduce lock contention, but that will hopefully be infrequent.</p>
+<p>The root cause of lock contention in kalloctest is that kalloc() has
+a single free list, protected by a single lock. To remove lock
+contention, you will have to redesign the memory allocator to avoid a
+single lock and list. The basic idea is to maintain a free list per CPU,
+each list with its own lock. Allocations and frees on different CPUs can
+run in parallel, because each CPU will operate on a different list. The
+main challenge will be to deal with the case in which one CPU's free
+list is empty, but another CPU's list has free memory; in that case, the
+one CPU must "steal" part of the other CPU's free list. Stealing may
+introduce lock contention, but that will hopefully be infrequent.</p>
 </blockquote>
-<p>“<code>kalloctest</code> 的锁竞争的根本条件是 <code>kalloc()</code> 只有一个空闲链表，该链表由一把锁保护。为了消除锁竞争，你要重新涉及一个内存分配器用来避免单个锁、链表的竞争。<strong>基本思想是为每个 CPU 维持一个空闲链表，并且每个链表都有自己的锁</strong>。这样不同 CPU 上的分配和释放都可以并行运行，因为每个 CPU 可以在不同链表上操作。<strong>最大的问题是一个 CPU 的空闲链表为空时，此时另一个 CPU 的空闲链拥有空闲块，那么就可以 ‘偷’ 其他 CPU 链表的其中一部分</strong>。偷这个动作可能会导致锁竞争，但在这个实验里不频繁”</p>
+<p>"<code>kalloctest</code> 的锁竞争的根本条件是 <code>kalloc()</code>
+只有一个空闲链表，该链表由一把锁保护。为了消除锁竞争，你要重新涉及一个内存分配器用来避免单个锁、链表的竞争。<strong>基本思想是为每个
+CPU 维持一个空闲链表，并且每个链表都有自己的锁</strong>。这样不同 CPU
+上的分配和释放都可以并行运行，因为每个 CPU
+可以在不同链表上操作。<strong>最大的问题是一个 CPU
+的空闲链表为空时，此时另一个 CPU 的空闲链拥有空闲块，那么就可以 '偷'
+其他 CPU
+链表的其中一部分</strong>。偷这个动作可能会导致锁竞争，但在这个实验里不频繁"</p>
 <blockquote>
-<p>Your job is to implement per-CPU freelists, and stealing when a CPU’s free list is empty. You must give all of your locks names that start with “kmem”. That is, you should call initlock for each of your locks, and pass a name that starts with “kmem”. Run kalloctest to see if your implementation has reduced lock contention.</p>
+<p>Your job is to implement per-CPU freelists, and stealing when a CPU's
+free list is empty. You must give all of your locks names that start
+with "kmem". That is, you should call initlock for each of your locks,
+and pass a name that starts with "kmem". Run kalloctest to see if your
+implementation has reduced lock contention.</p>
 </blockquote>
-<p>“你的任务是为每个 CPU 实现各自的空闲链表，并且当链表空时需要去其他 CPU 的链表偷空闲块。你必须以 ‘kmem’ 打头命名你的全部锁，即，为每个锁调用 <code>initlock()</code> 并传入以 <code>kmem</code> 打头的形参。运行 <code>kalloctest</code> 检查你是否减少了锁竞争”</p>
-<br>
-<h3 id="实验思路-v2"><a class="header-anchor" href="#实验思路-v2"></a>实验思路</h3>
+<p>"你的任务是为每个 CPU 实现各自的空闲链表，并且当链表空时需要去其他
+CPU 的链表偷空闲块。你必须以 'kmem' 打头命名你的全部锁，即，为每个锁调用
+<code>initlock()</code> 并传入以 <code>kmem</code> 打头的形参。运行
+<code>kalloctest</code> 检查你是否减少了锁竞争"</p>
+<p><br></p>
+<h3 id="实验思路">实验思路</h3>
 <p>总结下来这个 assignment 就两件事：</p>
 <ul>
 <li>为每个 CPU 维持一个空闲链表，并且每个链表一把锁</li>
-<li>当链表空，要 “偷” 其他 CPU 的链表</li>
+<li>当链表空，要 "偷" 其他 CPU 的链表</li>
 </ul>
-<br>
-<h3 id="Solution-v20"><a class="header-anchor" href="#Solution-v20"></a>Solution</h3>
+<p><br></p>
+<h3 id="solution">Solution</h3>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/kalloc.c</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">freelist</span> &#123;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">spinlock</span> <span class="title">lock</span>;</span></span><br><span class="line">  <span class="class"><span class="keyword">struct</span> <span class="title">run</span> *<span class="title">freelist</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">freelist</span> <span class="title">kmem</span>[<span class="title">NCPU</span>];</span></span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">kinit</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="comment">// 重命名所有锁，并初始化</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; NCPU; ++i) &#123;</span><br><span class="line">        <span class="type">char</span> lockname[<span class="number">8</span>];</span><br><span class="line">        <span class="built_in">snprintf</span>(lockname, <span class="number">8</span>, <span class="string">&quot;kmem&quot;</span>, i);</span><br><span class="line">        initlock(&amp;kmem[i].lock, lockname);</span><br><span class="line">    &#125;</span><br><span class="line">    freerange(end, (<span class="type">void</span>*)PHYSTOP);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">kfree</span><span class="params">(<span class="type">void</span> *pa)</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    r = (<span class="keyword">struct</span> run*)pa;</span><br><span class="line"></span><br><span class="line">    push_off();</span><br><span class="line">    <span class="type">int</span> id = cpuid();</span><br><span class="line">    acquire(&amp;kmem[id].lock);</span><br><span class="line">    r-&gt;next = kmem[id].freelist;</span><br><span class="line">    kmem[id].freelist = r;</span><br><span class="line">    release(&amp;kmem[id].lock);</span><br><span class="line">    pop_off();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> *</span><br><span class="line"><span class="title function_">kalloc</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">run</span> *<span class="title">r</span>;</span></span><br><span class="line"></span><br><span class="line">    push_off();</span><br><span class="line">    <span class="type">int</span> id = cpuid();</span><br><span class="line">    acquire(&amp;kmem[id].lock);</span><br><span class="line">    r = kmem[id].freelist;</span><br><span class="line">    <span class="keyword">if</span>(r)</span><br><span class="line">        kmem[id].freelist = r-&gt;next;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 偷其他 CPU 的链表结点</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; NCPU; ++i) &#123;</span><br><span class="line">            <span class="keyword">if</span> (kmem[i].freelist) &#123;</span><br><span class="line">                acquire(&amp;kmem[i].lock);</span><br><span class="line">                r = kmem[i].freelist;</span><br><span class="line">                kmem[i].freelist = kmem[i].freelist-&gt;next;</span><br><span class="line">                release(&amp;kmem[i].lock);</span><br><span class="line">                <span class="keyword">break</span>;<span class="comment">// 偷到一个就可以退出了，不然偷多了会内存泄漏</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    release(&amp;kmem[id].lock);</span><br><span class="line">    pop_off();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(r)</span><br><span class="line">        <span class="built_in">memset</span>((<span class="type">char</span>*)r, <span class="number">5</span>, PGSIZE); <span class="comment">// fill with junk</span></span><br><span class="line">    <span class="keyword">return</span> (<span class="type">void</span>*)r;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<br>
-<h2 id="Buffer-cache-HARD"><a class="header-anchor" href="#Buffer-cache-HARD"></a>Buffer cache (HARD)</h2>
-<h3 id="实验要求（译）（节选）-v3"><a class="header-anchor" href="#实验要求（译）（节选）-v3"></a>实验要求（译）（节选）</h3>
+<p><br></p>
+<h2 id="buffer-cache-hard">Buffer cache (HARD)</h2>
+<h3 id="实验要求译节选-1">实验要求（译）（节选）</h3>
 <blockquote>
-<p>If multiple processes use the file system intensively, they will likely contend for bcache.lock, which protects the disk block cache in kernel/bio.c. bcachetest creates several processes that repeatedly read different files in order to generate contention on bcache.lock</p>
+<p>If multiple processes use the file system intensively, they will
+likely contend for bcache.lock, which protects the disk block cache in
+kernel/bio.c. bcachetest creates several processes that repeatedly read
+different files in order to generate contention on bcache.lock</p>
 </blockquote>
-<p>“如果多个进程密集地使用文件系统，它们很可能会竞争 <code>bcache.lock</code>，这是 <code>kernel/bio.c</code> 定义得，用来保护磁盘上磁盘块的锁。<code>bcachetest</code> 创建了多个进程，重复读不同文件只为测试 <code>bcache.lock</code> 的竞争”</p>
+<p>"如果多个进程密集地使用文件系统，它们很可能会竞争
+<code>bcache.lock</code>，这是 <code>kernel/bio.c</code>
+定义得，用来保护磁盘上磁盘块的锁。<code>bcachetest</code>
+创建了多个进程，重复读不同文件只为测试 <code>bcache.lock</code>
+的竞争"</p>
 <blockquote>
-<p>Modify the block cache so that the number of acquire loop iterations for all locks in the bcache is close to zero when running bcachetest. Ideally the sum of the counts for all locks involved in the block cache should be zero, but it’s OK if the sum is less than 500. Modify bget and brelse so that concurrent lookups and releases for different blocks that are in the bcache are unlikely to conflict on locks (e.g., don’t all have to wait for bcache.lock). You must maintain the invariant that at most one copy of each block is cached.</p>
+<p>Modify the block cache so that the number of acquire loop iterations
+for all locks in the bcache is close to zero when running bcachetest.
+Ideally the sum of the counts for all locks involved in the block cache
+should be zero, but it's OK if the sum is less than 500. Modify bget and
+brelse so that concurrent lookups and releases for different blocks that
+are in the bcache are unlikely to conflict on locks (e.g., don't all
+have to wait for bcache.lock). You must maintain the invariant that at
+most one copy of each block is cached.</p>
 </blockquote>
-<p>“修改 block cache 以便在 <code>bcache</code> 里的所有锁的 <code>acquire()</code> 次数在运行 <code>bcachetest</code> 时接近零。最理想的在 <code>bcache</code> 调用所有锁的总数应该是零，但其实小于 500 也没问题。修改 <code>bget()</code> 和 <code>brelse()</code> 以便并发的寻找和释放 <code>bcache</code> 里不同的块不会导致锁竞争（如不用全部都等 <code>bcache.lock</code>）。你必须维持每个已缓存块的不变量最多只有一个副本”</p>
+<p>"修改 block cache 以便在 <code>bcache</code> 里的所有锁的
+<code>acquire()</code> 次数在运行 <code>bcachetest</code>
+时接近零。最理想的在 <code>bcache</code>
+调用所有锁的总数应该是零，但其实小于 500 也没问题。修改
+<code>bget()</code> 和 <code>brelse()</code> 以便并发的寻找和释放
+<code>bcache</code> 里不同的块不会导致锁竞争（如不用全部都等
+<code>bcache.lock</code>）。你必须维持每个已缓存块的不变量最多只有一个副本"</p>
 <blockquote>
-<p>Reducing contention in the block cache is more tricky than for kalloc, because bcache buffers are truly shared among processes (and thus CPUs). For kalloc, one could eliminate most contention by giving each CPU its own allocator; that won’t work for the block cache. We suggest you look up block numbers in the cache with a hash table that has a lock per hash bucket.</p>
+<p>Reducing contention in the block cache is more tricky than for
+kalloc, because bcache buffers are truly shared among processes (and
+thus CPUs). For kalloc, one could eliminate most contention by giving
+each CPU its own allocator; that won't work for the block cache. We
+suggest you look up block numbers in the cache with a hash table that
+has a lock per hash bucket.</p>
 </blockquote>
-<p>“在 block cache 里减少竞争比 <code>kalloc()</code> 里的情况更难，因为 <code>bcache</code> 里的缓冲区是所有进程（以及所有 CPU）都共享的。对于 <code>kalloc()</code>，你可以通过给每个 CPU 它自己的分配器而消除大多竞争，但对于 block cache 却行不通。<strong>我们建议用哈希表来寻找 block cache 里的块号，这个哈希表设置为每个哈希 bucket 一把锁</strong>”</p>
+<p>"在 block cache 里减少竞争比 <code>kalloc()</code> 里的情况更难，因为
+<code>bcache</code> 里的缓冲区是所有进程（以及所有 CPU）都共享的。对于
+<code>kalloc()</code>，你可以通过给每个 CPU
+它自己的分配器而消除大多竞争，但对于 block cache
+却行不通。<strong>我们建议用哈希表来寻找 block cache
+里的块号，这个哈希表设置为每个哈希 bucket 一把锁</strong>"</p>
 <blockquote>
-<p>There are some circumstances in which it’s OK if your solution has lock conflicts:</p>
+<p>There are some circumstances in which it's OK if your solution has
+lock conflicts:</p>
 <ul>
-<li>When two processes concurrently use the same block number. bcachetest test0 doesn’t ever do this.</li>
-<li>When two processes concurrently miss in the cache, and need to find an unused block to replace. bcachetest test0 doesn’t ever do this.</li>
-<li>When two processes concurrently use blocks that conflict in whatever scheme you use to partition the blocks and locks; for example, if two processes use blocks whose block numbers hash to the same slot in a hash table. bcachetest test0 might do this, depending on your design, but you should try to adjust your scheme’s details to avoid conflicts (e.g., change the size of your hash table).</li>
+<li>When two processes concurrently use the same block number.
+bcachetest test0 doesn't ever do this.</li>
+<li>When two processes concurrently miss in the cache, and need to find
+an unused block to replace. bcachetest test0 doesn't ever do this.</li>
+<li>When two processes concurrently use blocks that conflict in whatever
+scheme you use to partition the blocks and locks; for example, if two
+processes use blocks whose block numbers hash to the same slot in a hash
+table. bcachetest test0 might do this, depending on your design, but you
+should try to adjust your scheme's details to avoid conflicts (e.g.,
+change the size of your hash table).</li>
 </ul>
-<p>bcachetest’s test1 uses more distinct blocks than there are buffers, and exercises lots of file system code paths.</p>
+<p>bcachetest's test1 uses more distinct blocks than there are buffers,
+and exercises lots of file system code paths.</p>
 </blockquote>
-<p>&quot;以下几种情况锁冲突的情况是没问题的：</p>
+<p>"以下几种情况锁冲突的情况是没问题的：</p>
 <ul>
-<li>当两个并发进程使用同一个块号。<code>bcachetest test0</code> 不检查</li>
-<li>当两个并发进程 cache 不命中，而需要找一个未用过的块来使用。<code>bcachetest test0</code> 也不检查这个问题</li>
-<li>当两个并发进程，在无论你如何细分锁的粒度、如何调度磁盘块的这种场景下，使用的块都会产生竞争。例如，如果两个进程使用的块都映射到同一个地方。<code>bcachetest test0</code> 会检查这种情况。但主要看你怎么实现，或者你需要关注细节的问题来规避这个问题（如改变哈希表的大小）</li>
+<li>当两个并发进程使用同一个块号。<code>bcachetest test0</code>
+不检查</li>
+<li>当两个并发进程 cache
+不命中，而需要找一个未用过的块来使用。<code>bcachetest test0</code>
+也不检查这个问题</li>
+<li>当两个并发进程，在无论你如何细分锁的粒度、如何调度磁盘块的这种场景下，使用的块都会产生竞争。例如，如果两个进程使用的块都映射到同一个地方。<code>bcachetest test0</code>
+会检查这种情况。但主要看你怎么实现，或者你需要关注细节的问题来规避这个问题（如改变哈希表的大小）</li>
 </ul>
-<p><code>bcachetest test1</code> 使用比缓冲区大得多的不同块，并且涉及大量的文件系统调用&quot;</p>
-<br>
-<h3 id="实验提示（译）（节选）-v2"><a class="header-anchor" href="#实验提示（译）（节选）-v2"></a>实验提示（译）（节选）</h3>
+<p><code>bcachetest test1</code>
+使用比缓冲区大得多的不同块，并且涉及大量的文件系统调用"</p>
+<p><br></p>
+<h3 id="实验提示译节选">实验提示（译）（节选）</h3>
 <blockquote>
-<p>Searching in the hash table for a buffer and allocating an entry for that buffer when the buffer is not found must be atomic.</p>
+<p>Searching in the hash table for a buffer and allocating an entry for
+that buffer when the buffer is not found must be atomic.</p>
 </blockquote>
-<p>“当 cache 不命中时，在整个哈希表中寻找一个 buffer，并且为这个 buffer 填充磁盘块的属性。以上几个步骤必须是原子操作”</p>
+<p>"当 cache 不命中时，在整个哈希表中寻找一个 buffer，并且为这个 buffer
+填充磁盘块的属性。以上几个步骤必须是原子操作"</p>
 <blockquote>
-<p>Remove the list of all buffers (bcache.head etc.) and instead time-stamp buffers using the time of their last use (i.e., using ticks in kernel/trap.c). With this change brelse doesn’t need to acquire the bcache lock, and bget can select the least-recently used block based on the time-stamps.</p>
+<p>Remove the list of all buffers (bcache.head etc.) and instead
+time-stamp buffers using the time of their last use (i.e., using ticks
+in kernel/trap.c). With this change brelse doesn't need to acquire the
+bcache lock, and bget can select the least-recently used block based on
+the time-stamps.</p>
 </blockquote>
-<p>“删除所有 buffer 中的链表（<code>bcache.head</code> 等），取而代之的是进程最后一次使用的时间点（即使用 <code>kernel/trap.c</code> 里的 <code>ticks</code> 变量）。经过这个更改后 <code>brelse()</code> 不需要获取 bcache 的锁了，并且 <code>bget()</code> 的 LRU 算法变成基于时间戳的 LRU 算法”</p>
+<p>"删除所有 buffer 中的链表（<code>bcache.head</code>
+等），取而代之的是进程最后一次使用的时间点（即使用
+<code>kernel/trap.c</code> 里的 <code>ticks</code>
+变量）。经过这个更改后 <code>brelse()</code> 不需要获取 bcache
+的锁了，并且 <code>bget()</code> 的 LRU 算法变成基于时间戳的 LRU
+算法"</p>
 <blockquote>
-<p>It is OK to serialize eviction in bget (i.e., the part of bget that selects a buffer to re-use when a lookup misses in the cache).</p>
+<p>It is OK to serialize eviction in bget (i.e., the part of bget that
+selects a buffer to re-use when a lookup misses in the cache).</p>
 </blockquote>
-<p>“可以在 <code>bget()</code> 里连续地进行 <em>eviction</em> （eviction 即 <code>bget()</code> 在 cache 不命中时选择并重复使用一个 buffer 这部分代码）”（<strong>译者注，连续地 eviction 即连续地遍历链表，从而寻找可用的空闲块</strong>）</p>
+<p>"可以在 <code>bget()</code> 里连续地进行 <em>eviction</em> （eviction
+即 <code>bget()</code> 在 cache 不命中时选择并重复使用一个 buffer
+这部分代码）"（<strong>译者注，连续地 eviction
+即连续地遍历链表，从而寻找可用的空闲块</strong>）</p>
 <blockquote>
-<p>When replacing a block, you might move a struct buf from one bucket to another bucket, because the new block hashes to a different bucket. You might have a tricky case: the new block might hash to the same bucket as the old block. Make sure you avoid deadlock in that case.</p>
+<p>When replacing a block, you might move a struct buf from one bucket
+to another bucket, because the new block hashes to a different bucket.
+You might have a tricky case: the new block might hash to the same
+bucket as the old block. Make sure you avoid deadlock in that case.</p>
 </blockquote>
-<p>“当取代一个块时，你可以需要从一个块移动 <code>struct buf</code> 到另一个块，因为新块是映射到另一个不同的块上的。你可能会遇到新块映射到旧块上的困难，此时你需要确保不发生死锁”（<strong>译者注，事实上改变哈希映射时不一定要移动块。比如你使用链表，链表元素是块地址，那么改变哈希就只需改变链表地址元素的指向就够了</strong>）</p>
-<br>
-<h3 id="实验思路-v3"><a class="header-anchor" href="#实验思路-v3"></a>实验思路</h3>
+<p>"当取代一个块时，你可以需要从一个块移动 <code>struct buf</code>
+到另一个块，因为新块是映射到另一个不同的块上的。你可能会遇到新块映射到旧块上的困难，此时你需要确保不发生死锁"（<strong>译者注，事实上改变哈希映射时不一定要移动块。比如你使用链表，链表元素是块地址，那么改变哈希就只需改变链表地址元素的指向就够了</strong>）</p>
+<p><br></p>
+<h3 id="实验思路-1">实验思路</h3>
 <p>首先还是要弄懂这个 assignment 到底要我们做一个什么样的事情：</p>
-<p><img src="https://pic.imgdb.cn/item/6256cb9b239250f7c58e9ae2.jpg" alt=""></p>
-<p>如图所示，原来整个 block cache 只由一把锁保护，那么所有并发进程都要争用这把锁，这势必要等待，就降低了效率。因此，实验希望把整个大锁拆分掉，分成许多把小锁。这样并发进程请求资源就可以尽可能地分散开来，避免了争用同一把锁</p>
-<p>然后就要想怎么细分这把大锁，其实上面实验要求已经提示了，<strong>“We suggest you…”</strong> 这一句，简单来说就是在大锁之下、每个 cached buffer 元素之上，再抽象一层，在这一层引入哈希表。具体来说就是下图的逻辑：</p>
-<p><img src="https://pic.imgdb.cn/item/6256d727239250f7c5a33585.jpg" alt=""></p>
-<p>原来逻辑为什么是双链表，详见 <code>kernel/bio.c/binit()</code>，现在只需根据实验要求引入哈希表，这里键值对应该可以想到 &lt;blockno#, cached buffer 数组索引&gt; 的形式，即给出一个块号，返回 cached buffer 数组的一个索引</p>
-<p>现在有个问题可以想想，实验提示说到 <strong>“With this change brelse doesn’t need to acquire the bcache lock”</strong>，为什么引入哈希表以后，释放块就不需要持有 <code>bcache.lock</code> 了？</p>
-<p>按原来链表的逻辑，假设现在 PA、PB 并发调用 <code>brelse()</code>，且恰好各自形参的引用都是 1</p>
-<p><img src="https://pic.imgdb.cn/item/6256db0c239250f7c5aa7e82.jpg" alt=""></p>
-<p>接下来 PA、PB 都访问 block cache 链表，且都是在链头插入各自的块，那么后来那个进程可能覆盖前面的数据、又或者两个块的写入交替进行，这便形成了 race condition，所以原来逻辑需要一把锁确保每次只能有一个进程访问</p>
-<p>那么现在，引入哈希表之后，你释放的块只能是你自己哈希 bucket 上的链表的，难道可以释放别人链表的块？因此，既然是自己的链表，只需要自己的锁就行，就不需要大锁 <code>bcache.lock</code> 了</p>
-<p>还有一个小问题。就是这个 LRU 算法该怎么理解？到底是使用时长最短？还是使用顺序的先后？</p>
-<p>这就要看 LRU 算法的含义了————最近最少使用，即最近使用过的不会淘汰，而不是使用时间最短的淘汰，这两者概念不同</p>
-<p>再看 <code>kernel/trap.c/ticks</code> 这个变量，它的含义就是随着开机时间延迟而不断自增</p>
-<p>结合起来，最近使用过的 <code>ticks</code> 数值上必然最大，反而很久以前就开始使用的进程，它的 <code>ticks</code> 就很小。所以 “最近最少使用” 说的就是最小的 <code>ticks</code></p>
-<p>引入 <code>ticks</code> 这个逻辑后，原来 LRU 链表连来连去那部分逻辑就可以删掉了</p>
-<p>现在需要考虑一个最关键的问题，就是 “大锁”、“小锁” 到底是什么东西？到底怎么理解？</p>
-<p>如果你看过 xv6 handout，第六章，你应该了解一个矛盾的思想————“大锁低效率，小锁易死锁”，这又怎么理解？</p>
-<p>结合这个 lab 的需求来看，大锁就是 <code>bcache.lock</code>，负责保护全部的公共数据，这个保护具体来说就是每次只允许一个进程访问。那么，当你并发假设 10 个进程，虽然这 10 个进程是同时访问资源的，但大锁保证了一种顺序形式的资源访问次序，结果就是这 10 个进程逻辑上等同于 1 个进程的顺序执行————这就是 “大锁低效率” 的由来，但是另一方面，大锁保证了正确性，因为资源的访问井然有序，不可能出现某种资源的争用</p>
-<p>这也就是这个 assignment 的目的，表面上是减少大锁的使用，但目的是提高并发的效率。试想下 10 个进程同时运行快？还是 10 个进程一个一个地运行快？</p>
-<p>现在再考虑下，怎么做才能减少大锁的使用？一个极端的例子是不用大锁，只用小锁（在这个 lab 里，小锁就是每个哈希 bucket 的锁）。那只用小锁会有问题吗？答案是往往很容易导致死锁————这就是 “小锁易死锁” 的由来</p>
-<p><img src="https://pic.imgdb.cn/item/6256e282239250f7c5b7ba14.jpg" alt=""></p>
-<p>原来只有一把大锁的时候，并发进程运行虽然慢点，但好歹能往下运行。但现在使用了小锁，却很可能陷入死局而致进程无法往下推进————P2 持有自己的锁，请求 P5 的锁；同时，P5 持有自己的锁，请求 P2 的锁————只要 P2 没完成，P2 不可能释放自己的锁，P5 也一样，大家都在等待对方先完成，这就大家都完成不了</p>
-<p>所以正如 xv6-handout 说的那样，这两个粒度的锁其实带来了很矛盾的影响，来看看题目最开始这个输出就可以理解了</p>
-<p><img src="https://pic.imgdb.cn/item/6256e419239250f7c5bab3b2.png" alt=""></p>
-<p>test0 很明显就是测试大锁访问量的————源代码里只使用大锁，所以并发量一高，大锁访问量也越高，自然不能通过测试；test1 结合后面 <strong>“bcachetest’s test1 uses more distinct blocks than there are buffers, and exercises lots of file system code paths.”</strong> 这句话来看，我猜应该是测高并发下程序执行的正确性的————源代码由于只用大锁，所以必然能确保正确性</p>
-<p>所以就带来了矛盾，一方面我们想高效运行，一方面又希望程序运行的正确，可以想象这中间肯定有个度需要把握好。但是，这个 lab 的需求就是减少大锁的使用，因此，势必会出现以下两种设计方案</p>
-<h3 id="设计方案一：引入小锁同时，保留大锁的部分使用"><a class="header-anchor" href="#设计方案一：引入小锁同时，保留大锁的部分使用"></a>设计方案一：引入小锁同时，保留大锁的部分使用</h3>
+<p><img
+src="https://pic.imgdb.cn/item/6256cb9b239250f7c58e9ae2.jpg" /></p>
+<p>如图所示，原来整个 block cache
+只由一把锁保护，那么所有并发进程都要争用这把锁，这势必要等待，就降低了效率。因此，实验希望把整个大锁拆分掉，分成许多把小锁。这样并发进程请求资源就可以尽可能地分散开来，避免了争用同一把锁</p>
+<p>然后就要想怎么细分这把大锁，其实上面实验要求已经提示了，<strong>"We
+suggest you..."</strong> 这一句，简单来说就是在大锁之下、每个 cached
+buffer
+元素之上，再抽象一层，在这一层引入哈希表。具体来说就是下图的逻辑：</p>
+<p><img
+src="https://pic.imgdb.cn/item/6256d727239250f7c5a33585.jpg" /></p>
+<p>原来逻辑为什么是双链表，详见
+<code>kernel/bio.c/binit()</code>，现在只需根据实验要求引入哈希表，这里键值对应该可以想到
+&lt;blockno#, cached buffer 数组索引&gt; 的形式，即给出一个块号，返回
+cached buffer 数组的一个索引</p>
+<p>现在有个问题可以想想，实验提示说到 <strong>"With this change brelse
+doesn't need to acquire the bcache
+lock"</strong>，为什么引入哈希表以后，释放块就不需要持有
+<code>bcache.lock</code> 了？</p>
+<p>按原来链表的逻辑，假设现在 PA、PB 并发调用
+<code>brelse()</code>，且恰好各自形参的引用都是 1</p>
+<p><img
+src="https://pic.imgdb.cn/item/6256db0c239250f7c5aa7e82.jpg" /></p>
+<p>接下来 PA、PB 都访问 block cache
+链表，且都是在链头插入各自的块，那么后来那个进程可能覆盖前面的数据、又或者两个块的写入交替进行，这便形成了
+race condition，所以原来逻辑需要一把锁确保每次只能有一个进程访问</p>
+<p>那么现在，引入哈希表之后，你释放的块只能是你自己哈希 bucket
+上的链表的，难道可以释放别人链表的块？因此，既然是自己的链表，只需要自己的锁就行，就不需要大锁
+<code>bcache.lock</code> 了</p>
+<p>还有一个小问题。就是这个 LRU
+算法该怎么理解？到底是使用时长最短？还是使用顺序的先后？</p>
+<p>这就要看 LRU
+算法的含义了————最近最少使用，即最近使用过的不会淘汰，而不是使用时间最短的淘汰，这两者概念不同</p>
+<p>再看 <code>kernel/trap.c/ticks</code>
+这个变量，它的含义就是随着开机时间延迟而不断自增</p>
+<p>结合起来，最近使用过的 <code>ticks</code>
+数值上必然最大，反而很久以前就开始使用的进程，它的 <code>ticks</code>
+就很小。所以 "最近最少使用" 说的就是最小的 <code>ticks</code></p>
+<p>引入 <code>ticks</code> 这个逻辑后，原来 LRU
+链表连来连去那部分逻辑就可以删掉了</p>
+<p>现在需要考虑一个最关键的问题，就是 "大锁"、"小锁"
+到底是什么东西？到底怎么理解？</p>
+<p>如果你看过 xv6
+handout，第六章，你应该了解一个矛盾的思想————"大锁低效率，小锁易死锁"，这又怎么理解？</p>
+<p>结合这个 lab 的需求来看，大锁就是
+<code>bcache.lock</code>，负责保护全部的公共数据，这个保护具体来说就是每次只允许一个进程访问。那么，当你并发假设
+10 个进程，虽然这 10
+个进程是同时访问资源的，但大锁保证了一种顺序形式的资源访问次序，结果就是这
+10 个进程逻辑上等同于 1 个进程的顺序执行————这就是 "大锁低效率"
+的由来，但是另一方面，大锁保证了正确性，因为资源的访问井然有序，不可能出现某种资源的争用</p>
+<p>这也就是这个 assignment
+的目的，表面上是减少大锁的使用，但目的是提高并发的效率。试想下 10
+个进程同时运行快？还是 10 个进程一个一个地运行快？</p>
+<p>现在再考虑下，怎么做才能减少大锁的使用？一个极端的例子是不用大锁，只用小锁（在这个
+lab 里，小锁就是每个哈希 bucket
+的锁）。那只用小锁会有问题吗？答案是往往很容易导致死锁————这就是
+"小锁易死锁" 的由来</p>
+<p><img
+src="https://pic.imgdb.cn/item/6256e282239250f7c5b7ba14.jpg" /></p>
+<p>原来只有一把大锁的时候，并发进程运行虽然慢点，但好歹能往下运行。但现在使用了小锁，却很可能陷入死局而致进程无法往下推进————P2
+持有自己的锁，请求 P5 的锁；同时，P5 持有自己的锁，请求 P2 的锁————只要
+P2 没完成，P2 不可能释放自己的锁，P5
+也一样，大家都在等待对方先完成，这就大家都完成不了</p>
+<p>所以正如 xv6-handout
+说的那样，这两个粒度的锁其实带来了很矛盾的影响，来看看题目最开始这个输出就可以理解了</p>
+<p><img
+src="https://pic.imgdb.cn/item/6256e419239250f7c5bab3b2.png" /></p>
+<p>test0
+很明显就是测试大锁访问量的————源代码里只使用大锁，所以并发量一高，大锁访问量也越高，自然不能通过测试；test1
+结合后面 <strong>"bcachetest's test1 uses more distinct blocks than
+there are buffers, and exercises lots of file system code
+paths."</strong>
+这句话来看，我猜应该是测高并发下程序执行的正确性的————源代码由于只用大锁，所以必然能确保正确性</p>
+<p>所以就带来了矛盾，一方面我们想高效运行，一方面又希望程序运行的正确，可以想象这中间肯定有个度需要把握好。但是，这个
+lab 的需求就是减少大锁的使用，因此，势必会出现以下两种设计方案</p>
+<h3
+id="设计方案一引入小锁同时保留大锁的部分使用">设计方案一：引入小锁同时，保留大锁的部分使用</h3>
 <p>设计思想如下图所示：</p>
-<p><img src="https://pic.imgdb.cn/item/6256e975239250f7c5c40b3d.jpg" alt=""></p>
-<p>初始化的时候每个哈希 bucket 链表均为空；所有 buffer 都由 block cache（放到代码里即 <code>struct bcache</code> 结构体）掌控。随着程序运行趋于稳定，即开始了一些分配与释放之后，像下半部分这个图这样，开始出现 “散装” 的数据区域：</p>
+<p><img
+src="https://pic.imgdb.cn/item/6256e975239250f7c5c40b3d.jpg" /></p>
+<p>初始化的时候每个哈希 bucket 链表均为空；所有 buffer 都由 block
+cache（放到代码里即 <code>struct bcache</code>
+结构体）掌控。随着程序运行趋于稳定，即开始了一些分配与释放之后，像下半部分这个图这样，开始出现
+"散装" 的数据区域：</p>
 <ul>
-<li>blockno#13 代表的是 0 号 bucket 的哈希链表，它被分配了两块 buffer，它用自己的链表结构表示着，这两块 buffer 受到 0 号 bucket 这把锁保护</li>
-<li>blockno#41 也是同理，只不过它被分配了一块，它的锁 #2 只能保护这一块</li>
-<li>与此同时，大锁保护的数据区仍然一直存在。通过 block cache 我们仍然能找到所有 buffer，虽然目前 #0、#2、#3 被其他 bucket 占有</li>
+<li>blockno#13 代表的是 0 号 bucket 的哈希链表，它被分配了两块
+buffer，它用自己的链表结构表示着，这两块 buffer 受到 0 号 bucket
+这把锁保护</li>
+<li>blockno#41 也是同理，只不过它被分配了一块，它的锁 #2
+只能保护这一块</li>
+<li>与此同时，大锁保护的数据区仍然一直存在。通过 block cache
+我们仍然能找到所有 buffer，虽然目前 #0、#2、#3 被其他 bucket 占有</li>
 </ul>
-<p>这种设计方案有什么好处呢？最大的好处就是避免竞争，每次我自己的 bucket 没有可用的块时，我就到公共数据区找，只要我能先抢到大锁，那么接下来我就独占整个公共数据区。这个时间段内其他人根本不可能进入 block cache，那就自然不可能发生我和你大家抢同一块 buffer 的离奇现象了，这就消除了 race condition</p>
-<p>但可惜的是，我在遵循这种思路设计的代码仍然无法将大锁访问量降至 500 以下，我不清楚是我代码设计的问题还是说，像 6w 次并发保持在 500 以下的大锁访问量压根就不可能，所以也有可能的是这个实验根本就不想我们使用大锁（毕竟实验要求有提到 “最理想的情况下大锁访问量为 0”）</p>
+<p>这种设计方案有什么好处呢？最大的好处就是避免竞争，每次我自己的 bucket
+没有可用的块时，我就到公共数据区找，只要我能先抢到大锁，那么接下来我就独占整个公共数据区。这个时间段内其他人根本不可能进入
+block cache，那就自然不可能发生我和你大家抢同一块 buffer
+的离奇现象了，这就消除了 race condition</p>
+<p>但可惜的是，我在遵循这种思路设计的代码仍然无法将大锁访问量降至 500
+以下，我不清楚是我代码设计的问题还是说，像 6w 次并发保持在 500
+以下的大锁访问量压根就不可能，所以也有可能的是这个实验根本就不想我们使用大锁（毕竟实验要求有提到
+"最理想的情况下大锁访问量为 0"）</p>
 <p>那么，这就引出第二种设计方案了</p>
-<h3 id="设计方案二：只使用小锁"><a class="header-anchor" href="#设计方案二：只使用小锁"></a>设计方案二：只使用小锁</h3>
+<h3 id="设计方案二只使用小锁">设计方案二：只使用小锁</h3>
 <p>设计思想如下</p>
-<p><img src="https://pic.imgdb.cn/item/625764f4239250f7c5323f5b.jpg" alt=""></p>
-<p>初始化的时候由其中一个哈希 bucket 持有所有的 buffer，随着程序运行趋于稳定，这个 bucket 链表的内存肯定会被分配出去，其他 bucket 都有机会拥有 buffer。最终就是所有 bucket 链表都大致上能均分全部的 buffer</p>
-<p>可能你会觉得这种策略一开始由 bucket#0 拥有所有 buffer，这不是和设计一的思路一样了吗？其他 bucket 没有可用块的时候，设计一是往公共的 block cache 寻找，那么现在往 bucket#0 寻找，不也是往一个固定的地方找吗？</p>
-<p>对于运行伊始，确实是这样。一开始所有 bucket# 都跑到 bucket#0 这里取 buffer 块。但是当出现一些分配和释放之后，一旦其他 bucket 链表 “抢” 到了块，那么以后涉及的分配就不只是 bucket#0 的事————比如，假设现在所有 bucket 都拥有至少一个块，那么我 blockno#41 代表的 bucket#2 链表如果没有可用块，它会先去 bucket#0 寻找可用块，如果找不到，再去 bucket#1，再找不到，就去 bucket#2…依此类推</p>
+<p><img
+src="https://pic.imgdb.cn/item/625764f4239250f7c5323f5b.jpg" /></p>
+<p>初始化的时候由其中一个哈希 bucket 持有所有的
+buffer，随着程序运行趋于稳定，这个 bucket
+链表的内存肯定会被分配出去，其他 bucket 都有机会拥有
+buffer。最终就是所有 bucket 链表都大致上能均分全部的 buffer</p>
+<p>可能你会觉得这种策略一开始由 bucket#0 拥有所有
+buffer，这不是和设计一的思路一样了吗？其他 bucket
+没有可用块的时候，设计一是往公共的 block cache 寻找，那么现在往 bucket#0
+寻找，不也是往一个固定的地方找吗？</p>
+<p>对于运行伊始，确实是这样。一开始所有 bucket# 都跑到 bucket#0 这里取
+buffer 块。但是当出现一些分配和释放之后，一旦其他 bucket 链表 "抢"
+到了块，那么以后涉及的分配就不只是 bucket#0 的事————比如，假设现在所有
+bucket 都拥有至少一个块，那么我 blockno#41 代表的 bucket#2
+链表如果没有可用块，它会先去 bucket#0 寻找可用块，如果找不到，再去
+bucket#1，再找不到，就去 bucket#2...依此类推</p>
 <p>到这个时候，设计二的高效率才体现出来。之前没可用块时，大家都挤到同一个地方找资源，现在大家都分散开来，到多个不同的地方找资源</p>
-<p>但是，设计二是有非常大的问题的，这就是前面提过的 “小锁易死锁” 的死锁</p>
-<p>那我怎么知道我自己设计的代码是否有死锁发生呢？以我的理解，死锁根本没办法用代码调试出来，毕竟进程的推进速度是随机的，你现在这个环境 PA 和 PB 发生死锁，下次可能就是 PC 和 PD 死锁了。那应该怎么做？我这里的方法是先画一个死锁的逻辑，然后跟着自己代码的逻辑一直走，看能不能走到画好的逻辑上。举个例子：</p>
-<p><img src="https://pic.imgdb.cn/item/62576bb9239250f7c5385105.jpg" alt=""></p>
-<p>这是一个很简单的两个进程的死锁模型，就是彼此持有彼此请求的资源————P1 持有 #1 锁，请求 #2 锁；而 P2 持有 #2 锁，请求 #1 锁</p>
-<p>此时要做的事情就是检查自己代码的逻辑：从 <code>binit()</code> 到 <code>bget()</code> 再到 <code>brelse()</code>，看看能不能走到死锁</p>
-<p>万一真有死锁的风险，应该怎么处理？这就涉及操作系统死锁八股文的知识了，你可以让它产生死锁，然后实现一个资源图简化的逻辑（这可以剥夺死锁进程的资源）；也可以采取一些其他手段避免死锁，当然银行家算法放在这里那可太复杂了。在这个 lab 里我也思考过死锁的问题，推荐可以参考以下的资料：</p>
+<p>但是，设计二是有非常大的问题的，这就是前面提过的 "小锁易死锁"
+的死锁</p>
+<p>那我怎么知道我自己设计的代码是否有死锁发生呢？以我的理解，死锁根本没办法用代码调试出来，毕竟进程的推进速度是随机的，你现在这个环境
+PA 和 PB 发生死锁，下次可能就是 PC 和 PD
+死锁了。那应该怎么做？我这里的方法是先画一个死锁的逻辑，然后跟着自己代码的逻辑一直走，看能不能走到画好的逻辑上。举个例子：</p>
+<p><img
+src="https://pic.imgdb.cn/item/62576bb9239250f7c5385105.jpg" /></p>
+<p>这是一个很简单的两个进程的死锁模型，就是彼此持有彼此请求的资源————P1
+持有 #1 锁，请求 #2 锁；而 P2 持有 #2 锁，请求 #1 锁</p>
+<p>此时要做的事情就是检查自己代码的逻辑：从 <code>binit()</code> 到
+<code>bget()</code> 再到 <code>brelse()</code>，看看能不能走到死锁</p>
+<p>万一真有死锁的风险，应该怎么处理？这就涉及操作系统死锁八股文的知识了，你可以让它产生死锁，然后实现一个资源图简化的逻辑（这可以剥夺死锁进程的资源）；也可以采取一些其他手段避免死锁，当然银行家算法放在这里那可太复杂了。在这个
+lab 里我也思考过死锁的问题，推荐可以参考以下的资料：</p>
 <ul>
-<li><a target="_blank" rel="noopener" href="https://fanxiao.tech/posts/MIT-6S081-notes/#106-lab-8-locks">死锁避免算法, can_lock()</a>：这位老哥提供了一个分配锁的策略，每个 bucket 链表只能申请一半范围内的锁。由于锁的申请范围缩小了一半，请求锁时发生冲突的可能也减少了。不过，我觉得虽然看起来确实可以减少请求锁时的冲突，但冲突机率再小也有冲突的可能，比如一半范围内的两把锁死锁也不是没可能。当然如果想验证这个算法正不正确，跟着它程序逻辑走一遍可能是个好方法，但毕竟要花一点点时间，所以只能说提供一种避免死锁的思路</li>
-<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/weijunji/p/xv6-study-12.html">公共区不加锁，发生竞争时再回退至公共区</a>：这种策略我觉得比较可取。思想就是当前 bucket 链没有可用块而需要到公共区 block cache 寻找时，由于没有上锁，势必会出现两个 bucket 链表同时寻找到同一个 buffer 的情况。但是因为 buffer 属于 <code>struct buf</code> 结构体，这个结构体本身带锁，这把锁保证了每次只有一个进程能进入 buffer。所以，虽然大家都找到同一个 buffer，但每次只允许一个进程使用 buffer，那么这个进程使用完后，<code>buf-&gt;refcnt</code> 字段是会被设为 1 的，通过这个字段就可以告诉下一个进程，这个 buffer 已经被使用过了，你赶紧回到上一步重新找另外的块————这就是 “冲突后回退” 的思想</li>
+<li><a
+target="_blank" rel="noopener" href="https://fanxiao.tech/posts/MIT-6S081-notes/#106-lab-8-locks">死锁避免算法,
+can_lock()</a>：这位老哥提供了一个分配锁的策略，每个 bucket
+链表只能申请一半范围内的锁。由于锁的申请范围缩小了一半，请求锁时发生冲突的可能也减少了。不过，我觉得虽然看起来确实可以减少请求锁时的冲突，但冲突机率再小也有冲突的可能，比如一半范围内的两把锁死锁也不是没可能。当然如果想验证这个算法正不正确，跟着它程序逻辑走一遍可能是个好方法，但毕竟要花一点点时间，所以只能说提供一种避免死锁的思路</li>
+<li><a
+target="_blank" rel="noopener" href="https://www.cnblogs.com/weijunji/p/xv6-study-12.html">公共区不加锁，发生竞争时再回退至公共区</a>：这种策略我觉得比较可取。思想就是当前
+bucket 链没有可用块而需要到公共区 block cache
+寻找时，由于没有上锁，势必会出现两个 bucket 链表同时寻找到同一个 buffer
+的情况。但是因为 buffer 属于 <code>struct buf</code>
+结构体，这个结构体本身带锁，这把锁保证了每次只有一个进程能进入
+buffer。所以，虽然大家都找到同一个 buffer，但每次只允许一个进程使用
+buffer，那么这个进程使用完后，<code>buf-&gt;refcnt</code> 字段是会被设为
+1 的，通过这个字段就可以告诉下一个进程，这个 buffer
+已经被使用过了，你赶紧回到上一步重新找另外的块————这就是 "冲突后回退"
+的思想</li>
 </ul>
-<p>但是呢，我在真正实现的时候没有使用任何的死锁预防手段，因为我发现这个 lab 有些窍门可以避免死锁————先遍历自己的链表有没有空闲块，再遍历其他人的链表，这就可以做到避免死锁。我们来设想一个实际的场景：</p>
-<p><img src="https://pic.imgdb.cn/item/62577393239250f7c5401b15.jpg" alt=""></p>
+<p>但是呢，我在真正实现的时候没有使用任何的死锁预防手段，因为我发现这个
+lab
+有些窍门可以避免死锁————先遍历自己的链表有没有空闲块，再遍历其他人的链表，这就可以做到避免死锁。我们来设想一个实际的场景：</p>
+<p><img
+src="https://pic.imgdb.cn/item/62577393239250f7c5401b15.jpg" /></p>
 <p>这还是上面那个最简单的两两死锁模型，现在思考先遍历自己的链表再遍历其他人的链表是否会发生死锁？</p>
-<p><img src="https://pic.imgdb.cn/item/62577512239250f7c541bdfb.jpg" alt=""></p>
-<p>如图所示，当前并发两个进程 P1 和 P2，P1 先遍历自己的链表，发现了可用的块 buffer#13。那此时 P2 能发现 P1 链表里这个块吗，答案是根本不可能，因为 P2 也会先找自己链表（这里会先找到 buffer#1）。那么换一个别的进程比如 P3，此时发现了 P1 可用的 buffer#13 呢？这确实可能发生，取决于具体的实现（如果你先请求其他 bucket 的锁，再去它的链表找可用块，那就不可能发生这种情况了），但也仅此而已。因为你别忘了访问 buffer#13 要先请求 bucket#1 这把锁，而这把锁由 P1 持有，那么也是 P1 先使用这个 buffer#13。总之，利用这个窍门可以避免死锁</p>
-<p>那么现在大锁小锁的设计思想都分享完了，接下来是一个细节的地方，那就是 <code>bpin()</code> 和 <code>bunpin()</code> 里面的大锁 <code>bcache.lock</code> 要怎么处理？</p>
-<p>如果不处理，那么调用这两个函数的时候肯定要请求大锁，这仍会使大锁访问量居高不下，所以也要取代这个大锁。那么用哈希 bucket 的小锁可以吗？还是要定义新的其他锁？</p>
-<p>答案是直接用哈希 bucket 小锁就够了，因为 <code>bpin()</code> 和 <code>bunpin()</code> 其实就是将块上的计数增加或减少，而每个 cached buffer 都有自己的块号，通过这个块号可以计算出哈希 bucket，这就找到对应的哈希链了，然后申请小锁就可以</p>
-<br>
-<h3 id="Solution-v21"><a class="header-anchor" href="#Solution-v21"></a>Solution</h3>
-<p>真正实现之前，有个<strong>非常非常踩坑的地方</strong>要说明的就是，一定要修改 <code>kernel/param.h</code> 里的宏 <code>FSSIZE</code>，改大一点，比如从 1000 改成 10000</p>
-<p>由于实验要求没有指出这一点，导致我在 <code>usertests</code> 的 <code>writebig</code> 测试点卡在 <code>PANIC: balloc: out of blocks</code> 两天多，这里可真的太坑了</p>
+<p><img
+src="https://pic.imgdb.cn/item/62577512239250f7c541bdfb.jpg" /></p>
+<p>如图所示，当前并发两个进程 P1 和 P2，P1
+先遍历自己的链表，发现了可用的块 buffer#13。那此时 P2 能发现 P1
+链表里这个块吗，答案是根本不可能，因为 P2 也会先找自己链表（这里会先找到
+buffer#1）。那么换一个别的进程比如 P3，此时发现了 P1 可用的 buffer#13
+呢？这确实可能发生，取决于具体的实现（如果你先请求其他 bucket
+的锁，再去它的链表找可用块，那就不可能发生这种情况了），但也仅此而已。因为你别忘了访问
+buffer#13 要先请求 bucket#1 这把锁，而这把锁由 P1 持有，那么也是 P1
+先使用这个 buffer#13。总之，利用这个窍门可以避免死锁</p>
+<p>那么现在大锁小锁的设计思想都分享完了，接下来是一个细节的地方，那就是
+<code>bpin()</code> 和 <code>bunpin()</code> 里面的大锁
+<code>bcache.lock</code> 要怎么处理？</p>
+<p>如果不处理，那么调用这两个函数的时候肯定要请求大锁，这仍会使大锁访问量居高不下，所以也要取代这个大锁。那么用哈希
+bucket 的小锁可以吗？还是要定义新的其他锁？</p>
+<p>答案是直接用哈希 bucket 小锁就够了，因为 <code>bpin()</code> 和
+<code>bunpin()</code> 其实就是将块上的计数增加或减少，而每个 cached
+buffer 都有自己的块号，通过这个块号可以计算出哈希
+bucket，这就找到对应的哈希链了，然后申请小锁就可以</p>
+<p><br></p>
+<h3 id="solution-1">Solution</h3>
+<p>真正实现之前，有个<strong>非常非常踩坑的地方</strong>要说明的就是，一定要修改
+<code>kernel/param.h</code> 里的宏 <code>FSSIZE</code>，改大一点，比如从
+1000 改成 10000</p>
+<p>由于实验要求没有指出这一点，导致我在 <code>usertests</code> 的
+<code>writebig</code> 测试点卡在
+<code>PANIC: balloc: out of blocks</code> 两天多，这里可真的太坑了</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// path: kernel/param.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> FSSIZE       10000  <span class="comment">// size of file system in blocks</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/buf.h</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">buf</span> &#123;</span></span><br><span class="line">    <span class="comment">// lab lock</span></span><br><span class="line">    uint tickstamp;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> valid;   <span class="comment">// has data been read from disk?</span></span><br><span class="line">    <span class="type">int</span> disk;    <span class="comment">// does disk &quot;own&quot; buf?</span></span><br><span class="line">    uint dev;</span><br><span class="line">    uint blockno;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">sleeplock</span> <span class="title">lock</span>;</span></span><br><span class="line">    uint refcnt;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">prev</span>;</span> <span class="comment">// LRU cache list</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">next</span>;</span></span><br><span class="line">    uchar data[BSIZE];</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// path: kernel/bio.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PRIME 13</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">hash_t</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">spinlock</span> <span class="title">lock</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> <span class="title">list</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">hash_t</span> <span class="title">hash</span>[<span class="title">PRIME</span>];</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> <span class="title">buf</span>[<span class="title">NBUF</span>];</span></span><br><span class="line">&#125; bcache;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">binit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">b</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// lab lock</span></span><br><span class="line">    <span class="comment">// 初始化哈希表的🔒</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; PRIME; ++i) &#123;</span><br><span class="line">        initlock(&amp;hash[i].lock, <span class="string">&quot;bcache&quot;</span>);</span><br><span class="line">        hash[i].<span class="built_in">list</span>.next = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span>(b = bcache.buf; b &lt; bcache.buf+NBUF; b++)&#123;</span><br><span class="line">        <span class="comment">// 初始化每个 cached buffer 的🔒</span></span><br><span class="line">        initsleeplock(&amp;b-&gt;lock, <span class="string">&quot;buffer&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 标识这个 buffer 属于哪个哈希 bucket</span></span><br><span class="line">        <span class="comment">// bget() eviction 阶段，遍历全部 cached buffer 时</span></span><br><span class="line">        <span class="comment">// 不使用大锁取而代之的是细粒度的锁</span></span><br><span class="line">        b-&gt;blockno = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 将全部 RENBUF 个的 cached buffer 数组都给第一个哈希 bucket</span></span><br><span class="line">        b-&gt;next = hash[<span class="number">0</span>].<span class="built_in">list</span>.next;</span><br><span class="line">        hash[<span class="number">0</span>].<span class="built_in">list</span>.next = b;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// bget() 会调用的一个函数封装</span></span><br><span class="line"><span class="comment">// 淘汰某个块，这个块由最小的 ticks 指出，传入形参 rob，表示需要抢走</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">struct</span> buf *</span><br><span class="line"><span class="title function_">subbget</span><span class="params">(<span class="keyword">struct</span> buf *rob, uint dev, uint blockno)</span> &#123;</span><br><span class="line">    <span class="type">int</span> bucket = blockno % PRIME;</span><br><span class="line">    <span class="comment">//  victim 是待抢走的块 rob 所在的哈希链</span></span><br><span class="line">    <span class="type">int</span> victim = rob-&gt;blockno % PRIME;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 抢完 buffer 的时间点这个 buffer 从现在开始投入使用</span></span><br><span class="line">    rob-&gt;tickstamp = ticks;</span><br><span class="line">    rob-&gt;dev = dev;</span><br><span class="line">    rob-&gt;blockno = blockno;</span><br><span class="line">    rob-&gt;valid = <span class="number">0</span>;</span><br><span class="line">    rob-&gt;refcnt = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (victim != bucket) &#123;</span><br><span class="line">        <span class="comment">// 被抢的哈希链，断链</span></span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">pre</span> =</span> &amp;hash[victim].<span class="built_in">list</span>;</span><br><span class="line">        <span class="keyword">for</span> (; pre-&gt;next != rob; pre = pre-&gt;next);</span><br><span class="line">        pre-&gt;next = rob-&gt;next;</span><br><span class="line">        release(&amp;hash[victim].lock);</span><br><span class="line">        <span class="comment">// 当前这个 bucket 抢完很开心，加了一块 buffer 到自己链头</span></span><br><span class="line">        rob-&gt;next = hash[bucket].<span class="built_in">list</span>.next;</span><br><span class="line">        hash[bucket].<span class="built_in">list</span>.next = rob;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    release(&amp;hash[bucket].lock);</span><br><span class="line">    acquiresleep(&amp;rob-&gt;lock);</span><br><span class="line">    <span class="keyword">return</span> rob;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">struct</span> buf*</span><br><span class="line"><span class="title function_">bget</span><span class="params">(uint dev, uint blockno)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">b</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// Is the block already cached?</span></span><br><span class="line">    <span class="type">int</span> bucket = blockno % PRIME;</span><br><span class="line">    acquire(&amp;hash[bucket].lock);</span><br><span class="line">    <span class="keyword">for</span>(b = hash[bucket].<span class="built_in">list</span>.next; b != <span class="number">0</span>; b = b-&gt;next)&#123;</span><br><span class="line">        <span class="keyword">if</span>(b-&gt;dev == dev &amp;&amp; b-&gt;blockno == blockno)&#123;</span><br><span class="line">            b-&gt;refcnt++;</span><br><span class="line">            release(&amp;hash[bucket].lock);</span><br><span class="line">            acquiresleep(&amp;b-&gt;lock);</span><br><span class="line">            <span class="keyword">return</span> b;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Not cached.</span></span><br><span class="line">    <span class="comment">// Recycle the least recently used (LRU) unused buffer.</span></span><br><span class="line">    <span class="comment">// 缓冲不命中时，需要找最久以前（即最小）的 ticks</span></span><br><span class="line">    <span class="comment">// 遍历所有的哈希链表，找出 ticks 最小那块</span></span><br><span class="line">    <span class="comment">// do-while() 可以先检查自己的哈希链表</span></span><br><span class="line">    <span class="type">int</span> i = bucket;</span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">        <span class="comment">// 如果当前遍历的哈希链是 bucket，那就不要再上自己的锁</span></span><br><span class="line">        <span class="keyword">if</span> (i != bucket)    acquire(&amp;hash[i].lock);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 遍历当前 bucket 所在的链表，找出 ticks 最小</span></span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">buf</span> *<span class="title">minibuf</span> =</span> <span class="number">0</span>;</span><br><span class="line">        uint mini = <span class="number">0xffffffff</span>;</span><br><span class="line">        <span class="keyword">for</span> (b = hash[i].<span class="built_in">list</span>.next; b != <span class="number">0</span>; b = b-&gt;next) &#123;</span><br><span class="line">            <span class="keyword">if</span> (b-&gt;refcnt == <span class="number">0</span> &amp;&amp; mini &gt; b-&gt;tickstamp) &#123;</span><br><span class="line">                mini = b-&gt;tickstamp;</span><br><span class="line">                minibuf = b;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 在当前哈希链找到，那就直接 &quot;抢&quot; 走，然后就可以返回了</span></span><br><span class="line">        <span class="keyword">if</span> (minibuf != <span class="number">0</span>)</span><br><span class="line">            <span class="keyword">return</span> subbget(minibuf, dev, blockno);</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (i != bucket)    release(&amp;hash[i].lock);</span><br><span class="line">        i = (i + <span class="number">1</span>) % PRIME;</span><br><span class="line">    &#125; <span class="keyword">while</span> (i != bucket);</span><br><span class="line"></span><br><span class="line">    panic(<span class="string">&quot;bget: no buffers&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">brelse</span><span class="params">(<span class="keyword">struct</span> buf *b)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(!holdingsleep(&amp;b-&gt;lock))</span><br><span class="line">        panic(<span class="string">&quot;brelse&quot;</span>);</span><br><span class="line"></span><br><span class="line">    releasesleep(&amp;b-&gt;lock);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// lab lock</span></span><br><span class="line">    <span class="type">int</span> bucket = b-&gt;blockno % PRIME;</span><br><span class="line">    acquire(&amp;hash[bucket].lock);</span><br><span class="line"></span><br><span class="line">    b-&gt;refcnt--;</span><br><span class="line">    <span class="comment">// 只需将 ticks 清零，0 必是最快被 LRU 淘汰的</span></span><br><span class="line">    <span class="keyword">if</span> (b-&gt;refcnt == <span class="number">0</span>)    b-&gt;tickstamp = ticks;</span><br><span class="line">    </span><br><span class="line">    release(&amp;hash[bucket].lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">bpin</span><span class="params">(<span class="keyword">struct</span> buf *b)</span> &#123;</span><br><span class="line">    <span class="type">int</span> bucket = b-&gt;blockno % PRIME;</span><br><span class="line">    acquire(&amp;hash[bucket].lock);</span><br><span class="line">    b-&gt;refcnt++;</span><br><span class="line">    release(&amp;hash[bucket].lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">bunpin</span><span class="params">(<span class="keyword">struct</span> buf *b)</span> &#123;</span><br><span class="line">    <span class="type">int</span> bucket = b-&gt;blockno % PRIME;</span><br><span class="line">    acquire(&amp;hash[bucket].lock);</span><br><span class="line">    b-&gt;refcnt--;</span><br><span class="line">    release(&amp;hash[bucket].lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<br>
-<h2 id="写于最后-v2"><a class="header-anchor" href="#写于最后-v2"></a>写于最后</h2>
+<p><br></p>
+<h2 id="写于最后">写于最后</h2>
 <p>这可是我最花时间的 lab 了，共耗时 32h27m</p>
 
     </article>
@@ -688,7 +909,7 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ABOUT-v3"><span class="toc-number">1.</span> <span class="toc-text">ABOUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#INTRO-v5"><span class="toc-number">2.</span> <span class="toc-text">INTRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Memory-allocator-MODERATE"><span class="toc-number">3.</span> <span class="toc-text">Memory allocator (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%EF%BC%88%E8%AF%91%EF%BC%89%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89-v2"><span class="toc-number">3.1.</span> <span class="toc-text">实验要求（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%80%9D%E8%B7%AF-v2"><span class="toc-number">3.2.</span> <span class="toc-text">实验思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v20"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Buffer-cache-HARD"><span class="toc-number">4.</span> <span class="toc-text">Buffer cache (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%EF%BC%88%E8%AF%91%EF%BC%89%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89-v3"><span class="toc-number">4.1.</span> <span class="toc-text">实验要求（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA%EF%BC%88%E8%AF%91%EF%BC%89%EF%BC%88%E8%8A%82%E9%80%89%EF%BC%89-v2"><span class="toc-number">4.2.</span> <span class="toc-text">实验提示（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%80%9D%E8%B7%AF-v3"><span class="toc-number">4.3.</span> <span class="toc-text">实验思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%A1%88%E4%B8%80%EF%BC%9A%E5%BC%95%E5%85%A5%E5%B0%8F%E9%94%81%E5%90%8C%E6%97%B6%EF%BC%8C%E4%BF%9D%E7%95%99%E5%A4%A7%E9%94%81%E7%9A%84%E9%83%A8%E5%88%86%E4%BD%BF%E7%94%A8"><span class="toc-number">4.4.</span> <span class="toc-text">设计方案一：引入小锁同时，保留大锁的部分使用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%A1%88%E4%BA%8C%EF%BC%9A%E5%8F%AA%E4%BD%BF%E7%94%A8%E5%B0%8F%E9%94%81"><span class="toc-number">4.5.</span> <span class="toc-text">设计方案二：只使用小锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Solution-v21"><span class="toc-number">4.6.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E4%BA%8E%E6%9C%80%E5%90%8E-v2"><span class="toc-number">5.</span> <span class="toc-text">写于最后</span></a></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#about"><span class="toc-number">1.</span> <span class="toc-text">ABOUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#intro"><span class="toc-number">2.</span> <span class="toc-text">INTRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#memory-allocator-moderate"><span class="toc-number">3.</span> <span class="toc-text">Memory allocator (MODERATE)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%E8%AF%91%E8%8A%82%E9%80%89"><span class="toc-number">3.1.</span> <span class="toc-text">实验要求（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%80%9D%E8%B7%AF"><span class="toc-number">3.2.</span> <span class="toc-text">实验思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution"><span class="toc-number">3.3.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#buffer-cache-hard"><span class="toc-number">4.</span> <span class="toc-text">Buffer cache (HARD)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E8%A6%81%E6%B1%82%E8%AF%91%E8%8A%82%E9%80%89-1"><span class="toc-number">4.1.</span> <span class="toc-text">实验要求（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%8F%90%E7%A4%BA%E8%AF%91%E8%8A%82%E9%80%89"><span class="toc-number">4.2.</span> <span class="toc-text">实验提示（译）（节选）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%80%9D%E8%B7%AF-1"><span class="toc-number">4.3.</span> <span class="toc-text">实验思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%A1%88%E4%B8%80%E5%BC%95%E5%85%A5%E5%B0%8F%E9%94%81%E5%90%8C%E6%97%B6%E4%BF%9D%E7%95%99%E5%A4%A7%E9%94%81%E7%9A%84%E9%83%A8%E5%88%86%E4%BD%BF%E7%94%A8"><span class="toc-number">4.4.</span> <span class="toc-text">设计方案一：引入小锁同时，保留大锁的部分使用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%A1%88%E4%BA%8C%E5%8F%AA%E4%BD%BF%E7%94%A8%E5%B0%8F%E9%94%81"><span class="toc-number">4.5.</span> <span class="toc-text">设计方案二：只使用小锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#solution-1"><span class="toc-number">4.6.</span> <span class="toc-text">Solution</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E4%BA%8E%E6%9C%80%E5%90%8E"><span class="toc-number">5.</span> <span class="toc-text">写于最后</span></a></li></ol>
             </div>
         <!-- sidebar -->
         <div class="sidebar sidebar-hide">
@@ -727,15 +948,20 @@
         
         
         
+        
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 27
+        Total : 28
         </div>
         <!-- search  -->
     </div>
     <div class="post-archive">
             <div class="archive-year"> 2025 </div>
             <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2025/06/14/ebpf-1/">通过 libbpf-bootstrap 创建 CO-RE eBPF 项目</a>
+        </li>
         <li class="archive-post-item">
             <span class="archive-post-date">03/02</span>
             <a class="archive-post-title" href="/2025/03/02/github-index/">美化 Github 主页</a>
@@ -859,13 +1085,17 @@
 
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
-            <span class="sidebar-tag-name" data-tags="hoo">
+            <span class="sidebar-tag-name" data-tags="eBPF">
                 <span class="iconfont-archer">&#xe606;</span>
-                hoo
+                eBPF
             </span>
             <span class="sidebar-tag-name" data-tags="Blogs">
                 <span class="iconfont-archer">&#xe606;</span>
                 Blogs
+            </span>
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
             </span>
             <span class="sidebar-tag-name" data-tags="translation">
                 <span class="iconfont-archer">&#xe606;</span>

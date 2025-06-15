@@ -17,22 +17,11 @@
 <meta property="og:site_name">
 <meta property="og:description" content="设备驱动作为宏内核中占据主要的一个部分，现代操作系统会包括大量设备驱动。但在 hoo 里面，只实现了四个能驱动任务运行的驱动，分别是 PIC、PIT、磁盘驱动和键盘驱动">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a1cae3d0e0a243d4fbc8b7.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a204f6d0e0a243d4fbd060.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a206afd0e0a243d4fbd07c.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a2082ad0e0a243d4fbd0ac.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a20aefd0e0a243d4fbd0cc.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a20d8bd0e0a243d4fbd100.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a20f3bd0e0a243d4fbd11c.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a21614d0e0a243d4fbd1ec.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a322a5d0e0a243d4fbf058.png">
-<meta property="og:image" content="https://pic1.imgdb.cn/item/67a5a631d0e0a243d4fc7957.png">
 <meta property="article:published_time" content="2025-02-05T03:12:46.000Z">
 <meta property="article:modified_time" content="2025-03-03T13:26:56.371Z">
 <meta property="article:author" content="Horbyn">
 <meta property="article:tag" content="hoo">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://pic1.imgdb.cn/item/67a1cae3d0e0a243d4fbc8b7.png">
     <meta http-equiv="Cache-control" content="no-cache">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <link rel="icon" href="/avatar/link.PNG">
@@ -455,179 +444,351 @@
             <div class="container container-unloaded">
                 <main class="main post-page">
     <article class="article-entry">
-        <h1>PIC</h1>
-<p><img src="https://pic1.imgdb.cn/item/67a1cae3d0e0a243d4fbc8b7.png" alt=""></p>
-<p>PIC 全称 Programmable Interrupt Controller，可编程的中断控制器，<code>x86</code> 基础设施是 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/8259_PIC">8259(A) 芯片</a>。另外还有一种控制器是 APIC，专门用于多处理器系统，所以 <code>hoo</code> 只是一个单处理器内核</p>
+        <h1 id="pic">PIC</h1>
+<p><img
+src="https://pic1.imgdb.cn/item/67a1cae3d0e0a243d4fbc8b7.png" /></p>
+<p>PIC 全称 Programmable Interrupt
+Controller，可编程的中断控制器，<code>x86</code> 基础设施是 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/8259_PIC">8259(A)
+芯片</a>。另外还有一种控制器是 APIC，专门用于多处理器系统，所以
+<code>hoo</code> 只是一个单处理器内核</p>
 <p>8259A 内部有两组寄存器：</p>
 <ul>
-<li>初始化命令寄存器 ICW（只设置一次），写入顺序 ICW1 -&gt; ICW2 -&gt; ICW3 -&gt; ICW4</li>
+<li>初始化命令寄存器 ICW（只设置一次），写入顺序 ICW1 -&gt; ICW2 -&gt;
+ICW3 -&gt; ICW4</li>
 <li>操作命令寄存器 OCW（可多次设置），无写入顺序要求</li>
 </ul>
-<p><img src="https://pic1.imgdb.cn/item/67a204f6d0e0a243d4fbd060.png" alt=""></p>
-<p>ICW1 用来初始化 8259A 的连接方式（单片还是多片），以及中断信号的触发方式：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a204f6d0e0a243d4fbd060.png" /></p>
+<p>ICW1 用来初始化 8259A
+的连接方式（单片还是多片），以及中断信号的触发方式：</p>
 <ul>
 <li>边缘触发：信号的上升或下降就会触发，并且触发后会被清除</li>
 <li>电平触发：信号出于高电平就会触发，并且只要保持高电平，中断就不断被触发</li>
 </ul>
-<p><img src="https://pic1.imgdb.cn/item/67a206afd0e0a243d4fbd07c.png" alt=""></p>
-<p>ICW2 用来设置起始的中断向量号（设置 IRQ0 是哪个中断向量号），关于什么是中断向量号可以参考《操作系统真象还原》7.5.1 图 7-11：</p>
-<p><img src="https://pic1.imgdb.cn/item/67a2082ad0e0a243d4fbd0ac.png" alt=""></p>
-<p><code>x86</code> 保留的 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/Exceptions">异常</a> 共 32 个，索引从 0 至 31，所以 IRQ0 一般都是从 32 开始，然后 IRQ1 为 33，以此类推。ICW2 只需要填写高 5 位，也就是说任意数字都是 8 的倍数</p>
-<p><img src="https://pic1.imgdb.cn/item/67a20aefd0e0a243d4fbd0cc.png" alt=""></p>
-<p>ICW3 是级联（即需要使用多片）才使用，用来设置主片和从片用哪个 IRQ 互连。主片置位的比特位表示引出从片（比如 0x04 表示比特位 2 置位，使用 IRQ2 用来引出从片）；从片只使用最低 3 个比特位，低 3 位的数值表示级联的 IRQ 引脚（比如 0x02 表示 <code>0000_0010</code>，表示从片通过 IRQ2 与主片相连）</p>
-<p><img src="https://pic1.imgdb.cn/item/67a20d8bd0e0a243d4fbd100.png" alt=""></p>
-<p>ICW4 是杂项设置，只需要关注 AEOI 位，其他不重要。AEOI 的自动和非自动是指结束中断的方式，非自动表示处理器每次接收到中断信号都要响应一个 EOI 信号让 8259A 芯片知道处理器已经处理了该中断；自动则表示处理器无需干预中断过程，结束中断的权利完完全全在 8259A 芯片这里</p>
-<p><img src="https://pic1.imgdb.cn/item/67a20f3bd0e0a243d4fbd11c.png" alt=""></p>
-<p>OCW1 用来屏蔽中断信号，就是说不将指定的中断信号上报给处理器。M0 ～ M7 对应 IRQ0 ～ IRQ7，置位的比特位就表示对应的 IRQ 上的中断信号被屏蔽了</p>
-<p>而 OCW2 和 OCW3 和非自动结束中断信号有关，<code>hoo</code> 使用的是自动结束，所以就略过了，代码详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/driver.c#L11">kern/module/driver.c</a></p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a206afd0e0a243d4fbd07c.png" /></p>
+<p>ICW2 用来设置起始的中断向量号（设置 IRQ0
+是哪个中断向量号），关于什么是中断向量号可以参考《操作系统真象还原》7.5.1
+图 7-11：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a2082ad0e0a243d4fbd0ac.png" /></p>
+<p><code>x86</code> 保留的 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Exceptions">异常</a> 共 32 个，索引从 0 至
+31，所以 IRQ0 一般都是从 32 开始，然后 IRQ1 为 33，以此类推。ICW2
+只需要填写高 5 位，也就是说任意数字都是 8 的倍数</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a20aefd0e0a243d4fbd0cc.png" /></p>
+<p>ICW3 是级联（即需要使用多片）才使用，用来设置主片和从片用哪个 IRQ
+互连。主片置位的比特位表示引出从片（比如 0x04 表示比特位 2 置位，使用
+IRQ2 用来引出从片）；从片只使用最低 3 个比特位，低 3 位的数值表示级联的
+IRQ 引脚（比如 0x02 表示 <code>0000_0010</code>，表示从片通过 IRQ2
+与主片相连）</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a20d8bd0e0a243d4fbd100.png" /></p>
+<p>ICW4 是杂项设置，只需要关注 AEOI 位，其他不重要。AEOI
+的自动和非自动是指结束中断的方式，非自动表示处理器每次接收到中断信号都要响应一个
+EOI 信号让 8259A
+芯片知道处理器已经处理了该中断；自动则表示处理器无需干预中断过程，结束中断的权利完完全全在
+8259A 芯片这里</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a20f3bd0e0a243d4fbd11c.png" /></p>
+<p>OCW1 用来屏蔽中断信号，就是说不将指定的中断信号上报给处理器。M0 ～ M7
+对应 IRQ0 ～ IRQ7，置位的比特位就表示对应的 IRQ 上的中断信号被屏蔽了</p>
+<p>而 OCW2 和 OCW3 和非自动结束中断信号有关，<code>hoo</code>
+使用的是自动结束，所以就略过了，代码详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/driver.c#L11">kern/module/driver.c</a></p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> ICW1_ICW4 1</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ICW4_AUTO 2</span></span><br><span class="line"></span><br><span class="line">set_icw1(ICW1_ICW4);</span><br><span class="line">set_icw2(<span class="number">0x20</span>, <span class="number">0x28</span>);</span><br><span class="line">set_icw3(<span class="number">2</span>);</span><br><span class="line">set_icw4(ICW4_AUTO);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> IRQ_TIMER    0</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> IRQ_KEYBOARD 1</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> IRQ_CASCADE  2</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> IRQ_ATA1     0xe</span></span><br><span class="line"></span><br><span class="line">enable_mask_ocw1(IRQ_TIMER);    <span class="comment">// irq0</span></span><br><span class="line">enable_mask_ocw1(IRQ_KEYBOARD); <span class="comment">// irq1</span></span><br><span class="line">enable_mask_ocw1(IRQ_CASCADE);  <span class="comment">// irq2</span></span><br><span class="line">enable_mask_ocw1(IRQ_ATA1);     <span class="comment">// irq14</span></span><br></pre></td></tr></table></figure>
 <p><code>hoo</code> 为：</p>
 <ul>
-<li>ICW1 设置了 <code>0000_0001</code>，对应到命令字即边缘触发、需要从片</li>
+<li>ICW1 设置了
+<code>0000_0001</code>，对应到命令字即边缘触发、需要从片</li>
 <li>ICW2 设置了主片 IRQ0 从 32 开始，从片 IRQ0 从 40 开始</li>
 <li>ICW3 设置了主片的 IRQ2 用作级联</li>
 <li>ICW4 设置了 <code>0000_0010</code>，对应到命令字即自动结束中断</li>
-<li>OCW1 放行了 IRQ0、IRQ1、IRQ2 和 IRQ14，分别表示接收时间片中断、键盘中断和 ATA 硬盘中断</li>
+<li>OCW1 放行了 IRQ0、IRQ1、IRQ2 和
+IRQ14，分别表示接收时间片中断、键盘中断和 ATA 硬盘中断</li>
 </ul>
-<h1>PIT</h1>
-<p>PIT 全称 Programmable Interval Timer，可编程的时间间隔计时器，<code>x86</code> 基础设施是 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/Programmable_Interval_Timer">8253 芯片</a></p>
-<p>8253 芯片内部包含一个控制字寄存器，通过 <code>0x43</code> 端口访问</p>
-<p><img src="https://pic1.imgdb.cn/item/67a21614d0e0a243d4fbd1ec.png" alt=""></p>
+<h1 id="pit">PIT</h1>
+<p>PIT 全称 Programmable Interval
+Timer，可编程的时间间隔计时器，<code>x86</code> 基础设施是 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/Programmable_Interval_Timer">8253
+芯片</a></p>
+<p>8253 芯片内部包含一个控制字寄存器，通过 <code>0x43</code>
+端口访问</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a21614d0e0a243d4fbd1ec.png" /></p>
 <p>SC 位是选择通道 Select Channel 的缩写，通道 0、1、2 的区别如下：</p>
 <ul>
 <li>channel 0：第一个计数器，通常用于生成定时中断</li>
 <li>channel 1：第二个计算器，通常用于特定任务的计时</li>
 <li>channel 2：第三个计算器，通常用于音频输出</li>
 </ul>
-<p>3 个计数器的工作频率均是 1.19318 Mhz，即一秒内会有 1193182 次脉冲信号。来一次脉冲则计数器会减 1，当计数器减到 0，8253 芯片就会输出一个中断信号</p>
-<p>一秒内发出多少个输出信号取决于计数器的值变成 0 有多快（初始值越小，则倒计时到 0 就越快）。例如默认下初始值为 65536，则一秒内发出信号次数为 1193182 / 65536 约等于 18.206，即意味着中断信号频率为 18.206 Hz。换句话说，当希望一秒内发出 1000 次信号（频率 100 Hz），通过 1193182 / 1000 就可以计算出来初始值应该为 1193</p>
-<p>如果使用第一个计数器，初始值需要写入 <code>0x40</code> 端口；要使用第二个计数器则是 <code>0x41</code>；第三个是 <code>0x42</code></p>
-<p><code>hoo</code> 的实现详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/driver.c#L57">kern/module/driver.c</a>：</p>
+<p>3 个计数器的工作频率均是 1.19318 Mhz，即一秒内会有 1193182
+次脉冲信号。来一次脉冲则计数器会减 1，当计数器减到 0，8253
+芯片就会输出一个中断信号</p>
+<p>一秒内发出多少个输出信号取决于计数器的值变成 0
+有多快（初始值越小，则倒计时到 0 就越快）。例如默认下初始值为
+65536，则一秒内发出信号次数为 1193182 / 65536 约等于
+18.206，即意味着中断信号频率为 18.206 Hz。换句话说，当希望一秒内发出
+1000 次信号（频率 100 Hz），通过 1193182 / 1000
+就可以计算出来初始值应该为 1193</p>
+<p>如果使用第一个计数器，初始值需要写入 <code>0x40</code>
+端口；要使用第二个计数器则是 <code>0x41</code>；第三个是
+<code>0x42</code></p>
+<p><code>hoo</code> 的实现详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/module/driver.c#L57">kern/module/driver.c</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> SC_CHANNEL0   0</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> LOWHIGHBYTE   48</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> M3            6</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BINARY        0</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TICKS_PER_SEC 1000</span></span><br><span class="line"></span><br><span class="line">set_command(SC_CHANNEL0, LOWHIGHBYTE, M3, BINARY);</span><br><span class="line">set_counter(TICKS_PER_SEC);</span><br></pre></td></tr></table></figure>
 <p>含义为：</p>
 <ul>
-<li>控制字：<code>0011_0100</code> 表示使用 channel 0、读写顺序为先低字节再高字节、工作方式为方式 2（周期性产生中断信号）、二进制格式</li>
+<li>控制字：<code>0011_0100</code> 表示使用 channel
+0、读写顺序为先低字节再高字节、工作方式为方式
+2（周期性产生中断信号）、二进制格式</li>
 <li>初始值：频率为 1000，则写入初始值为 1193</li>
 </ul>
-<h1>ATA</h1>
-<p>ATA（Advanced Technology Attachment）是一个电气标准，用来规定 ATA 设备（比如硬盘）之间的连接情况，IDE 标准是旧的名称</p>
-<p>从软件角度来看，硬盘包括了硬盘本身和硬盘控制器，ATA 驱动可视为对硬盘控制器的编程，编程方式非常繁琐，可以参考 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/ATA_PIO_Mode">OSDev ATA PIO Mode</a> 或其他资料，以下是 <code>hoo</code> 的实现思路</p>
-<h2 id="ATA-设备检测"><a class="header-anchor" href="#ATA-设备检测"></a>ATA 设备检测</h2>
-<p>主要利用 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/ATA_PIO_Mode#IDENTIFY_command">IDENTIFY 命令</a>，该命令会读取出来一个 512 字节的数据，准确来说，这 512 字节数据是一个结构体，该结构体被称为 IDENTIFY DEVICE，详见 <a target="_blank" rel="noopener" href="https://people.freebsd.org/~imp/asiabsdcon2015/works/d2161r5-ATAATAPI_Command_Set_-_3.pdf">《ATA/ATAPI Command Set - 3 (ACS-3)》，7.12.1 一章表格 45</a>。对于一个不太复杂的 ATA 驱动来说，大部分字段都可以忽略，因此 <code>hoo</code> 仅定义了部分字段，详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_identify.h#L26">kern/driver/ata/ata_identify.h</a>：</p>
+<h1 id="ata">ATA</h1>
+<p>ATA（Advanced Technology Attachment）是一个电气标准，用来规定 ATA
+设备（比如硬盘）之间的连接情况，IDE 标准是旧的名称</p>
+<p>从软件角度来看，硬盘包括了硬盘本身和硬盘控制器，ATA
+驱动可视为对硬盘控制器的编程，编程方式非常繁琐，可以参考 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/ATA_PIO_Mode">OSDev ATA PIO Mode</a>
+或其他资料，以下是 <code>hoo</code> 的实现思路</p>
+<h2 id="ata-设备检测">ATA 设备检测</h2>
+<p>主要利用 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/ATA_PIO_Mode#IDENTIFY_command">IDENTIFY
+命令</a>，该命令会读取出来一个 512 字节的数据，准确来说，这 512
+字节数据是一个结构体，该结构体被称为 IDENTIFY DEVICE，详见 <a
+target="_blank" rel="noopener" href="https://people.freebsd.org/~imp/asiabsdcon2015/works/d2161r5-ATAATAPI_Command_Set_-_3.pdf">《ATA/ATAPI
+Command Set - 3 (ACS-3)》，7.12.1 一章表格 45</a>。对于一个不太复杂的
+ATA 驱动来说，大部分字段都可以忽略，因此 <code>hoo</code>
+仅定义了部分字段，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_identify.h#L26">kern/driver/ata/ata_identify.h</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 序列号</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ata_serial_number</span> &#123;</span></span><br><span class="line">    <span class="type">uint16_t</span> serial_number_[<span class="number">10</span>];</span><br><span class="line">&#125; <span class="type">ataser_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 模式号</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ata_model_number</span> &#123;</span></span><br><span class="line">    <span class="type">uint16_t</span> model_number_[<span class="number">20</span>];</span><br><span class="line">&#125; <span class="type">atamod_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// IDENTIFY DATA</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ata_identify_data</span> &#123;</span></span><br><span class="line">    <span class="type">uint16_t</span> :<span class="number">15</span>;</span><br><span class="line">    <span class="comment">// 通用配置</span></span><br><span class="line">    <span class="type">uint16_t</span> word0_ :<span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="type">uint16_t</span> word1_9_[<span class="number">9</span>];</span><br><span class="line">    <span class="comment">// 序列号</span></span><br><span class="line">    <span class="type">ataser_t</span> word10_19_;</span><br><span class="line"></span><br><span class="line">    <span class="type">uint16_t</span> word20_26_[<span class="number">7</span>];</span><br><span class="line">    <span class="comment">// 设备模式号</span></span><br><span class="line">    <span class="type">atamod_t</span> word27_46_;</span><br><span class="line"></span><br><span class="line">    <span class="type">uint16_t</span> word47_59_[<span class="number">13</span>];</span><br><span class="line">    <span class="comment">// 硬盘扇区总数</span></span><br><span class="line">    <span class="type">uint16_t</span> word60_61_[<span class="number">2</span>];</span><br><span class="line"></span><br><span class="line">    <span class="type">uint16_t</span> word62_255_[<span class="number">194</span>];</span><br><span class="line">&#125; <span class="type">ataid_t</span>;</span><br></pre></td></tr></table></figure>
-<p><code>hoo</code> 最多支持两个 ATA 通道（可以视为主板上最多有两个 ATA 插槽），分别是 Primary 和 Secondary 通道，由于每个通道都可以支持主盘（master）和从盘（slave），因此 <code>hoo</code> 最多支持 4 个 ATA 设备</p>
-<p>Primary 通道的数据端口为 <code>0x1f0</code> ～ <code>0x1f7</code>，控制端口为 <code>0x3f6</code>；Secondary 通道的数据端口为 <code>0x170</code> ～ <code>0x177</code>，控制端口为 <code>0x376</code></p>
-<p>读取 IDENTIFY DATA 逻辑详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L123">kern/driver/ata/ata_device.c</a>，以下代码片段有删减，并且仅仅是从 Primary 通道中读取：</p>
+<p><code>hoo</code> 最多支持两个 ATA 通道（可以视为主板上最多有两个 ATA
+插槽），分别是 Primary 和 Secondary
+通道，由于每个通道都可以支持主盘（master）和从盘（slave），因此
+<code>hoo</code> 最多支持 4 个 ATA 设备</p>
+<p>Primary 通道的数据端口为 <code>0x1f0</code> ～
+<code>0x1f7</code>，控制端口为 <code>0x3f6</code>；Secondary
+通道的数据端口为 <code>0x170</code> ～ <code>0x177</code>，控制端口为
+<code>0x376</code></p>
+<p>读取 IDENTIFY DATA 逻辑详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L123">kern/driver/ata/ata_device.c</a>，以下代码片段有删减，并且仅仅是从
+Primary 通道中读取：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_CMD_IO_IDENTIFY           0xec</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_IO_RW_OFFSET_DATA         0x00</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_IO_RW_OFFSET_DRIVE_SELECT 0x06</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_IO_W_OFFSET_COMMAND       0x07</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_IO_R_OFFSET_STATUS        ATA_IO_W_OFFSET_COMMAND</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_STATUS_BSY                0x80</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_STATUS_DRQ                0x08</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_STATUS_ERR                0x01</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// helper functions</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">uint8_t</span></span><br><span class="line"><span class="title function_">inb</span><span class="params">(<span class="type">uint16_t</span> port)</span> &#123;</span><br><span class="line">    <span class="type">uint8_t</span> val;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(<span class="string">&quot;inb %w1, %b0&quot;</span> : <span class="string">&quot;=a&quot;</span>(val) : <span class="string">&quot;d&quot;</span>(port))</span>;</span><br><span class="line">    <span class="keyword">return</span> val;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span></span><br><span class="line"><span class="title function_">outb</span><span class="params">(<span class="type">uint8_t</span> val, <span class="type">uint16_t</span> port)</span> &#123;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(<span class="string">&quot;outb %b0, %w1&quot;</span> : : <span class="string">&quot;a&quot;</span>(val), <span class="string">&quot;d&quot;</span>(port))</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span></span><br><span class="line"><span class="title function_">insw</span><span class="params">(<span class="type">void</span> *flow, <span class="type">uint32_t</span> len, <span class="type">uint16_t</span> port)</span> &#123;</span><br><span class="line">    __asm__ <span class="title function_">volatile</span> <span class="params">(<span class="string">&quot;cld; rep insw&quot;</span> :: <span class="string">&quot;D&quot;</span>(flow), <span class="string">&quot;c&quot;</span>(len), <span class="string">&quot;d&quot;</span>(port))</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="type">void</span></span><br><span class="line"><span class="title function_">ata_wait_register_400ns</span><span class="params">(<span class="type">uint16_t</span> reg)</span> &#123;</span><br><span class="line">    inb(reg);</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 1</span></span><br><span class="line"><span class="type">uint16_t</span> port_io = <span class="number">0x1f0</span>, port_ctrl = <span class="number">0x3f0</span>;</span><br><span class="line">outb(<span class="number">0xe0</span>, port_io + ATA_IO_RW_OFFSET_DRIVE_SELECT);</span><br><span class="line">ata_wait_register_400ns(port_ctrl); <span class="comment">// 2</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 3</span></span><br><span class="line">outb(ATA_CMD_IO_IDENTIFY, port_io + ATA_IO_W_OFFSET_COMMAND);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 4</span></span><br><span class="line"><span class="keyword">if</span> (inb(port_io + ATA_IO_R_OFFSET_STATUS) != <span class="number">0x00</span>) &#123;</span><br><span class="line">	<span class="comment">// 轮询状态</span></span><br><span class="line">	<span class="keyword">while</span> (inb(port_io + ATA_IO_R_OFFSET_STATUS) &amp; ATA_STATUS_BSY);</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 等待设备就绪</span></span><br><span class="line">	<span class="keyword">while</span> (!((inb(port_io + ATA_IO_R_OFFSET_STATUS) &amp; ATA_STATUS_DRQ)</span><br><span class="line">		|| (inb(port_io + ATA_IO_R_OFFSET_STATUS) &amp; ATA_STATUS_ERR)));</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 5</span></span><br><span class="line">	<span class="type">static</span> <span class="type">ataid_t</span> id;</span><br><span class="line">	insw(&amp;id, <span class="keyword">sizeof</span>(<span class="type">ataid_t</span>), port_io + ATA_IO_RW_OFFSET_DATA);</span><br><span class="line">	<span class="comment">// 从 IDENTIFY DATA 中获取序列号、扇区总数等信息</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
-<li>注释 1：将命令字发送到 Drive Select IO 端口（master 设备发送 <code>0xa0</code>，slave 设备发送 <code>0xb0</code>），Drive Select IO 端口在 Primary 通道上是 <code>0x1f6</code> 。将 Sector Count / LBA low / LBA mid / LBA high 这些 IO 端口写入 0（Primary 通道为 <code>0x1f2</code> ～ <code>0x1f5</code>），这里是忽略了</li>
-<li>注释 2：操作 ATA 设备有一个 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/ATA_PIO_Mode#400ns_delays">400 纳秒延迟</a> 的说法，意思是说在选择完设备之后需要读取 Status IO 端口 15 次后，最后一次就绪才能进入下一步</li>
-<li>注释 3：发送 IDENTIRY 命令（<code>0xec</code>）到 Command IO 端口（Primary 是 <code>0x1f7</code>）</li>
-<li>注释 4：从 Status IO 端口（Primary 是 <code>0x1f7</code>）中读取，如果值为 0 则设备不存在，否则设备存在。之后下一步继续从 Status IO 端口轮询状态，需要 Status IO 端口对应寄存器 <code>bit-7</code>（BSY） 清位、<code>bit-3</code>（DRQ）置位（或者 <code>bit-0</code>（ERR）置位）</li>
-<li>注释 5：轮询完后，读取 256 次 16 位数据（借助 <code>insw</code> 指令单次读取 16 位数据）。当取出 IDENTIFY DATA 之后，从中获取硬盘序列号、硬盘扇区总数等信息</li>
+<li>注释 1：将命令字发送到 Drive Select IO 端口（master 设备发送
+<code>0xa0</code>，slave 设备发送 <code>0xb0</code>），Drive Select IO
+端口在 Primary 通道上是 <code>0x1f6</code> 。将 Sector Count / LBA low /
+LBA mid / LBA high 这些 IO 端口写入 0（Primary 通道为 <code>0x1f2</code>
+～ <code>0x1f5</code>），这里是忽略了</li>
+<li>注释 2：操作 ATA 设备有一个 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/ATA_PIO_Mode#400ns_delays">400 纳秒延迟</a>
+的说法，意思是说在选择完设备之后需要读取 Status IO 端口 15
+次后，最后一次就绪才能进入下一步</li>
+<li>注释 3：发送 IDENTIRY 命令（<code>0xec</code>）到 Command IO
+端口（Primary 是 <code>0x1f7</code>）</li>
+<li>注释 4：从 Status IO 端口（Primary 是
+<code>0x1f7</code>）中读取，如果值为 0
+则设备不存在，否则设备存在。之后下一步继续从 Status IO
+端口轮询状态，需要 Status IO 端口对应寄存器 <code>bit-7</code>（BSY）
+清位、<code>bit-3</code>（DRQ）置位（或者
+<code>bit-0</code>（ERR）置位）</li>
+<li>注释 5：轮询完后，读取 256 次 16 位数据（借助 <code>insw</code>
+指令单次读取 16 位数据）。当取出 IDENTIFY DATA
+之后，从中获取硬盘序列号、硬盘扇区总数等信息</li>
 </ul>
-<p>获取完 ATA 设备的基本信息后，<code>hoo</code> 会将这些信息保存到 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L27"><code>ataspc_t</code> 结构体</a>：</p>
+<p>获取完 ATA 设备的基本信息后，<code>hoo</code> 会将这些信息保存到 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L27"><code>ataspc_t</code>
+结构体</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ata_space</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span> device_amount_;  <span class="comment">// 机器上 ATA 设备的总数</span></span><br><span class="line">    <span class="type">int</span>      current_select_; <span class="comment">// 当前选择的 ATA 设备（本质是数组下标）</span></span><br><span class="line">    <span class="type">atadev_t</span> *device_info_;   <span class="comment">// ATA 设备结构体数组</span></span><br><span class="line">&#125; <span class="type">ataspc_t</span>;</span><br></pre></td></tr></table></figure>
-<p>ATA 设备结构体详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L11">kern/driver/ata/ata_driver.h</a>，下面代码片段有删减：</p>
+<p>ATA 设备结构体详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L11">kern/driver/ata/ata_driver.h</a>，下面代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ata_device</span> &#123;</span></span><br><span class="line">    <span class="type">bool</span>     valid_;         <span class="comment">// 设备是否有效</span></span><br><span class="line">    <span class="type">uint16_t</span> io_port_;       <span class="comment">// 数据端口</span></span><br><span class="line">    <span class="type">uint16_t</span> ctrl_port_;     <span class="comment">// 控制端口</span></span><br><span class="line">    <span class="type">uint32_t</span> device_no_;     <span class="comment">// 设备号</span></span><br><span class="line">    <span class="type">uint32_t</span> total_sectors_; <span class="comment">// 设备扇区总数</span></span><br><span class="line">    <span class="type">ataser_t</span> dev_serial_;    <span class="comment">// 设备序列号</span></span><br><span class="line">    <span class="type">atamod_t</span> dev_model_;     <span class="comment">// 设备模式号</span></span><br><span class="line">&#125; <span class="type">atadev_t</span>;</span><br></pre></td></tr></table></figure>
 <p>ATA 对象组织方式如下：</p>
-<p><img src="https://pic1.imgdb.cn/item/67a322a5d0e0a243d4fbf058.png" alt=""></p>
-<p>由于 <code>hoo</code> 最多只支持 4 个 ATA 设备，所以 ATA 设备数组只有 4 个元素，依次是 Primary 主盘、Primary 从盘、Secondary 主盘和 Secondary 从盘</p>
-<h2 id="ATA-设备读写"><a class="header-anchor" href="#ATA-设备读写"></a>ATA 设备读写</h2>
-<p><code>hoo</code> 使用 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/LBA">LBA28 方式</a> 读写 ATA 设备，读写方式参考 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/ATA_PIO_Mode#28_bit_PIO">ATA PIO Mode</a>，以下是 <code>hoo</code> 的实现，详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L94">kern/driver/ata/ata_device.c</a>：</p>
+<p><img
+src="https://pic1.imgdb.cn/item/67a322a5d0e0a243d4fbf058.png" /></p>
+<p>由于 <code>hoo</code> 最多只支持 4 个 ATA 设备，所以 ATA 设备数组只有
+4 个元素，依次是 Primary 主盘、Primary 从盘、Secondary 主盘和 Secondary
+从盘</p>
+<h2 id="ata-设备读写">ATA 设备读写</h2>
+<p><code>hoo</code> 使用 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/LBA">LBA28
+方式</a> 读写 ATA 设备，读写方式参考 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/ATA_PIO_Mode#28_bit_PIO">ATA PIO
+Mode</a>，以下是 <code>hoo</code> 的实现，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L94">kern/driver/ata/ata_device.c</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">outb(<span class="number">0xe0</span> | (<span class="type">uint8_t</span>)((lba &gt;&gt; <span class="number">24</span>) &amp; <span class="number">0xf</span>),</span><br><span class="line">	io_port + ATA_IO_RW_OFFSET_DRIVE_SELECT); <span class="comment">// 1</span></span><br><span class="line">ata_wait_register_400ns(ctrl_port);</span><br><span class="line"></span><br><span class="line">outb(cr, io_port + ATA_IO_RW_OFFSET_SECTOR_COUNT); <span class="comment">// 2</span></span><br><span class="line">outb((<span class="type">uint8_t</span>)(lba &amp; <span class="number">0xff</span>), io_port + ATA_IO_RW_OFFSET_LBA_LOW); <span class="comment">// 3</span></span><br><span class="line">outb((<span class="type">uint8_t</span>)((lba &gt;&gt; <span class="number">8</span>) &amp; <span class="number">0xff</span>), io_port + ATA_IO_RW_OFFSET_LBA_MID);</span><br><span class="line">outb((<span class="type">uint8_t</span>)((lba &gt;&gt; <span class="number">16</span>) &amp; <span class="number">0xff</span>), io_port + ATA_IO_RW_OFFSET_LBA_HIGH);</span><br><span class="line">outb((<span class="type">uint8_t</span>)cmd, io_port + ATA_IO_W_OFFSET_COMMAND); <span class="comment">// 4</span></span><br></pre></td></tr></table></figure>
 <ul>
-<li>注释 1：发送 <code>0xe0</code>（<code>0xf0</code>）到 Master（Slave）设备，并带上 LBA 最高 4 位，写入 <code>0x1f6</code>（<code>0x176</code>）</li>
-<li>注释 2：将要读写的扇区数量到 <code>0x1f2</code>（<code>0x172</code>）</li>
+<li>注释 1：发送 <code>0xe0</code>（<code>0xf0</code>）到
+Master（Slave）设备，并带上 LBA 最高 4 位，写入
+<code>0x1f6</code>（<code>0x176</code>）</li>
+<li>注释 2：将要读写的扇区数量到
+<code>0x1f2</code>（<code>0x172</code>）</li>
 <li>注释 3：写 LBA28</li>
-<li>注释 4：将命令字（读 <code>0x20</code>，写 <code>0x30</code>）写入 <code>0x1f7</code>（<code>0x177</code>）</li>
+<li>注释 4：将命令字（读 <code>0x20</code>，写 <code>0x30</code>）写入
+<code>0x1f7</code>（<code>0x177</code>）</li>
 </ul>
-<p>等待命令执行有两种方式：polling（轮询）和 IRQ（中断）。前者一直消耗 CPU 时间来读取设备完成状态，后者让设备完成后主动发送一个中断信号通知 CPU。从性能出发明显后者更优，但 <code>hoo</code> 两种方式都实现了，原因是内核初始化阶段是关中断的，这个时候要读写硬盘（初始化文件系统）没办法用 IRQ 方式，只能用 polling；当内核初始化完成后，所有硬盘读写都是采用 IRQ</p>
-<h3 id="Polling"><a class="header-anchor" href="#Polling"></a>Polling</h3>
-<p>polling 的好处是简单，每次操作 ATA 设备之后，只需要持续读取 Status IO 端口，检查 RDY 是否置位、BSY 是否清位，详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L34">kern/driver/ata/ata_device.c</a>：</p>
+<p>等待命令执行有两种方式：polling（轮询）和 IRQ（中断）。前者一直消耗
+CPU 时间来读取设备完成状态，后者让设备完成后主动发送一个中断信号通知
+CPU。从性能出发明显后者更优，但 <code>hoo</code>
+两种方式都实现了，原因是内核初始化阶段是关中断的，这个时候要读写硬盘（初始化文件系统）没办法用
+IRQ 方式，只能用 polling；当内核初始化完成后，所有硬盘读写都是采用
+IRQ</p>
+<h3 id="polling">Polling</h3>
+<p>polling 的好处是简单，每次操作 ATA 设备之后，只需要持续读取 Status IO
+端口，检查 RDY 是否置位、BSY 是否清位，详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.c#L34">kern/driver/ata/ata_device.c</a>：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span></span><br><span class="line"><span class="title function_">ata_wait</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="comment">// 忽略 io_port 的赋值</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> ((inb(io_port + ATA_IO_R_OFFSET_STATUS)</span><br><span class="line">        &amp; (ATA_STATUS_RDY | ATA_STATUS_BSY)) != ATA_STATUS_RDY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>polling 实现详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_polling.c#L19">kern/driver/ata/ata_polling.c</a>，以下代码片段有删减：</p>
+<p>polling 实现详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_polling.c#L19">kern/driver/ata/ata_polling.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="type">uint32_t</span> <span class="type">atacmd_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_CMD_IO_READ   0x20</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_CMD_IO_WRITE  0x30</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BYTES_SECTOR      512</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 1</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ata_buff</span> &#123;</span></span><br><span class="line">    <span class="type">void</span>     *buff_;  <span class="comment">// 缓存区</span></span><br><span class="line">    <span class="type">uint32_t</span> len_;    <span class="comment">// 缓存区大小</span></span><br><span class="line">    <span class="type">uint32_t</span> lba_;    <span class="comment">// LBA 号</span></span><br><span class="line">    <span class="type">atacmd_t</span> cmd_;    <span class="comment">// 操作命令</span></span><br><span class="line">&#125; <span class="type">atabuff_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">ata_polling_rw</span><span class="params">(<span class="type">atabuff_t</span> *buff)</span>&#123;</span><br><span class="line">    <span class="comment">// 2</span></span><br><span class="line">    <span class="type">uint32_t</span> sectors_to_rw = buff-&gt;len_ / BYTES_SECTOR;</span><br><span class="line">    <span class="type">ataspc_t</span> *space = get_ataspace();</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">0</span>; i &lt; sectors_to_rw &amp;&amp; buff-&gt;len_ &gt; <span class="number">0</span>; i++) &#123;</span><br><span class="line">        ata_set_cmd(space-&gt;current_select_, buff-&gt;lba_, <span class="number">1</span>, buff-&gt;cmd_);</span><br><span class="line">        ata_wait(); <span class="comment">// 3</span></span><br><span class="line"></span><br><span class="line">		<span class="comment">// 4</span></span><br><span class="line">        <span class="type">uint32_t</span> rest_bytes = (buff-&gt;len_ &gt;= BYTES_SECTOR) ?</span><br><span class="line">            (BYTES_SECTOR / <span class="keyword">sizeof</span>(<span class="type">uint16_t</span>)) : (buff-&gt;len_ / <span class="keyword">sizeof</span>(<span class="type">uint16_t</span>));</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 5</span></span><br><span class="line">        <span class="keyword">if</span> (buff-&gt;cmd_ == ATA_CMD_IO_READ)</span><br><span class="line">            insw(buff-&gt;buff_, rest_bytes, ATA_IO_RW_OFFSET_DATA +</span><br><span class="line">                space-&gt;device_info_[space-&gt;current_select_].io_port_);</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (buff-&gt;cmd_ == ATA_CMD_IO_WRITE)</span><br><span class="line">            outsw(buff-&gt;buff_, rest_bytes, ATA_IO_RW_OFFSET_DATA +</span><br><span class="line">                space-&gt;device_info_[space-&gt;current_select_].io_port_);</span><br><span class="line"></span><br><span class="line">        buff-&gt;lba_ += <span class="number">1</span>;</span><br><span class="line">        buff-&gt;len_ -= BYTES_SECTOR;</span><br><span class="line">        buff-&gt;buff_ += BYTES_SECTOR;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
-<li>注释 1：<code>hoo</code> 将读写 ATA 的数据封装成为 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L36"><code>atabuff_t</code> 结构体</a>，其中命令字 <code>atacmd_t</code> 本质上是 32 位无符号数，用来接收 <code>ATA_CMD_IO_READ</code> 和 <code>ATA_CMD_IO_WRITE</code> 两个宏</li>
-<li>注释 2：读写 ATA 设备可能涉及多个扇区，通过将读写字节数除以扇区大小计算扇区数量，然后 <code>for()</code> 循环一个一个扇区地读写</li>
+<li>注释 1：<code>hoo</code> 将读写 ATA 的数据封装成为 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_device.h#L36"><code>atabuff_t</code>
+结构体</a>，其中命令字 <code>atacmd_t</code> 本质上是 32
+位无符号数，用来接收 <code>ATA_CMD_IO_READ</code> 和
+<code>ATA_CMD_IO_WRITE</code> 两个宏</li>
+<li>注释 2：读写 ATA
+设备可能涉及多个扇区，通过将读写字节数除以扇区大小计算扇区数量，然后
+<code>for()</code> 循环一个一个扇区地读写</li>
 <li>注释 3：等待 ATA 设备完成</li>
-<li>注释 4：读写多个扇区时，最后一个扇区可能是不满一个 <code>BYTES_SECTOR</code>（512 字节）的，需要对最后一个扇区作特殊处理</li>
-<li>注释 5：对于 polling 来说，此时 ATA 设备已经完成读写，则通过 <code>insw()</code> 或 <code>outsw()</code> 两个 helper 将数据拷贝到 <code>atabuff_t</code> 结构体</li>
+<li>注释 4：读写多个扇区时，最后一个扇区可能是不满一个
+<code>BYTES_SECTOR</code>（512
+字节）的，需要对最后一个扇区作特殊处理</li>
+<li>注释 5：对于 polling 来说，此时 ATA 设备已经完成读写，则通过
+<code>insw()</code> 或 <code>outsw()</code> 两个 helper 将数据拷贝到
+<code>atabuff_t</code> 结构体</li>
 </ul>
-<h3 id="IRQ"><a class="header-anchor" href="#IRQ"></a>IRQ</h3>
-<p>IRQ 的实现分为两部分，第一部分处理 ATA 设备读写，第二部分是硬盘中断 ISR</p>
-<p>IRQ 的实现还要借助 sleep() 和 wakeup() 两个系统调用。当 ATA 设备正在工作的时候，让当前线程睡眠；当 ATA 设备就绪的时候，由运行队列上的第一个线程（正在占用处理器的线程）唤醒</p>
-<h4 id="Sleep、Wakeup"><a class="header-anchor" href="#Sleep、Wakeup"></a>Sleep、Wakeup</h4>
-<p>一个线程进入睡眠最简单的逻辑是：将当前线程从运行队列中移除，然后另外引入一个睡眠队列，将当前线程的 pcb 加入睡眠队列。然后立即进行调度，因为此时没有任何线程占用处理器</p>
-<p>那么反过来，当需要唤醒一个睡眠线程时，从睡眠队列中取出这个 pcb，加入就绪队列等待下一次调度</p>
-<p><code>hoo</code> 就是按照这个思路来实现 sleep() 和 wakeup() 的，现在只剩下一个问题，当睡眠队列有多个 pcb 时，唤醒线程时怎么知道这一次的资源到达是对应着哪个 pcb？<code>hoo</code> 的解决办法是在线程睡眠的时候，就要给出资源地址，并在 pcb 定义一个字段专门用来记录要等待的资源。这样当唤醒线程的时候（也是要给出资源地址），对比给出的资源和每个 pcb 内记录的资源，就能够找出到底要唤醒哪个线程</p>
-<p>睡眠的具体实现详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L207">kern/sched/tasks.c</a>，以下代码片段有删减：</p>
+<h3 id="irq">IRQ</h3>
+<p>IRQ 的实现分为两部分，第一部分处理 ATA 设备读写，第二部分是硬盘中断
+ISR</p>
+<p>IRQ 的实现还要借助 sleep() 和 wakeup() 两个系统调用。当 ATA
+设备正在工作的时候，让当前线程睡眠；当 ATA
+设备就绪的时候，由运行队列上的第一个线程（正在占用处理器的线程）唤醒</p>
+<h4 id="sleepwakeup">Sleep、Wakeup</h4>
+<p>一个线程进入睡眠最简单的逻辑是：将当前线程从运行队列中移除，然后另外引入一个睡眠队列，将当前线程的
+pcb 加入睡眠队列。然后立即进行调度，因为此时没有任何线程占用处理器</p>
+<p>那么反过来，当需要唤醒一个睡眠线程时，从睡眠队列中取出这个
+pcb，加入就绪队列等待下一次调度</p>
+<p><code>hoo</code> 就是按照这个思路来实现 sleep() 和 wakeup()
+的，现在只剩下一个问题，当睡眠队列有多个 pcb
+时，唤醒线程时怎么知道这一次的资源到达是对应着哪个 pcb？<code>hoo</code>
+的解决办法是在线程睡眠的时候，就要给出资源地址，并在 pcb
+定义一个字段专门用来记录要等待的资源。这样当唤醒线程的时候（也是要给出资源地址），对比给出的资源和每个
+pcb 内记录的资源，就能够找出到底要唤醒哪个线程</p>
+<p>睡眠的具体实现详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L207">kern/sched/tasks.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">sleep</span><span class="params">(<span class="type">void</span> *resource, <span class="type">spinlock_t</span> *resource_lock)</span> &#123;</span><br><span class="line">    disable_intr();</span><br><span class="line">    <span class="type">pcb_t</span> *cur = get_current_pcb();</span><br><span class="line">    cur-&gt;sleep_ = resource; <span class="comment">// 1</span></span><br><span class="line"></span><br><span class="line">    signal(resource_lock);  <span class="comment">// 2</span></span><br><span class="line">    scheduler();            <span class="comment">// 3</span></span><br><span class="line"></span><br><span class="line">    enable_intr();</span><br><span class="line">    cur-&gt;sleep_ = null;     <span class="comment">// 4</span></span><br><span class="line">    wait(resource_lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：将资源地址记录到 pcb 内</li>
-<li>注释 2：释放资源的锁。因为进入临界区是不能睡眠的，否则如果这个临界区资源只能自己解锁，而这个时候能够唤醒你的线程也在等待临界区资源，那么线程的睡眠将是永久。不用担心此时释放锁会不会造成共享资源的数据不一致，因为前面第一句代码已经关中断了，现在就是个串行执行流</li>
-<li>注释 3：立即进行调度。理由前面说了，现在逻辑上没有任何线程在运行</li>
-<li>注释 4：重置 pcb 和锁。到了这一步很可能已经过了很久很久了，要等待的资源已经到达，可以恢复执行流了，则 pcb 和锁回到最开始睡眠之前的状态</li>
+<li>注释
+2：释放资源的锁。因为进入临界区是不能睡眠的，否则如果这个临界区资源只能自己解锁，而这个时候能够唤醒你的线程也在等待临界区资源，那么线程的睡眠将是永久。不用担心此时释放锁会不会造成共享资源的数据不一致，因为前面第一句代码已经关中断了，现在就是个串行执行流</li>
+<li>注释
+3：立即进行调度。理由前面说了，现在逻辑上没有任何线程在运行</li>
+<li>注释 4：重置 pcb
+和锁。到了这一步很可能已经过了很久很久了，要等待的资源已经到达，可以恢复执行流了，则
+pcb 和锁回到最开始睡眠之前的状态</li>
 </ul>
-<p>唤醒的具体实现详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L233">kern/sched/tasks.c</a>，以下代码片段有删减：</p>
+<p>唤醒的具体实现详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/sched/tasks.c#L233">kern/sched/tasks.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">wakeup</span><span class="params">(<span class="type">void</span> *resource)</span> &#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// 1</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">uint32_t</span> i = <span class="number">1</span>; i &lt;= __list_sleeping.size_; ++i) &#123;</span><br><span class="line">        <span class="type">node_t</span> *n = list_find(&amp;__list_sleeping, i);</span><br><span class="line">        <span class="comment">// 2</span></span><br><span class="line">        <span class="keyword">if</span> (((<span class="type">pcb_t</span> *)n-&gt;data_)-&gt;sleep_ == resource) &#123;</span><br><span class="line">            <span class="type">node_t</span> *to_wakeup = list_remove(&amp;__list_sleeping, i--);</span><br><span class="line">            task_ready(to_wakeup); <span class="comment">// 3</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
-<li>注释 1：睡眠队列实际上 <code>hoo</code> 没有使用队列而是用了链表，因为需要遍历每个元素</li>
+<li>注释 1：睡眠队列实际上 <code>hoo</code>
+没有使用队列而是用了链表，因为需要遍历每个元素</li>
 <li>注释 2：对比资源找到需要唤醒的线程</li>
-<li>注释 3：找到要唤醒的线程后从睡眠链表中取出，通过 <code>task_ready()</code> 接口加入就绪队列</li>
+<li>注释 3：找到要唤醒的线程后从睡眠链表中取出，通过
+<code>task_ready()</code> 接口加入就绪队列</li>
 </ul>
-<h4 id="ATA-设备读写-v2"><a class="header-anchor" href="#ATA-设备读写-v2"></a>ATA 设备读写</h4>
-<p><img src="https://pic1.imgdb.cn/item/67a5a631d0e0a243d4fc7957.png" alt=""></p>
-<p><code>hoo</code> 引入一个队列来缓存所有正在发生读写的 atabuff。如图所示，所有线程都可以同时发起 ATA 设备读写，读写信息封装到 atabuff，然后将 atabuff 加入 ata 队列。其中 ata 队列是共享资源，访问时通过 spinlock 来保护</p>
-<p>具体实现详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_irq.c#L60">kern/driver/ata/ata_irq.c</a>，以下代码片段有删减：</p>
+<h4 id="ata-设备读写-1">ATA 设备读写</h4>
+<p><img
+src="https://pic1.imgdb.cn/item/67a5a631d0e0a243d4fc7957.png" /></p>
+<p><code>hoo</code> 引入一个队列来缓存所有正在发生读写的
+atabuff。如图所示，所有线程都可以同时发起 ATA 设备读写，读写信息封装到
+atabuff，然后将 atabuff 加入 ata 队列。其中 ata
+队列是共享资源，访问时通过 spinlock 来保护</p>
+<p>具体实现详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_irq.c#L60">kern/driver/ata/ata_irq.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="type">uint32_t</span> <span class="type">atacmd_t</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_CMD_IO_READ   0x20</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ATA_CMD_IO_WRITE  0x30</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ata_buff</span> &#123;</span></span><br><span class="line">    <span class="type">void</span>     *buff_;  <span class="comment">// 缓存区</span></span><br><span class="line">    <span class="type">uint32_t</span> len_;    <span class="comment">// 缓存区大小</span></span><br><span class="line">    <span class="type">uint32_t</span> lba_;    <span class="comment">// LBA 号</span></span><br><span class="line">    <span class="type">atacmd_t</span> cmd_;    <span class="comment">// 操作命令</span></span><br><span class="line">    <span class="type">bool</span>     finish_; <span class="comment">// 操作完成标识</span></span><br><span class="line">&#125; <span class="type">atabuff_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">queue_t</span> __queue_ata;           <span class="comment">// ata 队列</span></span><br><span class="line"><span class="type">static</span> <span class="type">spinlock_t</span> __slqueue, __slata; <span class="comment">// 锁</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 1</span></span><br><span class="line">wait(&amp;__slqueue);</span><br><span class="line">queue_push(&amp;__queue_ata, atabuff, TAIL);</span><br><span class="line">signal(&amp;__slqueue);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2</span></span><br><span class="line">ata_set_cmd(atabuff-&gt;lba_, atabuff-&gt;len_, buff-&gt;cmd_);</span><br><span class="line"><span class="keyword">if</span> (buff-&gt;cmd_ == ATA_CMD_IO_WRITE)</span><br><span class="line">	outsw(buff-&gt;buff_, buff-&gt;len_ / <span class="keyword">sizeof</span>(<span class="type">uint16_t</span>), io_port);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 3. sleep (give up CPU)</span></span><br><span class="line">wait(&amp;__slata);</span><br><span class="line"><span class="keyword">while</span> (buff-&gt;finish_ == <span class="literal">false</span>)</span><br><span class="line">	sleep(atabuff, &amp;__slata);</span><br><span class="line">signal(&amp;__slata);</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：将 atabuff（里面保存了读写 ATA 设备的信息）加入队列</li>
-<li>注释 2：发起 LBA28 方式读写 ATA 设备。对于读和写稍微有点不一样，读是设备准备完成后才可以写缓存区；写是在最开始就要将缓存区数据写入 IO 端口</li>
-<li>注释 3：主动放弃处理器，进入睡眠。这里锁 <code>__slata</code> 是用来串行访问每个 atabuff 的，不过这里加锁可以省略，因为每个线程请求的资源 —— atabuff 都是不一样的。这里加锁的目的是配平 <code>sleep()</code> 的函数参数，因为进入 <code>sleep()</code> 需要持有资源的锁，此后，线程将 atabuff 记录到 pcb 进入睡眠。另外，睡眠之前先查看资源是否已经准备就绪了，通过判断 <code>finish_</code> 标识获悉</li>
+<li>注释 2：发起 LBA28 方式读写 ATA
+设备。对于读和写稍微有点不一样，读是设备准备完成后才可以写缓存区；写是在最开始就要将缓存区数据写入
+IO 端口</li>
+<li>注释 3：主动放弃处理器，进入睡眠。这里锁 <code>__slata</code>
+是用来串行访问每个 atabuff
+的，不过这里加锁可以省略，因为每个线程请求的资源 —— atabuff
+都是不一样的。这里加锁的目的是配平 <code>sleep()</code>
+的函数参数，因为进入 <code>sleep()</code> 需要持有资源的锁，此后，线程将
+atabuff 记录到 pcb
+进入睡眠。另外，睡眠之前先查看资源是否已经准备就绪了，通过判断
+<code>finish_</code> 标识获悉</li>
 </ul>
-<h4 id="硬盘中断-ISR"><a class="header-anchor" href="#硬盘中断-ISR"></a>硬盘中断 ISR</h4>
-<p>由于 ata 队列是按照 FIFO 方式组织的，所以总是队头的元素先处理完成，因此处理器每次接收到硬盘中断，只需要处理 ata 队列的队头元素</p>
-<p>具体实现详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_irq.c#L31">kern/driver/ata/ata_irq.c</a>，以下代码片段有删减：</p>
+<h4 id="硬盘中断-isr">硬盘中断 ISR</h4>
+<p>由于 ata 队列是按照 FIFO
+方式组织的，所以总是队头的元素先处理完成，因此处理器每次接收到硬盘中断，只需要处理
+ata 队列的队头元素</p>
+<p>具体实现详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/ata/ata_irq.c#L31">kern/driver/ata/ata_irq.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">ata_irq_intr</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">	<span class="comment">// 1</span></span><br><span class="line">	wait(&amp;__slqueue);</span><br><span class="line">	<span class="type">atabuff_t</span> *done = queue_pop(&amp;__queue_ata);</span><br><span class="line">	signal(&amp;__slqueue);</span><br><span class="line">	<span class="keyword">if</span> (done != null) &#123;</span><br><span class="line">		<span class="keyword">if</span> (done-&gt;cmd_ == ATA_CMD_IO_READ) &#123;</span><br><span class="line">			insw(done-&gt;buff_, done-&gt;len_ / <span class="keyword">sizeof</span>(<span class="type">uint16_t</span>), io_port_);</span><br><span class="line">		&#125;</span><br><span class="line">		done-&gt;finish_ = <span class="literal">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	<span class="comment">// 2</span></span><br><span class="line">	wakeup(done);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
-<li>注释 1：取下 ata 队列队头，完成读写。对于读，现在 ATA 设备的 IO 端口已经准备好数据，将其读取出来放入缓存区；对于写，什么都不做。然后将 <code>finish_</code> 标识置位</li>
+<li>注释 1：取下 ata 队列队头，完成读写。对于读，现在 ATA 设备的 IO
+端口已经准备好数据，将其读取出来放入缓存区；对于写，什么都不做。然后将
+<code>finish_</code> 标识置位</li>
 <li>注释 2：唤醒挂靠到当前 atabuff 的线程</li>
 </ul>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> ISR46_HARD1 46</span></span><br><span class="line">set_isr_entry(&amp;__isr[ISR46_HARD1], (<span class="type">isr_t</span>)ata_irq_intr);</span><br></pre></td></tr></table></figure>
 <p>最后通过 <code>set_isr_entry()</code> 接口注册 ISR</p>
-<h1>键盘驱动</h1>
-<p>键盘从软件层面来看，也包括两部分，键盘和键盘控制器，<code>x86</code> 基础设施是 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/%228042%22_PS/2_Controller">8042 芯片</a></p>
-<p>和键盘有关的有两个方面：<a target="_blank" rel="noopener" href="https://wiki.osdev.org/PS/2_Keyboard#Scan_Code_Set_1">通码 / 断码</a> （<code>hoo</code> 使用了第一套）和 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Circular_buffer">环形缓冲区</a></p>
-<h2 id="第一套通码-断码"><a class="header-anchor" href="#第一套通码-断码"></a>第一套通码 / 断码</h2>
-<p>通码 / 断码就是键盘的输出，和 ASCII 码一样都是一套编码标准，但是和 ASCII 码不是一一对应的，通码 / 断码转换 ASCII 码详见 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/PS/2_Keyboard#Scan_Code_Set_1">第一套通码 / 断码</a></p>
-<h2 id="环形缓冲区"><a class="header-anchor" href="#环形缓冲区"></a>环形缓冲区</h2>
-<p>这是一个数据结构，和环形队列十分相似，区别是额外加入了生产者 - 消费者问题的实现，引入这个数据结构是用来缓存键盘输入</p>
+<h1 id="键盘驱动">键盘驱动</h1>
+<p>键盘从软件层面来看，也包括两部分，键盘和键盘控制器，<code>x86</code>
+基础设施是 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/%228042%22_PS/2_Controller">8042
+芯片</a></p>
+<p>和键盘有关的有两个方面：<a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/PS/2_Keyboard#Scan_Code_Set_1">通码 /
+断码</a> （<code>hoo</code> 使用了第一套）和 <a
+target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Circular_buffer">环形缓冲区</a></p>
+<h2 id="第一套通码-断码">第一套通码 / 断码</h2>
+<p>通码 / 断码就是键盘的输出，和 ASCII 码一样都是一套编码标准，但是和
+ASCII 码不是一一对应的，通码 / 断码转换 ASCII 码详见 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/PS/2_Keyboard#Scan_Code_Set_1">第一套通码 /
+断码</a></p>
+<h2 id="环形缓冲区">环形缓冲区</h2>
+<p>这是一个数据结构，和环形队列十分相似，区别是额外加入了生产者 -
+消费者问题的实现，引入这个数据结构是用来缓存键盘输入</p>
 <p>缓存键盘输入的场景主要发生在键盘驱动和输出设备之间：</p>
 <ul>
-<li>键盘驱动：用户按下一个键位，触发硬盘中断，将通码 / 断码转换为 ASCII 码，缓存到环形缓冲区</li>
+<li>键盘驱动：用户按下一个键位，触发硬盘中断，将通码 / 断码转换为 ASCII
+码，缓存到环形缓冲区</li>
 <li>输出设备：如果环形缓冲区有数据，就输出</li>
 </ul>
-<p><code>hoo</code> 实现的生产者 - 消费者问题详见 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/circular_buffer.h#L20">kern/utilities/circular_buffer.h</a>，以下代码有删减：</p>
+<p><code>hoo</code> 实现的生产者 - 消费者问题详见 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/utilities/circular_buffer.h#L20">kern/utilities/circular_buffer.h</a>，以下代码有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 环形缓冲区</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">circular_buffer</span> &#123;</span></span><br><span class="line">    <span class="type">uint32_t</span>    capacity_;</span><br><span class="line">    <span class="type">char</span>        *buff_;</span><br><span class="line">    <span class="type">int</span>         head_;</span><br><span class="line">    <span class="type">int</span>         tail_;</span><br><span class="line">    <span class="type">spinlock_t</span> slock_;</span><br><span class="line">&#125; <span class="type">cclbuff_t</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 生产者，缓存字符</span></span><br><span class="line"><span class="type">bool</span></span><br><span class="line"><span class="title function_">cclbuff_put</span><span class="params">(<span class="type">cclbuff_t</span> *cclbuff, <span class="type">char</span> c)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (cclbuff_isfull(cclbuff))    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    cclbuff-&gt;buff_[cclbuff-&gt;head_] = c;</span><br><span class="line">    cclbuff-&gt;head_ = (cclbuff-&gt;head_ + <span class="number">1</span>) % cclbuff-&gt;capacity_;</span><br><span class="line">    wakeup(cclbuff);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 消费者，读取字符</span></span><br><span class="line"><span class="type">char</span></span><br><span class="line"><span class="title function_">cclbuff_get</span><span class="params">(<span class="type">cclbuff_t</span> *cclbuff)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (cclbuff_isempty(cclbuff)) &#123;</span><br><span class="line">        wait(&amp;cclbuff-&gt;slock_);</span><br><span class="line">        sleep(cclbuff, &amp;cclbuff-&gt;slock_);</span><br><span class="line">        signal(&amp;cclbuff-&gt;slock_);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="type">char</span> ch = cclbuff-&gt;buff_[cclbuff-&gt;tail_];</span><br><span class="line">    cclbuff-&gt;tail_ = (cclbuff-&gt;tail_ + <span class="number">1</span>) % cclbuff-&gt;capacity_;</span><br><span class="line">    <span class="keyword">return</span> ch;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <ul>
-<li>生产者：每 “产生” 一个字符，就存起来，然后唤醒睡眠在该环形缓冲区上的线程</li>
+<li>生产者：每 "产生"
+一个字符，就存起来，然后唤醒睡眠在该环形缓冲区上的线程</li>
 <li>消费者：总是先判断缓存是否为空，如果为空就进入睡眠。下次被唤醒的时候，环形缓冲区必定存在数据，此时再输出数据</li>
 </ul>
-<h2 id="键盘驱动"><a class="header-anchor" href="#键盘驱动"></a>键盘驱动</h2>
-<p>和 8042 芯片硬件对应的是 PS/2 控制器软件，该控制器的数据端口是 <a target="_blank" rel="noopener" href="https://wiki.osdev.org/%228042%22_PS/2_Controller#PS/2_Controller_IO_Ports"><code>0x60</code></a>。因此键盘驱动的内容很简单，就是：</p>
+<h2 id="键盘驱动-1">键盘驱动</h2>
+<p>和 8042 芯片硬件对应的是 PS/2 控制器软件，该控制器的数据端口是 <a
+target="_blank" rel="noopener" href="https://wiki.osdev.org/%228042%22_PS/2_Controller#PS/2_Controller_IO_Ports"><code>0x60</code></a>。因此键盘驱动的内容很简单，就是：</p>
 <ul>
 <li>从数据端口中读取一个通码 / 断码</li>
 <li>将通码 / 断码转换为 ASCII 码</li>
 </ul>
-<p>详见代码 <a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/8042/8042.c#L54">kern/driver/8042/8042.c</a>，以下代码片段有删减：</p>
+<p>详见代码 <a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/8042/8042.c#L54">kern/driver/8042/8042.c</a>，以下代码片段有删减：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 1</span></span><br><span class="line"><span class="type">uint8_t</span> ch = inb(DATA_PORT_8042);</span><br><span class="line"><span class="type">char</span> result = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 处理控制字符，处理通码 / 断码转换</span></span><br><span class="line"><span class="comment">// result = ...</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 2</span></span><br><span class="line"><span class="type">cclbuff_t</span> *kbuff = get_kb_buff();</span><br><span class="line">cclbuff_put(kbuff, result);</span><br></pre></td></tr></table></figure>
 <ul>
 <li>注释 1：读取通码 / 断码</li>
-<li>注释 2：<a target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/8042/8042.c#L38"><code>get_kb_buff()</code></a> 返回一个全局对象，在转换得到最终的 ASCII 码 <code>result</code> 后就可以缓存到环形缓冲区了</li>
+<li>注释 2：<a
+target="_blank" rel="noopener" href="https://github.com/horbyn/hoo/blob/e1739ab3d639caee5c52e6ca5abd01214fbbe0ff/kern/driver/8042/8042.c#L38"><code>get_kb_buff()</code></a>
+返回一个全局对象，在转换得到最终的 ASCII 码 <code>result</code>
+后就可以缓存到环形缓冲区了</li>
 </ul>
-<p>最后还有一点要注意的是，键盘驱动在每次按下键位的时候就应该被触发了，而这个时候也是处理器接收键盘中断信号的时候，所以键盘驱动在 <code>hoo</code> 里面就是键盘中断 ISR，通过 <code>set_isr_entry()</code> 接口注册 ISR</p>
+<p>最后还有一点要注意的是，键盘驱动在每次按下键位的时候就应该被触发了，而这个时候也是处理器接收键盘中断信号的时候，所以键盘驱动在
+<code>hoo</code> 里面就是键盘中断 ISR，通过 <code>set_isr_entry()</code>
+接口注册 ISR</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> ISR33_KEYBOARD 33</span></span><br><span class="line">set_isr_entry(&amp;__isr[ISR33_KEYBOARD], (<span class="type">isr_t</span>)ps2_intr);</span><br></pre></td></tr></table></figure>
 
     </article>
@@ -705,7 +866,7 @@
                 <div class="toc-catalog">
                     <span class="iconfont-archer catalog-icon">&#xe613;</span><span>CATALOG</span>
                 </div>
-                <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">1.</span> <span class="toc-text">PIC</span></a></li><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">2.</span> <span class="toc-text">PIT</span></a></li><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">3.</span> <span class="toc-text">ATA</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#ATA-%E8%AE%BE%E5%A4%87%E6%A3%80%E6%B5%8B"><span class="toc-number">3.1.</span> <span class="toc-text">ATA 设备检测</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ATA-%E8%AE%BE%E5%A4%87%E8%AF%BB%E5%86%99"><span class="toc-number">3.2.</span> <span class="toc-text">ATA 设备读写</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Polling"><span class="toc-number">3.2.1.</span> <span class="toc-text">Polling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IRQ"><span class="toc-number">3.2.2.</span> <span class="toc-text">IRQ</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Sleep%E3%80%81Wakeup"><span class="toc-number">3.2.2.1.</span> <span class="toc-text">Sleep、Wakeup</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#ATA-%E8%AE%BE%E5%A4%87%E8%AF%BB%E5%86%99-v2"><span class="toc-number">3.2.2.2.</span> <span class="toc-text">ATA 设备读写</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%A1%AC%E7%9B%98%E4%B8%AD%E6%96%AD-ISR"><span class="toc-number">3.2.2.3.</span> <span class="toc-text">硬盘中断 ISR</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">4.</span> <span class="toc-text">键盘驱动</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%B8%80%E5%A5%97%E9%80%9A%E7%A0%81-%E6%96%AD%E7%A0%81"><span class="toc-number">4.1.</span> <span class="toc-text">第一套通码 &#x2F; 断码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%8E%AF%E5%BD%A2%E7%BC%93%E5%86%B2%E5%8C%BA"><span class="toc-number">4.2.</span> <span class="toc-text">环形缓冲区</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%94%AE%E7%9B%98%E9%A9%B1%E5%8A%A8"><span class="toc-number">4.3.</span> <span class="toc-text">键盘驱动</span></a></li></ol></li></ol>
+                <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#pic"><span class="toc-number">1.</span> <span class="toc-text">PIC</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#pit"><span class="toc-number">2.</span> <span class="toc-text">PIT</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#ata"><span class="toc-number">3.</span> <span class="toc-text">ATA</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#ata-%E8%AE%BE%E5%A4%87%E6%A3%80%E6%B5%8B"><span class="toc-number">3.1.</span> <span class="toc-text">ATA 设备检测</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ata-%E8%AE%BE%E5%A4%87%E8%AF%BB%E5%86%99"><span class="toc-number">3.2.</span> <span class="toc-text">ATA 设备读写</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#polling"><span class="toc-number">3.2.1.</span> <span class="toc-text">Polling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#irq"><span class="toc-number">3.2.2.</span> <span class="toc-text">IRQ</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#sleepwakeup"><span class="toc-number">3.2.2.1.</span> <span class="toc-text">Sleep、Wakeup</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#ata-%E8%AE%BE%E5%A4%87%E8%AF%BB%E5%86%99-1"><span class="toc-number">3.2.2.2.</span> <span class="toc-text">ATA 设备读写</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%A1%AC%E7%9B%98%E4%B8%AD%E6%96%AD-isr"><span class="toc-number">3.2.2.3.</span> <span class="toc-text">硬盘中断 ISR</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%94%AE%E7%9B%98%E9%A9%B1%E5%8A%A8"><span class="toc-number">4.</span> <span class="toc-text">键盘驱动</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%B8%80%E5%A5%97%E9%80%9A%E7%A0%81-%E6%96%AD%E7%A0%81"><span class="toc-number">4.1.</span> <span class="toc-text">第一套通码 &#x2F; 断码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%8E%AF%E5%BD%A2%E7%BC%93%E5%86%B2%E5%8C%BA"><span class="toc-number">4.2.</span> <span class="toc-text">环形缓冲区</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%94%AE%E7%9B%98%E9%A9%B1%E5%8A%A8-1"><span class="toc-number">4.3.</span> <span class="toc-text">键盘驱动</span></a></li></ol></li></ol>
             </div>
         <!-- sidebar -->
         <div class="sidebar sidebar-hide">
@@ -744,15 +905,20 @@
         
         
         
+        
     <div class="total-and-search">
         <div class="total-archive">
-        Total : 27
+        Total : 28
         </div>
         <!-- search  -->
     </div>
     <div class="post-archive">
             <div class="archive-year"> 2025 </div>
             <ul class="year-list">
+        <li class="archive-post-item">
+            <span class="archive-post-date">06/14</span>
+            <a class="archive-post-title" href="/2025/06/14/ebpf-1/">通过 libbpf-bootstrap 创建 CO-RE eBPF 项目</a>
+        </li>
         <li class="archive-post-item">
             <span class="archive-post-date">03/02</span>
             <a class="archive-post-title" href="/2025/03/02/github-index/">美化 Github 主页</a>
@@ -876,13 +1042,17 @@
 
         <div class="sidebar-panel-tags">
     <div class="sidebar-tags-name">
-            <span class="sidebar-tag-name" data-tags="hoo">
+            <span class="sidebar-tag-name" data-tags="eBPF">
                 <span class="iconfont-archer">&#xe606;</span>
-                hoo
+                eBPF
             </span>
             <span class="sidebar-tag-name" data-tags="Blogs">
                 <span class="iconfont-archer">&#xe606;</span>
                 Blogs
+            </span>
+            <span class="sidebar-tag-name" data-tags="hoo">
+                <span class="iconfont-archer">&#xe606;</span>
+                hoo
             </span>
             <span class="sidebar-tag-name" data-tags="translation">
                 <span class="iconfont-archer">&#xe606;</span>
